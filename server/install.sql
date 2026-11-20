@@ -421,4 +421,5 @@ INSERT IGNORE INTO be_settings (k, v) VALUES
  ('site_cidade','Brasília'),
  ('site_dimensoes',''),                 -- ex.: 60 × 70 × 190 cm (vazio = esconde)
  ('site_torneiras','2'),
- ('site_min_copos','100');              -- só mostra "copos servidos" a partir deste número
+ ('site_min_copos','100'),
+ ('simulador_publico','1');            -- simulador.html abre sem senha (só mexe no ponto de demonstração)              -- só mostra "copos servidos" a partir deste número

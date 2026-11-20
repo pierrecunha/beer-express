@@ -1502,6 +1502,19 @@ function demo_info(array $ids): array {
     return ['ok' => true, 'location_id' => $ids['location'], 'device_key' => (string)val('SELECT device_key FROM be_devices WHERE id = ?', [$ids['device']]),
         'codigo' => $t['codigo'], 'terminal_id' => $ids['terminal'], 'tap_id' => $t['tap_id'] !== null ? (int)$t['tap_id'] : null, 'taps' => $ids['taps']];
 }
+/** Simulador aberto (sem senha): cria/devolve só o ponto de demonstração, que nunca aparece no portal. */
+function r_pub_demo(): array {
+    if (setting('simulador_publico', '1') !== '1') fail('simulador', 'Simulador desativado pelo administrador', 403);
+    return r_admin_demo_seed(['nome' => 'Simulador']);
+}
+/** Troca o modo da maquininha de demonstração: presa à torneira 1 ou cardápio com todas. Só mexe na demonstração. */
+function r_pub_demo_modo(): array {
+    if (setting('simulador_publico', '1') !== '1') fail('simulador', 'Simulador desativado pelo administrador', 403);
+    $ids = json_decode((string)setting('demo_ids'), true) ?: [];
+    if (empty($ids['terminal']) || empty($ids['taps'])) fail('demo', 'Abra o simulador de novo', 404);
+    q('UPDATE be_terminals SET tap_id = ? WHERE id = ?', [arg('torneira') ? (int)$ids['taps'][0] : null, (int)$ids['terminal']]);
+    return demo_info($ids);
+}
 /** Remove o ponto de demonstração e tudo que foi vendido nele. */
 function r_admin_demo_clear(array $u): array {
     $ids = json_decode((string)setting('demo_ids'), true) ?: [];
@@ -1997,6 +2010,8 @@ try {
         case $r === 'pub/tv': out(r_pub_tv());
         case $r === 'pub/site': out(r_pub_site());
         case $r === 'pub/lead': out(r_pub_lead());
+        case $r === 'pub/demo': out(r_pub_demo());
+        case $r === 'pub/demo_modo': out(r_pub_demo_modo());
         case $r === 'mp/webhook': out(r_mp_webhook());
         case $r === 'tg/webhook': out(r_tg_webhook());
         case $r === 'admin/needs_setup': out(r_admin_needs_setup());

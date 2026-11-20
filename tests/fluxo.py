@@ -349,6 +349,16 @@ st, r = call("pub/lead", {"tipo": "avise", "nome": "M", "contato": "x"}); ok(st 
 ok(call("admin/leads", h=AD)[1]["leads"][0]["nome"] == "Maria", "contato aparece no painel")
 ok(call("admin/leads", h=DN)[0] == 403, "dono de quiosque não vê os contatos do portal")
 
+print("── simulador sem senha")
+st, r = call("pub/demo", {})
+ok(st == 200 and r.get("device_key") and r.get("codigo"), "simulador abre sem login de administrador", r)
+r2 = call("pub/demo_modo", {"torneira": 0})[1]
+ok(r2.get("tap_id") is None, "troca para cardápio com todas sem login", r2)
+r2 = call("pub/demo_modo", {"torneira": 1})[1]
+ok(r2.get("tap_id") == r["taps"][0], "volta para maquininha da torneira", r2)
+ok(not any(p["nome"].startswith("Demonstração") for p in call("pub/site")[1]["pontos"]), "demonstração continua fora do portal")
+call("admin/demo_clear", {}, AD)
+
 print("── segurança")
 for i in range(6): st, r = call("pos/identify", {"cpf": "123.456.789-00", "nascimento": "01/01/1990", "declara_maior": True}, T)
 ok(r.get("erro") == "terminal_bloqueado", "força bruta bloqueia a maquininha", r)

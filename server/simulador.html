@@ -55,7 +55,7 @@ const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;
 async function api(r, body, headers){
   const res = await fetch(API + '?r=' + r, {method: body ? 'POST' : 'GET', headers: {'Content-Type':'application/json', ...(headers || {'Authorization':'Bearer ' + JWT})}, body: body ? JSON.stringify(body) : undefined});
   const j = await res.json().catch(() => ({ok:false, mensagem:`Resposta inválida do servidor (HTTP ${res.status})`}));
-  if (res.status === 401 && j.erro === 'auth') { JWT = ''; localStorage.removeItem('be_jwt'); login(); throw j; }
+  if (res.status === 401 && j.erro === 'auth') { JWT = ''; localStorage.removeItem('be_jwt'); }
   if (!j.ok) throw j; return j;
 }
 const dev = (r, body) => api(r + '&key=' + encodeURIComponent(DEMO.device_key), body, {'X-Device-Key': DEMO.device_key});
@@ -75,7 +75,7 @@ async function doLogin(){ try { const j = await fetch(API+'?r=admin/login', {met
 async function start(){
   $('#root').innerHTML = `<header><h1>🧪 Simulador <b>Beer Express</b></h1>
      <span class="mut">Totem:</span><button class="btn" id="mTap" onclick="modo(true)">Maquininha da torneira (BeerPass)</button><button class="btn" id="mMenu" onclick="modo(false)">Cardápio com todas</button>
-     <a class="btn" href="painel.html" target="_blank">Abrir painel ↗</a><button class="btn" onclick="recarregar()">↻ Recomeçar totem</button><button class="btn dan" onclick="limpar()">Remover dados de demonstração</button></header>
+     <a class="btn" href="painel.html" target="_blank">Abrir painel ↗</a><button class="btn" onclick="recarregar()">↻ Recomeçar totem</button>${JWT ? '<button class="btn dan" onclick="limpar()">Remover dados de demonstração</button>' : ''}</header>
    <main><div class="phone"><div class="cap">Maquininha (simulada)</div><iframe id="pos" title="Maquininha"></iframe></div>
    <div class="side">
      <div class="card"><h2>🍺 Chopeira virtual <span class="mut" id="conn" style="font-size:13px;font-weight:600;margin-left:8px">⏳ conectando…</span></h2><p class="mut">Faz o papel do ESP32 na chopeira: recebe o copo pago, libera a torneira e mede os ml. Segure o botão para "puxar a alavanca".</p>
@@ -91,7 +91,7 @@ async function start(){
          <li>Teste também: cupom (crie em Chopeiras e barris → Cupons), happy hour (Configurações), cartão recusado, barril vazio, temperatura alta (alerta após 10 min com o cron ligado) e chopeira desligada (offline após 3 min).</li></ol></div>
      <div class="card"><h2>📜 O que a chopeira está fazendo</h2><div class="log" id="log"></div></div>
    </div></main>`;
-  try { DEMO = await api('admin/demo_seed', {}); } catch(e){ log('⚠️ Falha ao criar a demonstração: ' + (e.mensagem || 'erro')); return; }
+  try { DEMO = await api('pub/demo', {}, {}); } catch(e){ log('⚠️ Falha ao criar a demonstração: ' + (e.mensagem || 'erro')); return; }
   log('Ponto de demonstração pronto (Pilsen da Casa e IPA do Cerrado).');
   $('#mTap').classList.toggle('on', DEMO.tap_id !== null); $('#mMenu').classList.toggle('on', DEMO.tap_id === null);
   clearInterval(POLL); await poll(); POLL = setInterval(poll, 800);
@@ -104,7 +104,7 @@ async function recarregar(){
   $('#pos').src = 'pos.html?sim=' + Date.now();
 }
 async function modo(daTorneira){
-  await api('admin/save', {entity:'terminais', data:{id: DEMO.terminal_id, tap_id: daTorneira ? DEMO.taps[0] : ''}});
+  try { DEMO = await api('pub/demo_modo', {torneira: daTorneira ? 1 : 0}, {}); } catch(e){ return log('⚠️ ' + (e.mensagem || 'Não foi possível trocar o modo')); }
   DEMO.tap_id = daTorneira ? DEMO.taps[0] : null; $('#mTap').classList.toggle('on', daTorneira); $('#mMenu').classList.toggle('on', !daTorneira);
   log(daTorneira ? 'Totem preso à Torneira 1 (igual BeerPass).' : 'Totem mostrando o cardápio com todas as torneiras.'); recarregar();
 }
@@ -168,7 +168,7 @@ function puxar(canal, segurando){
 }
 function report(s, status, erro){ dev('dev/report', {id:s.id, status, servido_ml:s.servido || 0, pulsos:Math.round((s.servido || 0) * 1.925), erro}).catch(()=>{}); }
 
-JWT ? start() : login();
+start();   // simulador aberto: não precisa de senha (o painel continua com login)
 </script>
 </body>
 </html>

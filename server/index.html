@@ -68,6 +68,9 @@ nav.top .btn{min-height:46px;padding:0 20px;margin-left:10px;font-size:15px}
   nav.top a{font-size:24px;font-family:var(--fh)}
   nav.top .btn{margin:16px 0 0}
   .burger{display:grid;position:relative;z-index:60}
+  /* com o menu aberto o topo não pode ter desfoque: o filtro "prende" o menu dentro da barra e borra tudo */
+  header.mo{backdrop-filter:none!important;-webkit-backdrop-filter:none!important;background:var(--stout)!important}
+  nav.top{z-index:55;padding:90px 24px 40px;overflow-y:auto}
 }
 /* hero */
 .hero{min-height:100vh;min-height:100svh;padding:130px 0 90px;background:radial-gradient(90% 70% at 78% 30%,#4A2E0E 0%,transparent 60%),radial-gradient(60% 50% at 10% 100%,#2B1A0B 0%,transparent 70%),var(--stout);overflow:hidden;display:flex;align-items:center}
@@ -585,8 +588,10 @@ $('#ano').textContent=new Date().getFullYear();
 
 /* topo que encolhe + menu do celular */
 const hd=$('#hd');addEventListener('scroll',()=>hd.classList.toggle('sc',scrollY>30),{passive:true});
-$('#bg').onclick=()=>{const on=$('#nv').classList.toggle('on');$('#bg').setAttribute('aria-expanded',on);document.body.style.overflow=on?'hidden':''};
-document.querySelectorAll('#nv a').forEach(a=>a.addEventListener('click',()=>{$('#nv').classList.remove('on');document.body.style.overflow=''}));
+const IC_MENU=$('#bg').innerHTML, IC_X='<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+function menu(on){$('#nv').classList.toggle('on',on);hd.classList.toggle('mo',on);$('#bg').setAttribute('aria-expanded',on);$('#bg').setAttribute('aria-label',on?'Fechar menu':'Abrir menu');$('#bg').innerHTML=on?IC_X:IC_MENU;document.body.style.overflow=on?'hidden':''}
+$('#bg').onclick=()=>menu(!$('#nv').classList.contains('on'));
+document.querySelectorAll('#nv a, #nv button').forEach(a=>a.addEventListener('click',()=>menu(false)));
 
 /* bolhas do chopp */
 if(!RM){const bb=$('#bb');for(let i=0;i<26;i++){const e=document.createElement('i'),s=4+Math.random()*12;Object.assign(e.style,{left:Math.random()*100+'%',width:s+'px',height:s+'px',animationDuration:(7+Math.random()*9)+'s',animationDelay:(-Math.random()*14)+'s'});e.style.setProperty('--dx',(Math.random()*60-30)+'px');bb.appendChild(e)}}
@@ -613,7 +618,7 @@ function contato(t,m){TIPO=t;tipo(t);if(m)$('#fM').value=m;$('#fMsg').textConten
 function tipo(t){TIPO=t;document.querySelectorAll('#shSeg button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));const x=TXT[t];$('#shT').textContent=x[0];$('#shS').textContent=x[1];$('#fCiL').textContent=x[2];$('#fM').placeholder=x[3]}
 document.querySelectorAll('#shSeg button').forEach(b=>b.onclick=()=>tipo(b.dataset.t));
 function fechar(){$('#sbg').classList.remove('on');$('#sheet').classList.remove('on');document.body.style.overflow=''}
-addEventListener('keydown',e=>{if(e.key==='Escape'){fechar();$('#nv').classList.remove('on')}});
+addEventListener('keydown',e=>{if(e.key==='Escape'){fechar();menu(false)}});
 async function enviar(){const b=$('#fB'),m=$('#fMsg');b.disabled=true;b.textContent='Enviando…';m.style.color='';
   try{const r=await fetch('api.php?r=pub/lead',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tipo:TIPO,nome:$('#fN').value,contato:$('#fC').value,cidade:$('#fCi').value,mensagem:$('#fM').value,site:$('#fS').value})}).then(r=>r.json());
     if(!r.ok)throw r;m.style.color='#0B8A56';m.textContent='🍻 Recebido! Em breve falamos com você.';['#fN','#fC','#fCi','#fM'].forEach(s=>$(s).value='');setTimeout(fechar,2200)}
