@@ -68,30 +68,20 @@ DS18B20 → GPIO 4 · Porta → GPIO 5 · GPIO 34/35 precisam de pull-up externo
 
 ---
 
-## 3. Servidor (Hostinger)
+## 3. Servidor (Hostinger) e deploy automático
 
-1. hPanel → **Bancos de dados MySQL** → crie `u338897690_beerexpress` → phpMyAdmin → importe `server/install.sql`.
-2. Copie `server/config.example.php` para `config.php` **direto no servidor** (Gerenciador de Arquivos) e edite: usuário/senha do banco, `BE_JWT_SECRET` e `BE_CRON_KEY` (gere com `php -r "echo bin2hex(random_bytes(32));"`), `BE_BASE_URL`.
-3. Suba a pasta `server/` como `public_html/beerexpress/` (ou no domínio que preferir).
-4. Abra `https://SEU_DOMINIO/beerexpress/painel.html` → **crie o administrador** (só aparece na primeira vez).
-5. hPanel → **Cron Jobs** → a cada minuto:
-   `/usr/bin/php /home/u338897690/domains/SEU_DOMINIO/public_html/beerexpress/cron_tick.php`
+Tudo sobe sozinho pelo GitHub (SSH + rsync, mesmo padrão do WashEasy e do Portaria Express): **push na `main` → portão (segredos, sintaxe, testes de ponta a ponta) → deploy → health**. O deploy cria as tabelas do banco e aplica `server/migrations/` sozinho — não precisa de phpMyAdmin.
 
-## 3.1 Deploy automático (GitHub → Hostinger)
+Configuração única (banco, chave SSH, segredos, cron, administrador): **[docs/CONFIGURAR.md](docs/CONFIGURAR.md)**.
 
-Todo `git push` na `main` que altera `server/` publica sozinho na Hostinger (GitHub Actions → FTP). Só os arquivos alterados sobem; `config.php` e `install.sql` nunca são enviados nem sobrescritos.
+| Workflow (aba Actions) | O que faz |
+|---|---|
+| `gate` | Em todo push/PR: procura segredo no código, checa sintaxe PHP/JS e roda o fluxo completo (painel → maquininha → pagamento → ESP32) num MySQL de teste |
+| `deploy` | Push em `server/` (ou manual, com opção "só simular"): backup do que está no ar → envio → `.env` → banco → health |
+| `conferir` | Diagnóstico de 1 clique: SSH, pasta, rsync, PHP, banco, e se os arquivos sensíveis estão bloqueados na web |
+| `monitor` | A cada 15 min: site, banco e cron. Caiu → e-mail do GitHub (+ WhatsApp com `ALERT_*`) |
 
-**Configuração única** — GitHub → repositório → *Settings → Secrets and variables → Actions*:
-
-| Tipo | Nome | Valor |
-|---|---|---|
-| Secret | `FTP_SERVER` | IP do FTP sem `ftp://`, ex.: `147.93.38.110` |
-| Secret | `FTP_USERNAME` | Usuário FTP, ex.: `u338897690` |
-| Secret | `FTP_PASSWORD` | Senha FTP |
-| Secret | `FTP_SERVER_DIR` | `public_html/beerexpress/` (termina com /) |
-| Variable | `BE_URL` | `https://lavafacilexpress.com/beerexpress` (o deploy confere se a API respondeu) |
-
-Depois: aba **Actions → Deploy Hostinger → Run workflow** para o primeiro envio. Acompanhe o resultado ali mesmo (✅/❌).
+No seu PC: `make gate` (mesmo portão), `make deploy-simular`, `make local`.
 
 ## 4. Telegram
 

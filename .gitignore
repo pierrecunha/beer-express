@@ -1,5 +1,3 @@
-# Segredos — ficam só no servidor
-server/config.php
 android/*.jks
 android/local.properties
 android/app/libs/*.aar
@@ -11,3 +9,13 @@ android/app/build/
 *.iml
 .DS_Store
 firmware/**/build/
+server/.env
+server/.env.*
+server/.be_versao
+*.pem
+*.key
+segredos/
+tests/.run/
+__pycache__/
+error_log
+*.log

@@ -343,8 +343,19 @@ function pedido_marcar_pago(array $o, array $pg): void {
 function pedido_recalcular(int $orderId): void {
     $o = row('SELECT * FROM be_orders WHERE id = ?', [$orderId]);
     if (!$o || in_array($o['status'], ['aguardando_pagamento', 'cancelado', 'estornado'], true)) return;
-    $ds = rows('SELECT status, servido_ml, volume_ml FROM be_dispenses WHERE order_id = ?', [$orderId]);
-    if (!$ds) return;
+    $todos = rows('SELECT id, seq, status, servido_ml, volume_ml FROM be_dispenses WHERE order_id = ? ORDER BY id', [$orderId]);
+    if (!$todos) return;
+    // Um copo pode ter sido reliberado (nova linha com o volume que faltou): soma tudo do mesmo copo (seq)
+    $porSeq = [];
+    foreach ($todos as $d) {
+        $s = &$porSeq[$d['seq']];
+        $s['volume_ml'] = $s['volume_ml'] ?? (int)$d['volume_ml'];          // volume original = 1ª linha
+        $s['servido_ml'] = ($s['servido_ml'] ?? 0) + (int)$d['servido_ml'];
+        if ($d['status'] !== 'cancelado') $s['status'] = $d['status'];        // status da tentativa ativa
+        else $s['status'] = $s['status'] ?? 'cancelado';
+        unset($s);
+    }
+    $ds = array_values($porSeq);
     $abertos = array_filter($ds, fn($d) => in_array($d['status'], ['pendente', 'armado', 'liberado', 'servindo'], true));
     if ($abertos) {
         $novo = array_filter($ds, fn($d) => $d['status'] !== 'pendente') ? 'servindo' : 'pago';
@@ -1029,7 +1040,71 @@ function r_admin_telemetry(): array {
 
 /* ============================== ROTEADOR ============================== */
 
+/* ============================== SAÚDE / MIGRAÇÕES ============================== */
+
+/** Situação do sistema (deploy, monitor do GitHub e "conferir"). */
+function be_health(): array {
+    $h = ['ok' => false, 'status' => 'ERRO', 'versao' => BE_VERSION, 'db' => false, 'cron_min' => null, 'deploy' => trim((string)@file_get_contents(__DIR__ . '/.be_versao'))];
+    try {
+        $h['db'] = (int)val('SELECT 1') === 1;
+        $h['instalado'] = (bool)val("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'be_settings'");
+        if ($h['instalado']) {
+            $c = val("SELECT v FROM be_settings WHERE k = 'cron_ultimo'");
+            $h['cron_min'] = $c ? (int)floor((time() - (int)$c) / 60) : null;
+            $h['devices_online'] = (int)val('SELECT COUNT(*) FROM be_devices WHERE ativo = 1 AND online = 1');
+            $h['terminais_online'] = (int)val('SELECT COUNT(*) FROM be_terminals WHERE ativo = 1 AND online = 1');
+        }
+        $h['ok'] = $h['db'] && $h['instalado'];
+        $h['status'] = $h['ok'] ? 'OK' : 'SEM_TABELAS';
+    } catch (Throwable $e) {
+        $h['erro'] = 'banco: ' . preg_replace('/\s+/', ' ', substr($e->getMessage(), 0, 160));
+    }
+    return $h;
+}
+
+/** Cria as tabelas na 1ª vez (install.sql) e aplica migrations/*.sql pendentes, em ordem. */
+function be_migrate(): array {
+    $exec = function (string $sql) {
+        $sql = preg_replace('/^\s*--.*$/m', '', $sql);
+        foreach (preg_split('/;\s*(\r?\n|$)/', $sql) as $st) if (trim($st) !== '') db()->exec($st);
+    };
+    $feito = [];
+    db()->exec('CREATE TABLE IF NOT EXISTS be_migrations (nome VARCHAR(120) PRIMARY KEY, aplicado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+    if (!val("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'be_settings'")) {
+        $exec((string)file_get_contents(__DIR__ . '/install.sql'));
+        $feito[] = 'install.sql';
+    } else {
+        $exec((string)file_get_contents(__DIR__ . '/install.sql'));   // idempotente: só acrescenta configurações novas (INSERT IGNORE)
+    }
+    $ja = array_flip(array_column(rows('SELECT nome FROM be_migrations'), 'nome'));
+    $lista = glob(__DIR__ . '/migrations/*.sql') ?: [];
+    sort($lista);
+    foreach ($lista as $f) {
+        $n = basename($f);
+        if (isset($ja[$n])) continue;
+        $exec((string)file_get_contents($f));
+        q('INSERT INTO be_migrations (nome) VALUES (?)', [$n]);
+        $feito[] = $n;
+    }
+    return $feito;
+}
+
 if (defined('BE_LIB_ONLY')) return;
+
+/* Linha de comando: php api.php health | migrate */
+if (PHP_SAPI === 'cli') {
+    $cmd = $argv[1] ?? '';
+    if ($cmd === 'migrate') {
+        try { $f = be_migrate(); echo $f ? 'aplicado: ' . implode(', ', $f) . "\n" : "banco em dia\n"; exit(0); }
+        catch (Throwable $e) { fwrite(STDERR, 'ERRO migrate: ' . $e->getMessage() . "\n"); exit(1); }
+    }
+    if ($cmd === 'health') {
+        $h = be_health();
+        echo json_encode($h, JSON_UNESCAPED_UNICODE) . "\n";
+        exit($h['ok'] ? 0 : 1);
+    }
+    fwrite(STDERR, "uso: php api.php health|migrate\n"); exit(2);
+}
 
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Terminal-Token, X-Device-Key');
@@ -1039,6 +1114,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'OPTIONS') exit;
 try {
     $r = trim((string)($_GET['r'] ?? ''), '/');
     switch (true) {
+        case $r === 'health': $h = be_health(); if (!isset($_GET['full'])) $h = ['ok' => $h['ok'], 'status' => $h['status']]; out($h, $h['ok'] ? 200 : 503);
         case $r === 'pos/pair': out(r_pos_pair());
         case str_starts_with($r, 'pos/'):
             $t = auth_terminal();

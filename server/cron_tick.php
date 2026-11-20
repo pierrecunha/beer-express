@@ -13,6 +13,7 @@ if (PHP_SAPI !== 'cli' && ($_GET['key'] ?? '') !== BE_CRON_KEY) { http_response_
 $lock = fopen(sys_get_temp_dir() . '/beerexpress_cron.lock', 'c');
 if (!flock($lock, LOCK_EX | LOCK_NB)) exit("já rodando\n");
 
+setting_set('cron_ultimo', (string)time());   // sinal de vida para o monitor do GitHub
 $off = (int)setting('offline_minutos', 3);
 $log = [];
 

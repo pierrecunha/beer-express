@@ -1,0 +1,70 @@
+# Vigia a produção a cada 15 min: site, banco e cron (cron_tick.php) rodando. Falhou → o GitHub manda e-mail.
+# Com os segredos ALERT_* (os mesmos do WashEasy), manda WhatsApp também (no máximo um por hora).
+name: monitor
+
+on:
+  schedule:
+    - cron: "7,22,37,52 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  vigiar:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: conferir produção
+        id: c
+        env:
+          BE_URL: ${{ secrets.BE_URL || vars.BE_URL }}
+        run: |
+          [ -n "$BE_URL" ] || { echo "BE_URL ainda não definido — nada a vigiar"; echo "ok=1" >> "$GITHUB_OUTPUT"; exit 0; }
+          ok=1; msg=""
+          for i in 1 2 3; do
+            body=$(curl -s -m 15 -w '|%{http_code}' "$BE_URL/api.php?r=health&full" || echo '|000'); code=${body##*|}; json=${body%|*}
+            [ "$code" = 200 ] && break; sleep 20
+          done
+          if [ "$code" != 200 ]; then ok=0; msg="Beer Express fora do ar ou banco sem responder (HTTP $code) — maquininhas sem vender"
+          else
+            w=$(python3 -c 'import json,sys; d=json.loads(sys.argv[1]); print(-1 if d.get("cron_min") is None else d["cron_min"])' "$json")
+            if [ "$w" = "-1" ]; then ok=0; msg="O cron da Hostinger nunca rodou (php cron_tick.php)"
+            elif [ "$w" -gt 10 ]; then ok=0; msg="O cron da Hostinger parou há $w min (alertas de offline, temperatura e copos travados parados)"; fi
+            echo "$json"
+          fi
+          echo "ok=$ok" >> "$GITHUB_OUTPUT"; echo "msg=$msg" >> "$GITHUB_OUTPUT"
+          [ "$ok" = 1 ] && echo "tudo certo" || echo "::error::$msg"
+      - name: hora do aviso
+        if: steps.c.outputs.ok == '0'
+        id: h
+        run: echo "h=$(date -u +%Y%m%d%H)" >> "$GITHUB_OUTPUT"
+      - name: já avisou nesta hora?
+        if: steps.c.outputs.ok == '0'
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: .avisado
+          key: aviso-${{ steps.h.outputs.h }}
+      - name: WhatsApp
+        if: steps.c.outputs.ok == '0' && steps.cache.outputs.cache-hit != 'true'
+        env:
+          EVO: ${{ secrets.ALERT_EVO_URL }}
+          TOKEN: ${{ secrets.ALERT_EVO_TOKEN }}
+          INST: ${{ secrets.ALERT_EVO_INSTANCE }}
+          PHONE: ${{ secrets.ALERT_PHONE }}
+          MSG: ${{ steps.c.outputs.msg }}
+        run: |
+          mkdir -p .avisado && date > .avisado/quando
+          if [ -z "$EVO" ] || [ -z "$TOKEN" ] || [ -z "$INST" ] || [ -z "$PHONE" ]; then echo "sem ALERT_* — só o e-mail do GitHub"; exit 0; fi
+          python3 - <<'PY'
+          import json, os, urllib.request
+          body = json.dumps({"number": os.environ["PHONE"], "text": "🚨 *Beer Express — monitor*\n\n" + os.environ["MSG"] + "\n\nConfira em github.com → Actions → monitor."}).encode()
+          req = urllib.request.Request(os.environ["EVO"].rstrip("/") + "/message/sendText/" + os.environ["INST"], data=body, method="POST",
+                                       headers={"Content-Type": "application/json", "apikey": os.environ["TOKEN"]})
+          try: print("WhatsApp:", urllib.request.urlopen(req, timeout=15).status)
+          except Exception as e: print("WhatsApp falhou:", e)
+          PY
+      - name: falhar para o GitHub avisar por e-mail
+        if: steps.c.outputs.ok == '0'
+        run: exit 1

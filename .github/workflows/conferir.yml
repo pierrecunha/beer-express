@@ -1,0 +1,25 @@
+# Diagnóstico de 1 clique (Actions → conferir → Run workflow). Não muda nada; nunca imprime segredo.
+name: conferir
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  conferir:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: conferir
+        env:
+          HOSTINGER_SSH_KEY: ${{ secrets.HOSTINGER_SSH_KEY }}
+          HOSTINGER_SSH: ${{ secrets.HOSTINGER_SSH || vars.HOSTINGER_SSH }}
+          HOSTINGER_PORT: ${{ secrets.HOSTINGER_PORT || vars.HOSTINGER_PORT }}
+          HOSTINGER_PATH: ${{ secrets.HOSTINGER_PATH || vars.HOSTINGER_PATH }}
+          BE_URL: ${{ secrets.BE_URL || vars.BE_URL }}
+        run: scripts/conferir-configuracao.sh

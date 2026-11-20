@@ -1,0 +1,51 @@
+# Portão: segredos + sintaxe + testes de ponta a ponta em todo push e PR. O deploy chama este mesmo portão.
+name: gate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gate-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    services:
+      mysql:
+        image: mariadb:10.11
+        env:
+          MARIADB_ROOT_PASSWORD: root
+        ports: ["3306:3306"]
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          extensions: pdo_mysql, curl, mbstring
+          coverage: none
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: segredos
+        run: python3 scripts/verificar-segredos.py
+      - name: sintaxe (PHP e scripts do HTML)
+        run: scripts/lint.sh
+      - name: testes (painel → maquininha → pagamento → ESP32 simulado)
+        env:
+          TZ: America/Sao_Paulo
+          MYSQL_ADMIN: mysql -uroot -proot -h127.0.0.1 -P3306
+        run: tests/run.sh
