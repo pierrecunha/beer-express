@@ -115,6 +115,7 @@ async function dash(){
    <div class="card kpi"><small>Saldo nas carteiras</small><b>${brl(d.pass.saldo_carteiras)}</b><span>crédito já recebido, ainda não consumido</span></div>
    <div class="card kpi"><small>Servindo agora</small><b>${d.pass.abertas.length}</b><span>${d.pass.abertas.map(a=>`${esc(a.cliente)} ${a.servido_ml} ml (${esc(a.torneira)})`).join(' • ')||'nenhuma torneira aberta'}</span></div>
   </div>`:''}
+  ${funilHtml(d)}
   <div class="grid g3 sec">
    <div class="card" style="grid-column:span 2"><h2>Faturamento — últimos 30 dias</h2><div class="chart">${dias.map(x=>`<div style="height:${Math.max(1,100*x.s/maxD)}%" data-t="${x.d.slice(8)}/${x.d.slice(5,7)}: ${brl(x.s)} (${x.n})"></div>`).join('')}</div></div>
    <div class="card"><h2>Horários de pico (30 dias)</h2><div class="chart" style="height:150px">${Array.from({length:24},(_,h)=>{const n=+(d.horas.find(x=>+x.h===h)?.n||0);return `<div style="height:${Math.max(1,100*n/maxH)}%;background:#6b5420" data-t="${h}h: ${n}"></div>`}).join('')}</div><p class="mut" style="font-size:11px;display:flex;justify-content:space-between"><span>0h</span><span>12h</span><span>23h</span></p></div>
@@ -128,6 +129,18 @@ async function dash(){
      ${d.problemas.length?`<h2 style="margin-top:14px">Pedidos com problema (7 dias)</h2>${d.problemas.map(o=>`<div class="ev" style="cursor:pointer" onclick="pedido(${o.id})">${pill(o.status)} ${o.ref} — ${brl(o.total)}<small>${dt(o.created_at)}</small></div>`).join('')}`:''}</div>
   </div>`;
   TIMER=setInterval(()=>PAGE==='dash'&&!$('#modal').classList.contains('on')&&dash(),20000)}
+
+/* Funil de vendas (7 dias) + satisfação (30 dias) */
+function funilHtml(d){const f=d.funil||{},et=[['inicio','Tocaram na tela'],['termos','Aceitaram os termos'],['tamanho','Escolheram o tamanho'],['quantidade','Foram ao resumo'],['pagamento','Escolheram o pagamento'],['pago','Pagaram'],['servido','Serviram']];
+  const base=f.inicio||0,n=d.nps||{},media=+n.media||0;
+  const hh=d.happy_hour&&d.happy_hour.ativo?`<span class="pill" style="background:#ff3d6e;color:#fff">🎉 ${esc(d.happy_hour.nome)} ativo agora (−${Math.round(d.happy_hour.pct)}%)</span>`:'';
+  const pior=et.slice(1).map(([k,l],i)=>({l,perda:(f[et[i][0]]||0)-(f[k]||0)})).sort((a,b)=>b.perda-a.perda)[0];
+  return `<div class="grid g3 sec"><div class="card" style="grid-column:span 2"><h2>Funil de vendas — últimos 7 dias ${hh}</h2>
+   ${base?et.map(([k,l])=>{const v=f[k]||0,p=Math.round(100*v/base);return `<div style="display:grid;grid-template-columns:180px 1fr 90px;gap:10px;align-items:center;margin:6px 0"><span>${l}</span><div class="bar" style="height:14px"><i style="width:${p}%;background:var(--amber)"></i></div><span class="r">${v} <span class="mut">(${p}%)</span></span></div>`}).join('')
+     +(pior&&pior.perda>0?`<p class="mut" style="margin-top:8px">💡 Maior perda: <b style="color:var(--txt)">${pior.l.toLowerCase()}</b> (${pior.perda} clientes desistiram nessa etapa).</p>`:'')
+     :'<p class="mut">Ainda sem dados. O funil começa a contar quando os clientes usarem a maquininha.</p>'}</div>
+   <div class="card"><h2>Satisfação — 30 dias</h2>${+n.n?`<div class="kpi"><b>${media.toFixed(1).replace('.',',')} <span style="font-size:15px" class="mut">/ 5</span></b><span>${n.n} avaliações • ${Math.round(100*(+n.bons)/(+n.n))}% satisfeitos • ${n.ruins} ruins</span></div>
+     ${(d.nps_motivos||[]).length?`<h2 style="margin-top:14px">Motivos de reclamação</h2>${d.nps_motivos.map(m=>`<div class="ev">${esc(m.motivo)} <b style="float:right">${m.n}</b></div>`).join('')}`:''}`:'<p class="mut">Nenhuma avaliação ainda.</p>'}</div></div>`}
 
 /* ============ vendas ============ */
 let VF={de:new Date(Date.now()-6*864e5).toISOString().slice(0,10),ate:new Date().toISOString().slice(0,10),status:'',q:'',page:1};
@@ -272,7 +285,13 @@ async function config(){const d=await api('admin/settings');SET=d.settings;const
    ${F('recarga_bonus','Bônus (valor:bônus, ex.: 100:5,150:10)')}${F('pass_ml_minimo','Saldo mínimo para abrir (em ml)','number')}${F('pass_fim_inatividade_s','Fecha a torneira após (s) sem fluxo','number')}
    ${F('tv_ranking','Ranking de consumo na TV (Nome S.)','sel',[['0','Não'],['1','Sim']])}</div>${F('tv_mensagem','Mensagem da TV (BeerList)','area')}
    <p class="mut" style="margin-top:8px">O preço por litro é definido em cada torneira (Chopeiras e barris → ✏️).</p></div>
-  <div class="card"><h2>🍻 Consumo responsável</h2><div class="grid g2">${F('limite_ml_dia_cpf','Limite por CPF por dia (ml, 0 = sem limite)','number')}${F('limite_copos_pedido','Máximo de copos por pedido','number')}</div></div>
+  <div class="card"><h2>🎉 Happy Hour automático</h2><div class="grid g2">${F('happy_hour_ativo','Ativo','sel',yn)}${F('happy_hour_nome','Nome da promoção')}
+   ${F('happy_hour_inicio','Início','time')}${F('happy_hour_fim','Fim','time')}${F('happy_hour_pct','Desconto (%)','number')}${F('happy_hour_dias','Dias (1=seg … 7=dom)')}</div>
+   <p class="mut" style="margin-top:8px">No horário, todos os preços caem sozinhos e a maquininha e a TV mostram o preço cheio riscado e a faixa da promoção.</p></div>
+  <div class="card"><h2>🛒 Experiência de compra</h2><div class="grid g2">${F('avaliacao_ativa','Pedir avaliação após servir','sel',yn)}${F('inatividade_s','"Ainda está aí?" após (s) parado','number')}
+   ${F('prova_social_min','Mostrar "X copos hoje" a partir de','number')}${F('limite_copos_pedido','Máximo de copos por compra','number')}</div>
+   <p class="mut" style="margin-top:8px">O selo "🔥 Mais pedido" e o "Economize X%" nos tamanhos maiores são calculados sozinhos pelas vendas dos últimos 30 dias.</p></div>
+  <div class="card"><h2>🍻 Consumo responsável</h2><div class="grid g2">${F('limite_ml_dia_cpf','Limite por CPF por dia (ml, 0 = sem limite)','number')}</div></div>
   <div class="card"><h2>💳 Mercado Pago (Pix e conferência de cartão)</h2>${F('mp_access_token','Access Token de produção','password')}<div class="grid g2">${F('pix_modo','Pix','sel',[['maquininha','Na própria maquininha (PagBank)'],['api_mp','QR gerado pelo servidor (Mercado Pago)']])}${F('pix_expira_min','Validade do Pix (min)','number')}${F('mp_verificar_cartao','Conferir cartão na API do MP','sel',yn)}</div>${F('pix_email_padrao','E-mail do pagador padrão (Pix)')}
    <p class="mut" style="margin-top:10px">Webhook (Mercado Pago → Suas integrações → Webhooks → evento Pagamentos):<br><code>${esc(d.webhooks.mercadopago)}</code></p></div>
   <div class="card"><h2>📲 Telegram</h2>${F('telegram_token','Token do bot (@BotFather)','password')}${F('telegram_chat_ids','Chat IDs (separados por vírgula)')}

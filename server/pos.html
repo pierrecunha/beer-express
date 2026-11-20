@@ -78,7 +78,8 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
 .thInfo .l b{display:block;color:#fff;font-size:16px;margin-bottom:6px}
 .thInfo .r{padding:10px;text-align:center;display:flex;flex-direction:column;justify-content:center;gap:4px}
 .thInfo .r .lbl{font-size:18px;font-weight:900;color:#fff}.thInfo .r small{color:var(--mut);font-size:12px}
-.thInfo .r .pv{background:var(--amber);color:#1A1206;font-weight:900;border-radius:10px;padding:6px 4px;font-size:26px}
+.thInfo .r .pv{background:var(--amber);color:#1A1206;font-weight:900;border-radius:10px;padding:6px 4px;font-size:26px;line-height:1.1}
+.thInfo .r .pv .old{display:block;font-size:12px;margin:0}
 .thOff{position:absolute;inset:12px;background:#000c;border-radius:18px;display:none;align-items:center;justify-content:center;text-align:center;padding:30px;font-size:18px;font-weight:800}
 #age{background:var(--amber);color:#1A1206}
 #age .warn{font-size:30px;font-weight:900;display:flex;gap:10px;align-items:center;justify-content:center;margin-top:16px}
@@ -100,6 +101,29 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
 .cupom button{color:var(--amber);font-weight:800;padding:8px}
 .lin{display:flex;justify-content:space-between;font-size:15px;padding:4px 0;color:var(--mut)}.lin.tt{color:var(--txt);font-size:24px;font-weight:900;border-top:1px solid var(--line);margin-top:6px;padding-top:10px}
 .lin .dsc{color:var(--ok)}
+/* barra de passos */
+#prog{position:absolute;top:0;left:0;right:0;z-index:4;display:none;gap:4px;padding:8px 18px 0}
+#prog.on{display:flex}
+#prog i{flex:1;height:4px;border-radius:9px;background:var(--line);transition:background .3s}
+#prog i.d{background:var(--amber)}
+.scr.hasprog{padding-top:24px}
+/* happy hour + prova social */
+.hh{background:linear-gradient(90deg,#ff3d6e,#ff8a00);color:#fff;font-weight:900;text-align:center;padding:7px;font-size:14px;letter-spacing:.02em}
+.hh small{font-weight:700;opacity:.9}
+.social{position:absolute;left:10px;top:10px;background:#000b;color:#fff;font-size:13px;font-weight:800;padding:6px 10px;border-radius:99px}
+.thImg{position:relative}
+.old{text-decoration:line-through;opacity:.6;font-size:.62em;font-weight:700;margin-right:4px}
+.tag{display:inline-block;font-size:11px;font-weight:900;border-radius:99px;padding:3px 8px;margin-top:4px;letter-spacing:.02em;line-height:1.2;white-space:nowrap}
+.tag.top{background:#ff5a1f;color:#fff}.tag.eco{background:#3ddc8422;color:var(--ok)}.tag.fast{background:#3ddc84;color:#062b16;margin-left:auto}
+.opt .info{display:flex;flex-direction:column;align-items:flex-start}
+/* avaliação */
+.rate{display:flex;justify-content:center;gap:12px;margin:14px 0 6px}
+.rate button{font-size:40px;width:64px;height:64px;border-radius:50%;background:var(--card);border:2px solid var(--line);transition:transform .15s}
+.rate button.sel{border-color:var(--amber);transform:scale(1.12)}
+.chips2{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:8px}
+.chips2 button{background:var(--card);border:1px solid var(--line);border-radius:99px;padding:8px 14px;font-size:14px}
+.tilt{font-size:56px;display:inline-block;animation:tilt 1.6s ease-in-out infinite}
+@keyframes tilt{0%,100%{transform:rotate(-35deg)}50%{transform:rotate(0)}}
 .wallet{display:flex;gap:8px;align-items:center;margin:-4px 0 12px}
 .wallet .sal{flex:1;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:8px 12px;font-size:12px;color:var(--mut)}
 .wallet .sal{min-width:0;white-space:nowrap}.wallet .sal b{display:block;font-size:19px;color:var(--txt);white-space:nowrap}
@@ -162,6 +186,7 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
 </style>
 </head>
 <body>
+<div id="prog"><i></i><i></i><i></i><i></i></div>
 <div class="offbar" id="offbar">Sem conexão com o servidor — tentando novamente…</div>
 
 <!-- PAREAMENTO -->
@@ -183,6 +208,7 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
     <div class="brand" id="brandName">Beer <b>Express</b></div>
     <div class="slog" id="brandSlogan">Chopp gelado, do seu jeito</div>
     <div class="chips" id="idleChips"></div>
+    <div class="hh" id="idleHH" style="display:none;border-radius:14px;margin-top:16px"></div>
   </div>
   <div>
     <button class="btn pri cta">Toque para começar</button>
@@ -194,8 +220,9 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
 <section class="scr tapHome" id="tapHome" onclick="start()">
   <div class="th">
     <div class="thHead"><div class="num" id="thNum">01</div><div><h1 id="thNome">CHOPP</h1><small id="thCerv"></small></div></div>
+    <div class="hh" id="thHH" style="display:none"></div>
     <div class="thBuy">👆 Toque na imagem para comprar</div>
-    <div class="thImg" id="thImg"></div>
+    <div class="thImg"><div id="thImg" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center"></div><div class="social" id="thSocial" style="display:none"></div></div>
     <div class="thInfo">
       <div class="l" id="thInfoL"></div>
       <div class="r"><div class="lbl">VALOR</div><small>100 ml</small><div class="pv" id="thPv">—</div><small id="thMarca" style="margin-top:2px"></small></div>
@@ -261,7 +288,7 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
 <section class="scr" id="tamanho">
   <div class="top"><button class="back" onclick="voltarTamanho()">‹</button><h2 id="tmTit">Comprar</h2></div>
   <div class="opts grow" id="tmOpts"></div>
-  <button class="btn pri" id="tmOk" onclick="go('qtd');renderQtd()">✓ CONFIRMAR</button>
+  <button class="btn pri" id="tmOk" onclick="track('quantidade');go('qtd');renderQtd()">✓ CONFIRMAR</button>
 </section>
 
 <!-- QUANTIDADE + CUPOM + RESUMO -->
@@ -272,6 +299,7 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
   <div class="box" id="cupBox"><div class="cupom"><span style="font-size:22px">🏷️</span><div class="t"><b id="cupT">Cupom</b><small id="cupS">Digite um código</small></div><button id="cupBtn" onclick="abrirCupom()">ADICIONAR</button></div></div>
   <div class="box"><h4>Resumo de valores</h4>
     <div class="lin"><span>Subtotal</span><span id="rSub"></span></div>
+    <div class="lin" id="rHHl" style="display:none"><span id="rHHn">Happy Hour</span><span class="dsc" id="rHH"></span></div>
     <div class="lin"><span>Cupom</span><span class="dsc" id="rDesc">R$ 0,00</span></div>
     <div class="lin tt"><span>Total</span><span id="rTot"></span></div></div>
   <div class="grow"></div>
@@ -370,11 +398,18 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
 <!-- FIM -->
 <section class="scr" id="fim">
   <div class="grow c" style="display:flex;flex-direction:column;justify-content:center">
-    <div class="okic">✓</div>
+    <div class="okic" style="margin:6px auto 10px">✓</div>
     <h2 style="font-size:28px">Saúde! 🍻</h2>
-    <p class="mut" id="fimMsg" style="margin-top:10px;font-size:16px;line-height:1.4"></p>
+    <p class="mut" id="fimMsg" style="margin-top:6px;font-size:15px;line-height:1.4"></p>
+    <div id="rateBox">
+      <p style="margin-top:18px;font-weight:800">Como foi o seu chopp?</p>
+      <div class="rate" id="rate"><button data-n="1">😞</button><button data-n="3">😐</button><button data-n="4">🙂</button><button data-n="5">😍</button></div>
+      <div class="chips2" id="rateWhy" style="display:none"><button>Espuma</button><button>Temperatura</button><button>Demorou</button><button>Volume</button><button>Preço</button></div>
+      <p class="mut" id="rateOk" style="display:none;margin-top:8px">Obrigado pela avaliação! 💛</p>
+    </div>
   </div>
-  <button class="btn sec" onclick="toIdle()">Concluir</button>
+  <button class="btn pri" id="maisUm" onclick="maisUm()">🍺 Pedir mais um</button>
+  <button class="btn sec" style="margin-top:8px" onclick="toIdle()">Concluir</button>
 </section>
 
 
@@ -404,7 +439,15 @@ async function api(r, body, method){
   if (!j.ok && !j.need_name) throw j;
   return j;
 }
-function go(id){ document.querySelectorAll('.scr').forEach(s => s.classList.toggle('on', s.id === id)); S.screen = id; armIdle(); }
+const PASSO = {cpf:1, nasc:1, nome:1, tamanho:2, qtd:3, cupomScr:3, pagamento:4, pix:4};
+function go(id){ document.querySelectorAll('.scr').forEach(s => s.classList.toggle('on', s.id === id)); S.screen = id; armIdle();
+  const n = PASSO[id] || 0, pr = $('prog'); pr.classList.toggle('on', n > 0); [...pr.children].forEach((b,i)=>b.classList.toggle('d', i < n));
+  const el = $(id); if (el) el.classList.toggle('hasprog', n > 0); }
+/* Funil de vendas (abandono por etapa no painel) */
+function track(etapa){ if (S.sessao) api('pos/track', {sessao:S.sessao, etapa}).catch(()=>{}); }
+function novaSessao(){ S.sessao = [...crypto.getRandomValues(new Uint8Array(8))].map(b=>b.toString(16).padStart(2,'0')).join(''); }
+/* Toque com resposta tátil (Android) */
+document.addEventListener('click', e => { if (e.target.closest('button, .tapHome, #idle') && navigator.vibrate) navigator.vibrate(12); }, true);
 function toast(msg){ const t=$('toast'); t.textContent=msg; t.style.display='block'; clearTimeout(t._t); t._t=setTimeout(()=>t.style.display='none', 3800); }
 function modal(ic, t, p, btns){ $('mIc').innerHTML=ic; $('mT').textContent=t; $('mP').textContent=p||''; const b=$('mB'); b.innerHTML='';
   (btns||[]).forEach(([txt, fn, cls]) => { const e=document.createElement('button'); e.className='btn '+(cls||'pri'); e.style.marginTop='8px'; e.textContent=txt; e.onclick=()=>{ $('modal').classList.remove('on'); fn&&fn(); }; b.appendChild(e); });
@@ -413,8 +456,11 @@ function loading(t){ modal('<div class="spin"></div>', t||'Aguarde…', ''); }
 function unload(){ $('modal').classList.remove('on'); }
 
 /* Volta ao descanso após inatividade (nunca durante pagamento/serviço) */
-function armIdle(){ clearTimeout(S.idleT); if (['idle','tapHome','pair','pix','serve'].includes(S.screen)) return;
-  S.idleT = setTimeout(() => { if (S.screen==='fim' || !S.order || S.order.status==='cancelado') toIdle(); }, S.screen==='fim' ? 12000 : 60000); }
+function armIdle(){ clearTimeout(S.idleT); clearInterval(S.awayT); if (['idle','tapHome','pair','pix','serve'].includes(S.screen)) return;
+  if (S.screen === 'fim') { S.idleT = setTimeout(toIdle, 25000); return; }
+  S.idleT = setTimeout(aindaAi, (S.cfg?.inatividade_s || 45) * 1000); }
+function aindaAi(){ let n = 15; modal('⏳', 'Ainda está aí?', `Voltando ao início em ${n} s…`, [['Sim, continuar', armIdle], ['Recomeçar', toIdle, 'sec']]);
+  S.awayT = setInterval(() => { n--; $('mP').textContent = `Voltando ao início em ${n} s…`; if (n <= 0) { clearInterval(S.awayT); toIdle(); } }, 1000); }
 document.addEventListener('touchstart', armIdle, {passive:true}); document.addEventListener('mousedown', armIdle);
 
 /* ================= Inicialização ================= */
@@ -428,13 +474,18 @@ async function boot(){
 }
 function applyBrand(){ const n=S.cfg.marca.nome.split(' '); $('brandName').innerHTML = n[0] + (n.length>1 ? ' <b>'+n.slice(1).join(' ')+'</b>' : '');
   $('brandSlogan').textContent = S.cfg.marca.slogan || ''; document.documentElement.style.setProperty('--amber', S.cfg.marca.cor || '#F5B301'); document.title = S.cfg.marca.nome; }
-async function loadMenu(){ S.taps = (await api('pos/menu')).torneiras; renderIdleChips(); renderTapHome(); }
+async function loadMenu(){ const m = await api('pos/menu'); S.taps = m.torneiras; S.hh = m.happy_hour || {ativo:false}; renderIdleChips(); renderTapHome(); renderHH(); }
+function hhTexto(){ return `🎉 ${esc(S.hh.nome || 'Happy Hour')} −${Math.round(S.hh.pct)}% <small>até ${esc(S.hh.ate)}</small>`; }
+function renderHH(){ const on = S.hh && S.hh.ativo; $('idleHH').style.display = on ? 'block' : 'none'; if (on) $('idleHH').innerHTML = hhTexto();
+  $('thHH').style.display = on ? 'block' : 'none'; if (on) $('thHH').innerHTML = hhTexto(); }
+const preco = (o) => (o.preco_cheio && o.preco_cheio > o.preco) ? `<span class="old">${brl(o.preco_cheio)}</span>${brl(o.preco)}` : brl(o.preco);
 /* Tela da torneira (igual BeerPass): número, nome, cervejaria, foto, tipo, ABV, IBU e valor por 100 ml */
 function renderTapHome(){ if (!S.cfg || !S.cfg.tap_id) return; const t = S.taps[0]; $('thOff').style.display = t && t.disponivel ? 'none' : 'flex'; if (!t) return;
   $('thNum').textContent = String(t.canal).padStart(2,'0'); $('thNome').textContent = (t.produto||'').toUpperCase(); $('thCerv').textContent = (t.cervejaria||'').toUpperCase();
   $('thImg').innerHTML = t.imagem_url ? `<img src="${esc(t.imagem_url)}" alt="">` : `<div class="bigcup" style="--c:${esc(t.cor)}"></div>`;
   $('thInfoL').innerHTML = `Tipo<b>${esc(t.estilo||'—')}</b>Teor alcoólico<b>${t.abv!==null?String(t.abv).replace('.',',')+'% ABV':'—'}</b>${t.ibu!==null?`Amargor<b style="margin:0">${t.ibu} IBU</b>`:''}`;
-  $('thPv').textContent = t.preco_100ml!==null ? brl(t.preco_100ml) : '—'; $('thMarca').textContent = S.cfg.marca.nome; }
+  $('thPv').innerHTML = t.preco_100ml!==null ? preco({preco:t.preco_100ml, preco_cheio:t.preco_100ml_cheio}) : '—'; $('thMarca').textContent = S.cfg.marca.nome;
+  $('thSocial').style.display = t.copos_hoje ? 'block' : 'none'; if (t.copos_hoje) $('thSocial').textContent = `🔥 ${t.copos_hoje} copos servidos hoje`; }
 function renderIdleChips(){ $('idleChips').innerHTML = S.taps.map(t => `<span class="chip"><span class="dot" style="background:${t.disponivel?t.cor:'#555'}"></span>${esc(t.produto)}</span>`).join(''); }
 function esc(s){ return String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
@@ -442,11 +493,11 @@ function toIdle(){ clearInterval(S.pollT); clearInterval(S.pixT); if (S.ver && S
   Object.assign(S, {cpf:'', nasc:'', nome:'', ver:null, order:null, wallet:null, vinc:'', rec:null, sel:null, cup:'', prev:null}); $('vDisp') && ($('vDisp').textContent='____');
   updCpf(); updNasc(); updNome(); unload(); go(home()); }
 function start(){ if (!S.taps.some(t => t.disponivel)) return modal('😕','Chopeira indisponível','Estamos sem chopp disponível agora. Volte em instantes!',[['OK']]);
-  $('termos').textContent = S.cfg.termos; $('ajudaBtn').style.display = S.cfg.ajuda ? 'flex' : 'none'; go('age'); }
+  $('termos').textContent = S.cfg.termos; $('ajudaBtn').style.display = S.cfg.ajuda ? 'flex' : 'none'; novaSessao(); track('inicio'); go('age'); }
 function ajuda(){ modal('🙋','Precisa de ajuda?', S.cfg.ajuda, [['OK']]); }
-async function ageYes(){ if (S.cfg.verificacao !== 'declaracao') return go('cpf');
+async function ageYes(){ track('termos'); if (S.cfg.verificacao !== 'declaracao') return go('cpf');
   loading('Aguarde…'); try { S.ver = await api('pos/identify', {declara_maior:true}); unload(); await depoisIdentificar(); } catch(e){ unload(); modal('⚠️','Não foi possível continuar', e.mensagem, [['OK', toIdle]]); } }
-async function depoisIdentificar(){ await loadMenu(); await loadWallet();
+async function depoisIdentificar(){ track('identificado'); await loadMenu(); await loadWallet();
   if (S.cfg.tap_id) return abrirTamanho(S.taps[0]);
   $('hello').innerHTML = S.ver.nome ? `👋 Olá, <b>${esc(S.ver.nome)}</b>! ${S.ver.novo ? 'Seja bem-vindo(a).' : 'Bom te ver de novo.'}` : '👋 Escolha seu chopp';
   renderMenu(); go('menu'); }
@@ -508,16 +559,22 @@ function renderMenu(){
   $('taps').innerHTML = S.taps.map((t,i) => { const min = t.ofertas.filter(o=>o.disponivel).sort((a,b)=>a.preco-b.preco)[0];
     return `<button class="tap ${t.disponivel?'':'off'}" ${t.disponivel?`onclick="abrirTamanho(S.taps[${i}])"`:''}>${cupHtml(t)}<div><h3>${esc(t.produto)}</h3>
       <p>${esc([t.estilo, t.abv ? t.abv.toString().replace('.',',')+'% ABV' : '', t.ibu ? t.ibu+' IBU' : ''].filter(Boolean).join(' • '))}</p>${t.cervejaria?`<p>${esc(t.cervejaria)}</p>`:''}
-      <div class="pr">${min ? 'a partir de ' + brl(min.preco) : ''}</div></div></button>`; }).join('') || '<p class="mut c">Nenhum chopp disponível.</p>'; }
+      <div class="pr">${min ? 'a partir de ' + preco(min) : ''}</div>${t.copos_hoje?`<p style="color:#ff8a00;font-weight:800">🔥 ${t.copos_hoje} copos hoje</p>`:''}</div></button>`; }).join('') || '<p class="mut c">Nenhum chopp disponível.</p>'; }
 
 /* Tamanho (300/350/400/1000 ml… definidos no painel) */
 function abrirTamanho(t){ if (!t) return; S.sel = {tap:t, offer:null, qtd:1}; S.cup=''; S.prev=null;
   $('tmTit').textContent = 'Comprar • ' + t.produto; const maxV = Math.max(...t.ofertas.map(o=>o.volume_ml));
   $('tmOpts').innerHTML = t.ofertas.map((o,j)=>`<button class="opt" ${o.disponivel?'':'disabled'} onclick="pickSize(${j})"><span class="mc"><i style="height:${Math.round(18+28*o.volume_ml/maxV)}px"></i></span>
-    <span><b>${o.volume_ml}</b> <small>ml</small></span><span class="pr">R$ <b>${o.preco.toFixed(2).replace('.',',')}</b></span></button>`).join('');
-  pickSize(t.ofertas.findIndex(o=>o.disponivel)); go('tamanho'); }
+    <span class="info"><span><b>${o.volume_ml}</b> <small>ml</small></span>${o.mais_pedido?'<span class="tag top">🔥 MAIS PEDIDO</span>':''}${o.economia_pct?`<span class="tag eco">Economize ${o.economia_pct}%</span>`:''}</span>
+    <span class="pr">${o.preco_cheio>o.preco?`<span class="old">${brl(o.preco_cheio)}</span><br>`:''}R$ <b>${o.preco.toFixed(2).replace('.',',')}</b></span></button>`).join('');
+  const top = t.ofertas.findIndex(o=>o.disponivel && o.mais_pedido);   // pré-seleciona o mais pedido (ancoragem)
+  pickSize(top >= 0 ? top : t.ofertas.findIndex(o=>o.disponivel)); track('tamanho'); go('tamanho'); }
 function pickSize(j){ S.sel.offer = S.sel.tap.ofertas[j] || null; [...$('tmOpts').children].forEach((b,k)=>b.classList.toggle('sel', k===j)); $('tmOk').disabled = !S.sel.offer; }
 function voltarTamanho(){ S.cfg.tap_id ? toIdle() : go('menu'); }
+
+function botoesPagamento(ms, excluir){ const lbl = {credito:['💳','CRÉDITO'], debito:['💳','DÉBITO'], pix:['⚡','PIX']};
+  return [...ms].filter(m=>m!==excluir).sort((a,b)=>(b==='pix')-(a==='pix'))   // Pix primeiro: mais rápido e taxa menor
+    .map(m=>`<button class="pay" onclick="pagar('${m}')"><i>${lbl[m][0]}</i>${lbl[m][1]}${m==='pix'?'<span class="tag fast">MAIS RÁPIDO</span>':''}</button>`).join(''); }
 
 /* Quantidade + cupom + resumo */
 function maxCopos(){ const o=S.sel.offer; return Math.max(1, Math.min(S.cfg.limite_copos_pedido||4, Math.floor((S.ver?.restante_ml_dia ?? 99999)/o.volume_ml))); }
@@ -527,7 +584,9 @@ function renderQtd(){ const o=S.sel.offer, sub=o.preco*S.sel.qtd, desc=S.prev ? 
   $('qN').textContent = S.sel.qtd; $('qInfo').textContent = `${S.sel.qtd} × ${S.sel.tap.produto} ${o.volume_ml} ml` + (S.sel.qtd>=maxCopos() && maxCopos()>1 ? ` • máximo ${maxCopos()} por compra` : '');
   $('cupBox').style.display = S.cfg.cupons ? 'block' : 'none';
   $('cupT').textContent = S.cup ? 'Cupom ' + S.cup : 'Cupom'; $('cupS').textContent = S.cup ? (S.prev?.descricao || 'Aplicado') : 'Digite um código'; $('cupBtn').textContent = S.cup ? 'REMOVER' : 'ADICIONAR';
-  $('rSub').textContent = brl(sub); $('rDesc').textContent = '− ' + brl(desc); $('rTot').textContent = brl(Math.max(0, sub-desc)); }
+  const cheio = (o.preco_cheio||o.preco)*S.sel.qtd, hh = Math.max(0, cheio - sub);
+  $('rHHl').style.display = hh > 0.004 ? 'flex' : 'none'; $('rHHn').textContent = '🎉 ' + (S.hh?.nome || 'Happy Hour'); $('rHH').textContent = '− ' + brl(hh);
+  $('rSub').textContent = brl(hh > 0.004 ? cheio : sub); $('rDesc').textContent = '− ' + brl(desc); $('rTot').textContent = brl(Math.max(0, sub-desc)); }
 function abrirCupom(){ if (S.cup){ S.cup=''; S.prev=null; return renderQtd(); } S.cupTxt=''; padCup(''); $('cupHint').textContent=''; go('cupomScr'); }
 function padCup(k){ if (k==='⌫') S.cupTxt=S.cupTxt.slice(0,-1); else if (k && S.cupTxt.length<20) S.cupTxt+=k; $('cupDisp').textContent = S.cupTxt || 'CÓDIGO'; $('cupDisp').classList.toggle('ph', !S.cupTxt); }
 async function aplicarCupom(){ if (!S.cupTxt) return; S.cup = S.cupTxt; if (await previaCupom(false)) go('qtd'); }
@@ -535,8 +594,8 @@ async function previaCupom(silencioso){ try { S.prev = await api('pos/coupon', {
   catch(e){ const msg = e.mensagem || 'Cupom inválido'; S.cup=''; S.prev=null; renderQtd(); if (silencioso) toast(msg); else { $('cupHint').textContent = msg; $('cupHint').classList.add('err'); } return false; } }
 function confirmaQtd(){ const o=S.sel.offer, sub=o.preco*S.sel.qtd, tot=Math.max(0, sub-(S.prev?S.prev.desconto:0));
   if (tot <= 0) return pagar('');
-  const lbl = {credito:['💳','CRÉDITO'], debito:['💳','DÉBITO'], pix:['⚡','PIX']};
-  $('pays').innerHTML = S.cfg.metodos.map(m=>`<button class="pay" onclick="pagar('${m}')"><i>${lbl[m][0]}</i>${lbl[m][1]}</button>`).join('');
+  track('pagamento');
+  $('pays').innerHTML = botoesPagamento(S.cfg.metodos);
   $('pgDesc').textContent = `${S.sel.qtd} copo(s) de ${S.sel.tap.produto} ${o.volume_ml} ml`; $('pgTot').textContent = brl(tot); go('pagamento'); }
 
 /* ================= Pagamento ================= */
@@ -546,7 +605,7 @@ async function pagar(metodo, recarga){
         S.order.recarga = !!recarga; }
   catch(e){ unload(); if (e.erro==='sessao') return modal('⏱️','Sessão expirada', e.mensagem, [['OK', toIdle]]); return modal('⚠️','Não foi possível', e.mensagem, [['Voltar', ()=>{ loadMenu().then(()=>{ renderMenu(); S.cfg.tap_id ? toIdle() : go('menu'); }); }]]); }
   unload();
-  if (S.order.pago) return startServe();                       // cupom de 100%
+  if (S.order.pago) { track('pago'); return startServe(); }   // cupom de 100%
   if (metodo === 'pix' && !S.order.pix_nativo) return showPix();
   if (NATIVE) { loading('AGUARDE'); BeerPOS.pay(JSON.stringify({ref:S.order.ref, centavos:S.order.total_centavos, metodo, descricao:S.order.descricao})); }
   else modal('🧪','Modo teste (navegador)', 'Simular resultado do cartão de ' + brl(S.order.total) + '?', [['Aprovado', ()=>window.__payResult(JSON.stringify({aprovado:true, bandeira:'TESTE', final_cartao:'0000', nsu:'SIM'}))], ['Recusado', ()=>window.__payResult(JSON.stringify({aprovado:false, motivo:'Recusado (simulado)'}))]]);
@@ -554,8 +613,11 @@ async function pagar(metodo, recarga){
 /* Chamado pelo app Android ao terminar a transação */
 window.__payResult = async function(json){
   const r = typeof json === 'string' ? JSON.parse(json) : json; unload();
-  if (!r.aprovado) { api('pos/payment_failed', {ref:S.order.ref, motivo:r.motivo||''}).catch(()=>{}); S.order=null;
-    return modal('💳','Pagamento não aprovado', r.motivo || 'Tente novamente ou use outra forma de pagamento.', [['Tentar de novo', ()=>go(S.rec ? 'recarga' : 'pagamento')], ['Cancelar', toIdle, 'sec']]); }
+  if (!r.aprovado) { const usado = S.order.metodo; api('pos/payment_failed', {ref:S.order.ref, motivo:r.motivo||''}).catch(()=>{}); S.order=null;
+    if (S.rec) return modal('💳','Pagamento não aprovado', r.motivo || 'Tente novamente.', [['Tentar de novo', ()=>go('recarga')], ['Cancelar', toIdle, 'sec']]);
+    const outros = S.cfg.metodos.filter(m=>m!==usado), nome = {credito:'Crédito', debito:'Débito', pix:'Pix'};
+    return modal('💳','Pagamento não aprovado', (r.motivo ? r.motivo + '. ' : '') + 'Quer tentar de outro jeito?',
+      [...outros.sort((a,b)=>(b==='pix')-(a==='pix')).map(m=>['Pagar com ' + nome[m], ()=>pagar(m)]), ['Tentar de novo', ()=>pagar(usado), 'sec'], ['Cancelar', toIdle, 'sec']]); }
   loading('Pagamento aprovado! Liberando…');
   for (let i=0;i<5;i++){ try { await api('pos/paid', {ref:S.order.ref, metodo:S.order.metodo, pagamento_id:r.pagamento_id||'', nsu:r.nsu||'', bandeira:r.bandeira||'', final_cartao:r.final_cartao||''}); unload(); return afterPaid(); }
     catch(e){ if (e.erro!=='rede') break; await new Promise(z=>setTimeout(z, 2000)); } }
@@ -571,7 +633,7 @@ function showPix(){ const p=S.order.pix;
     if (s%3===0){ try { const st = await api('pos/order_status&ref='+S.order.ref); if (['pago','servindo','concluido'].includes(st.status)) { clearInterval(S.pixT); afterPaid(); } if (st.status==='cancelado'){ clearInterval(S.pixT); modal('⏱️','Pix cancelado','',[['OK',toIdle]]); } } catch(e){} } }, 1000); }
 async function simPixOk(){ clearInterval(S.pixT); await api('pos/paid', {ref:S.order.ref, metodo:'pix'}).catch(()=>{}); afterPaid(); }
 /* ================= Beer Pass: carteira, recarga, cartão ================= */
-function afterPaid(){ if (S.order && S.order.recarga) return recargaOk(); startServe(); }
+function afterPaid(){ if (S.order && S.order.recarga) return recargaOk(); track('pago'); startServe(); }
 async function loadWallet(){ try { S.wallet = await api('pos/wallet', {token:S.ver.token}); } catch(e){ S.wallet = null; }
   $('walletBar').style.display = S.wallet && S.wallet.pass ? 'flex' : 'none'; if (S.wallet) $('wSaldo').textContent = brl(S.wallet.saldo); }
 function openRecarga(){ const w=S.wallet; S.rec = null;
@@ -618,16 +680,35 @@ async function pollServe(){
   if (cur.status==='pendente') { $('svSub').textContent = 'Preparando a chopeira…'; btn.style.display='none'; }
   else if (cur.status==='armado' && cur.start_mode==='pos') { $('svSub').textContent = 'Coloque o copo inclinado sob a torneira indicada e toque em SERVIR.'; btn.style.display='flex'; }
   else if (cur.status==='armado') { $('svSub').textContent = 'Coloque o copo inclinado sob a torneira e aperte o botão iluminado.'; btn.style.display='none'; }
-  else if (cur.start_mode==='auto' && cur.status!=='servindo') { $('svSub').textContent = '✅ Torneira liberada! Incline o copo e puxe a alavanca.'; btn.style.display='none'; }
+  else if (cur.start_mode==='auto' && cur.status!=='servindo') { $('svSub').innerHTML = '<span class="tilt">🍺</span><br>✅ Torneira liberada! Incline o copo a 45° e puxe a alavanca.'; btn.style.display='none'; }
   else { $('svSub').textContent = cur.status==='liberado' ? 'Liberando…' : 'Servindo… a torneira para sozinha no volume certo.'; btn.style.display='none'; }
 }
 async function serveNow(){ const st = await api('pos/order_status&ref=' + S.order.ref).catch(()=>null); const cur = st && st.copos.find(c=>c.status==='armado');
   if (cur) { $('svBtn').style.display='none'; await api('pos/serve', {dispense_id:cur.id}).catch(e=>toast(e.mensagem)); } }
 function finish(st){
-  if (st.status==='concluido') { $('fimMsg').textContent = S.cfg.msg_final || 'Beba com moderação.'; go('fim'); }
+  if (st.status==='concluido') { track('servido'); $('fimMsg').textContent = S.cfg.msg_final || 'Beba com moderação.';
+    S.ultimo = {tap:S.sel?.tap, offer:S.sel?.offer}; S.notaDada = false;
+    $('rateBox').style.display = S.cfg.avaliacao ? 'block' : 'none'; $('rateWhy').style.display = 'none'; $('rateOk').style.display = 'none';
+    document.querySelectorAll('#rate button').forEach(b=>b.classList.remove('sel'));
+    $('maisUm').style.display = S.ultimo.offer && S.ver ? 'flex' : 'none'; go('fim'); }
   else { const serv = st.copos.reduce((s,c)=>s+c.servido_ml,0), tot = st.copos.reduce((s,c)=>s+c.volume_ml,0);
     modal('⚠️', 'Tivemos um problema', `Foram servidos ${serv} de ${tot} ml. O responsável já foi avisado e vai liberar o restante ou estornar o valor. Pedido ${st.ref}.`, [['OK', toIdle]]); }
 }
+
+/* ================= Pós-venda: avaliação e recompra ================= */
+document.addEventListener('click', e => {
+  const b = e.target.closest('#rate button'); if (b && !S.notaDada) { const n = +b.dataset.n; S.nota = n;
+    document.querySelectorAll('#rate button').forEach(x=>x.classList.toggle('sel', x===b));
+    if (n <= 3) { $('rateWhy').style.display = 'flex'; } else enviarNota(''); armIdle(); }
+  const w = e.target.closest('#rateWhy button'); if (w && !S.notaDada) enviarNota(w.textContent);
+});
+function enviarNota(motivo){ S.notaDada = true; $('rateWhy').style.display = 'none'; $('rateOk').style.display = 'block';
+  if (S.order) api('pos/rate', {ref:S.order.ref, nota:S.nota, motivo}).catch(()=>{}); }
+async function maisUm(){ const u = S.ultimo; if (!u || !u.offer) return toIdle();
+  try { await loadMenu(); } catch(e){}
+  const t = S.taps.find(x=>x.tap_id===u.tap.tap_id), o = t && t.ofertas.find(x=>x.id===u.offer.id);
+  if (!t || !o || !o.disponivel) return modal('😕','Indisponível agora','Esse chopp acabou de esgotar. Escolha outro!', [['OK', ()=>S.cfg.tap_id ? toIdle() : go('menu')]]);
+  S.order = null; S.sel = {tap:t, offer:o, qtd:1}; S.cup=''; S.prev=null; novaSessao(); track('quantidade'); go('qtd'); renderQtd(); }
 
 /* ================= Pareamento ================= */
 let pairCode='';

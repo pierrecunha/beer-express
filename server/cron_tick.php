@@ -86,6 +86,7 @@ if (date('i') === '17') {
     q('DELETE FROM be_telemetry WHERE created_at < NOW() - INTERVAL 90 DAY');
     q("DELETE FROM be_events WHERE nivel = 'info' AND created_at < NOW() - INTERVAL 180 DAY");
     q('DELETE FROM be_verifications WHERE created_at < NOW() - INTERVAL 365 DAY');
+    q('DELETE FROM be_funnel WHERE created_at < NOW() - INTERVAL 180 DAY');
 }
 
 if (PHP_SAPI === 'cli') echo date('c') . ' ok ' . implode(', ', $log) . "\n";

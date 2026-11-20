@@ -228,6 +228,38 @@ call("admin/settings_save", {"settings": {"verificacao_idade": "cpf"}}, AD)
 st, r = call("pos/identify", {"declara_maior": True}, T2)
 ok(r.get("erro") == "cpf_invalido", "voltando ao modo CPF, o CPF é exigido de novo", r)
 
+print("── UX de vendas: happy hour, mais pedido, economia, funil, avaliação")
+call("admin/settings_save", {"settings": {"happy_hour_ativo": "1", "happy_hour_inicio": "00:00", "happy_hour_fim": "23:59", "happy_hour_dias": "1,2,3,4,5,6,7", "happy_hour_pct": "20"}}, AD)
+m = call("pos/menu", h=T)
+hh, of = m[1]["happy_hour"], m[1]["torneiras"][0]["ofertas"]
+o5 = next(x for x in of if x["id"] == o500)
+ok(hh["ativo"] and o5["preco"] == 11.92 and o5["preco_cheio"] == 14.9, "happy hour: 500 ml de R$14,90 por R$11,92", (hh, o5))
+ok(o5["economia_pct"] == 9, "500 ml mostra 'economize 9%' sobre o 300 ml", o5)
+st, r = call("pos/identify", {"cpf": "52998224725", "nascimento": "10/05/1990", "declara_maior": True}, T)
+VH = r.get("token")
+st, r = call("pos/order", {"token": VH, "metodo": "credito", "itens": [{"offer_id": o500, "qtd": 1}]}, T)
+ok(abs(r.get("total", 0) - 11.92) < 0.001, "pedido cobra o preço do happy hour", r)
+RH = r.get("ref")
+call("pos/paid", {"ref": RH, "metodo": "credito"}, T)
+EXTRAS = []
+for _ in range(2):
+    r = call("pos/order", {"token": VH, "metodo": "credito", "itens": [{"offer_id": o500, "qtd": 1}]}, T)[1]
+    call("pos/paid", {"ref": r["ref"], "metodo": "credito"}, T); EXTRAS.append(r["ref"])
+call("admin/settings_save", {"settings": {"happy_hour_ativo": "0"}}, AD)
+m = call("pos/menu", h=T)[1]
+ok(next(x for x in m["torneiras"][0]["ofertas"] if x["id"] == o500)["preco"] == 14.9, "fora do happy hour volta ao preço cheio")
+ok(next(x for x in m["torneiras"][0]["ofertas"] if x["id"] == o500).get("mais_pedido") is True, "selo 'Mais pedido' com base nas vendas reais (3 copos de 500 ml)")
+S16 = "a1b2c3d4e5f6a7b8"
+for e in ["inicio", "termos", "tamanho", "inicio", "pago"]: call("pos/track", {"sessao": S16, "etapa": e}, T)
+call("pos/track", {"sessao": "b1b2c3d4e5f6a7b8", "etapa": "inicio"}, T)
+st, r = call("pos/rate", {"ref": RH, "nota": 2, "motivo": "espuma"}, T)
+ok(r.get("ok"), "avaliação pós-compra", r)
+d = call("admin/dashboard", h=AD)[1]
+ok(d["funil"].get("inicio") == 2 and d["funil"].get("pago") == 1 and int(d["nps"]["n"]) == 1, "funil e avaliação no painel", (d.get("funil"), d.get("nps")))
+o = call("admin/orders", h=AD)[1]
+for p in o["pedidos"]:
+    if p["ref"] in [RH] + EXTRAS: call("admin/order_refund", {"id": p["id"]}, AD)
+
 print("── segurança")
 for i in range(6): st, r = call("pos/identify", {"cpf": "123.456.789-00", "nascimento": "01/01/1990", "declara_maior": True}, T)
 ok(r.get("erro") == "terminal_bloqueado", "força bruta bloqueia a maquininha", r)

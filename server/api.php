@@ -493,10 +493,26 @@ function r_pos_config(array $t): array {
         'ajuda' => setting('ajuda_texto'),
         'cupons' => setting('cupons_ativo', '1') === '1' && (int)val('SELECT COUNT(*) FROM be_coupons WHERE ativo = 1') > 0,
         'pix_nativo' => pix_nativo($t),
+        'inatividade_s' => max(20, (int)setting('inatividade_s', 45)),
+        'avaliacao' => setting('avaliacao_ativa', '1') === '1',
         'tap_id' => $t['tap_id'] !== null ? (int)$t['tap_id'] : null,
         'server_time' => now(),
     ];
 }
+/** Happy hour automático: devolve o % de desconto vigente agora (0 fora do horário). */
+function happy_hour(): array {
+    if (setting('happy_hour_ativo', '0') !== '1') return ['ativo' => false, 'pct' => 0];
+    $dias = array_map('intval', explode(',', (string)setting('happy_hour_dias', '1,2,3,4,5')));
+    $ini = (string)setting('happy_hour_inicio', '17:00'); $fim = (string)setting('happy_hour_fim', '19:00'); $agora = date('H:i');
+    $dentro = in_array((int)date('N'), $dias, true) && ($ini <= $fim ? ($agora >= $ini && $agora < $fim) : ($agora >= $ini || $agora < $fim));
+    $pct = max(0, min(90, (float)setting('happy_hour_pct', 20)));
+    return ['ativo' => $dentro && $pct > 0, 'pct' => $dentro ? $pct : 0, 'nome' => setting('happy_hour_nome', 'Happy Hour'), 'ate' => $fim, 'inicio' => $ini];
+}
+function preco_vigente(float $preco): float {
+    $hh = happy_hour();
+    return $hh['ativo'] ? round($preco * (1 - $hh['pct'] / 100), 2) : round($preco, 2);
+}
+
 /** Pix pago na própria maquininha (PagBank) em vez do QR gerado pelo servidor. */
 function pix_nativo(array $t): bool { return $t['provider'] === 'pagbank' && setting('pix_modo', 'api_mp') === 'maquininha'; }
 /** Preço de referência por 100 ml (como o BeerPass mostra na tela da torneira): menor preço proporcional entre os tamanhos. */
@@ -514,17 +530,30 @@ function r_pos_menu(array $t): array {
     foreach ($taps as $tp) {
         $on = $tp['dev_ativo'] && device_online($tp);
         $offers = rows('SELECT id, volume_ml, preco FROM be_offers WHERE tap_id = ? AND ativo = 1 ORDER BY ordem, volume_ml', [$tp['id']]);
-        $offers = array_map(fn($o) => ['id' => (int)$o['id'], 'volume_ml' => (int)$o['volume_ml'], 'preco' => (float)$o['preco'],
-            'disponivel' => $on && (int)$tp['restante_ml'] >= (int)$o['volume_ml']], $offers);
+        $vendidos = array_column(rows("SELECT i.offer_id, SUM(i.qtd) n FROM be_order_items i JOIN be_orders o ON o.id = i.order_id
+            WHERE i.tap_id = ? AND o.status IN ('pago','servindo','concluido','parcial') AND o.created_at >= NOW() - INTERVAL 30 DAY GROUP BY i.offer_id", [$tp['id']]), 'n', 'offer_id');
+        $topId = $vendidos && max($vendidos) >= 3 ? array_search(max($vendidos), $vendidos) : null;   // "Mais pedido" só com dados reais
+        $offers = array_map(fn($o) => ['id' => (int)$o['id'], 'volume_ml' => (int)$o['volume_ml'], 'preco' => preco_vigente((float)$o['preco']), 'preco_cheio' => (float)$o['preco'],
+            'disponivel' => $on && (int)$tp['restante_ml'] >= (int)$o['volume_ml'], 'mais_pedido' => $topId !== null && (int)$o['id'] === (int)$topId], $offers);
+        // Ancoragem: quanto o tamanho maior economiza por ml em relação ao menor
+        $base = null; foreach ($offers as $o) if ($base === null || $o['volume_ml'] < $base['volume_ml']) $base = $o;
+        foreach ($offers as &$o) {
+            $e = $base && $o['volume_ml'] > $base['volume_ml'] ? (1 - ($o['preco'] / $o['volume_ml']) / ($base['preco'] / $base['volume_ml'])) * 100 : 0;
+            $o['economia_pct'] = $e >= 5 ? (int)floor($e) : 0;
+        }
+        unset($o);
+        $hoje = (int)val("SELECT COUNT(*) FROM be_dispenses WHERE tap_id = ? AND status = 'concluido' AND created_at >= CURDATE()", [$tp['id']]);
         $out[] = [
             'tap_id' => (int)$tp['id'], 'torneira' => $tp['nome'], 'canal' => (int)$tp['canal'], 'produto' => $tp['produto'], 'estilo' => $tp['estilo'],
             'descricao' => $tp['descricao'], 'abv' => $tp['abv'] !== null ? (float)$tp['abv'] : null, 'imagem_url' => $tp['imagem_url'], 'cor' => $tp['cor'] ?: '#F5B301',
             'cervejaria' => $tp['cervejaria'], 'ibu' => $tp['ibu'] !== null ? (int)$tp['ibu'] : null, 'preco_100ml' => preco_100ml($offers),
+            'preco_100ml_cheio' => preco_100ml(array_map(fn($o) => ['volume_ml' => $o['volume_ml'], 'preco' => $o['preco_cheio']], $offers)),
+            'copos_hoje' => $hoje >= (int)setting('prova_social_min', 5) ? $hoje : null,
             'online' => $on, 'start_mode' => $tp['start_mode'], 'ofertas' => $offers,
             'disponivel' => $on && count(array_filter($offers, fn($o) => $o['disponivel'])) > 0,
         ];
     }
-    return ['ok' => true, 'torneiras' => $out];
+    return ['ok' => true, 'torneiras' => $out, 'happy_hour' => happy_hour()];
 }
 
 function r_pos_identify(array $t): array {
@@ -645,6 +674,7 @@ function pedido_calcular(array $t, array $cust, $itens): array {
         if (!device_online($of)) fail('offline', 'Chopeira momentaneamente offline. Tente em instantes.');
         $porTap[$of['tap_id']] = ($porTap[$of['tap_id']] ?? 0) + $of['volume_ml'] * $qtd;
         if ($porTap[$of['tap_id']] > (int)$of['restante_ml']) fail('estoque', "Não há {$of['produto']} suficiente no barril.");
+        $of['preco'] = preco_vigente((float)$of['preco']);   // happy hour
         $copos += $qtd; $total += $of['preco'] * $qtd; $totalMl += $of['volume_ml'] * $qtd;
         $linhas[] = [$of, $qtd];
     }
@@ -823,6 +853,24 @@ function r_pos_card_block(array $t): array {
     [, $cust] = pos_sessao($t);
     q('UPDATE be_cards SET ativo = 0 WHERE id = ? AND customer_id = ?', [(int)arg('card_id'), $cust['id']]);
     log_event('aviso', 'cartao_bloqueado', 'Cliente bloqueou um cartão pela maquininha (perda/roubo)', ['terminal_id' => $t['id']]);
+    return ['ok' => true];
+}
+
+/** Funil de vendas: cada etapa da sessão do cliente na maquininha (1 registro por etapa). */
+function r_pos_track(array $t): array {
+    $sessao = preg_replace('/[^a-z0-9]/', '', strtolower((string)arg('sessao')));
+    $etapa = (string)arg('etapa');
+    if (strlen($sessao) === 16 && in_array($etapa, ['inicio', 'termos', 'identificado', 'tamanho', 'quantidade', 'pagamento', 'pago', 'servido'], true))
+        q('INSERT IGNORE INTO be_funnel (terminal_id, sessao, etapa) VALUES (?,?,?)', [$t['id'], $sessao, $etapa]);
+    return ['ok' => true];
+}
+/** Avaliação pós-compra (1–5) — vai para o painel e, se ruim, para o Telegram. */
+function r_pos_rate(array $t): array {
+    $o = pos_order_by_ref($t, (string)arg('ref'));
+    $nota = max(1, min(5, (int)arg('nota')));
+    $motivo = mb_substr(preg_replace('/[^\p{L}\p{N} ]/u', '', (string)arg('motivo', '')), 0, 40) ?: null;
+    q('INSERT IGNORE INTO be_ratings (order_id, terminal_id, nota, motivo) VALUES (?,?,?,?)', [$o['id'], $t['id'], $nota, $motivo]);
+    if ($nota <= 2) log_event('aviso', 'avaliacao_ruim', "👎 Avaliação ruim ($nota/5) em {$t['location_nome']} / {$t['nome']}" . ($motivo ? ": $motivo" : '') . " — pedido {$o['ref']}", ['order_id' => $o['id'], 'terminal_id' => $t['id']], true);
     return ['ok' => true];
 }
 
@@ -1115,12 +1163,17 @@ function r_admin_dashboard(): array {
     $clientes = row("SELECT COUNT(*) total, SUM(created_at >= CURDATE()) hoje FROM be_customers");
     $pass = row("SELECT COUNT(*) n, COALESCE(SUM(valor),0) s, COALESCE(SUM(servido_ml),0) ml FROM be_pours WHERE status <> 'aberta' AND inicio_em >= CURDATE()");
     $pass['recargas'] = row("SELECT COUNT(*) n, COALESCE(SUM(total),0) s, COALESCE(SUM(bonus),0) b FROM be_orders WHERE tipo = 'recarga' AND status = 'concluido' AND created_at >= CURDATE()");
+    $funil = [];
+    foreach (rows("SELECT etapa, COUNT(*) n FROM be_funnel WHERE created_at >= CURDATE() - INTERVAL 6 DAY GROUP BY etapa") as $f) $funil[$f['etapa']] = (int)$f['n'];
+    $nps = row("SELECT COUNT(*) n, ROUND(AVG(nota),1) media, SUM(nota >= 4) bons, SUM(nota <= 2) ruins FROM be_ratings WHERE created_at >= CURDATE() - INTERVAL 29 DAY");
+    $motivos = rows("SELECT motivo, COUNT(*) n FROM be_ratings WHERE motivo IS NOT NULL AND created_at >= CURDATE() - INTERVAL 29 DAY GROUP BY motivo ORDER BY n DESC LIMIT 5");
     $pass['saldo_carteiras'] = (float)val('SELECT COALESCE(SUM(saldo),0) FROM be_customers');
     $pass['abertas'] = rows("SELECT p.id, p.produto, p.servido_ml, p.limite_ml, t.nome torneira, c.nome cliente FROM be_pours p JOIN be_taps t ON t.id = p.tap_id JOIN be_customers c ON c.id = p.customer_id WHERE p.status = 'aberta'");
     foreach ($pass['abertas'] as &$a) $a['cliente'] = nome_exibicao($a['cliente']);
     unset($a);
     return ['ok' => true, 'hoje' => $hoje, 'ontem' => $ontem, 'mes' => $mes, 'dias' => $dias, 'horas' => $horas, 'produtos' => $prods, 'devices' => $devices,
-        'terminais' => $terms, 'barris' => $barris, 'alertas' => $alertas, 'problemas' => $problemas, 'menores_hoje' => $menores, 'clientes' => $clientes, 'pass' => $pass, 'pass_ativo' => setting('pass_ativo', '0') === '1'];
+        'terminais' => $terms, 'barris' => $barris, 'alertas' => $alertas, 'problemas' => $problemas, 'menores_hoje' => $menores, 'clientes' => $clientes, 'pass' => $pass, 'pass_ativo' => setting('pass_ativo', '0') === '1',
+        'funil' => $funil, 'nps' => $nps, 'nps_motivos' => $motivos, 'happy_hour' => happy_hour()];
 }
 
 function r_admin_orders(): array {
@@ -1400,7 +1453,7 @@ function r_pub_tv(): array {
         $out[] = ['torneira' => $t['nome'], 'canal' => (int)$t['canal'], 'produto' => $t['produto'], 'estilo' => $t['estilo'], 'descricao' => $t['descricao'],
             'abv' => $t['abv'] !== null ? (float)$t['abv'] : null, 'cor' => $t['cor'] ?: '#F5B301', 'imagem_url' => $t['imagem_url'],
             'preco_litro' => $t['preco_litro'] !== null && setting('pass_ativo', '0') === '1' ? (float)$t['preco_litro'] : null,
-            'ofertas' => array_map(fn($o) => ['volume_ml' => (int)$o['volume_ml'], 'preco' => (float)$o['preco']], rows('SELECT volume_ml, preco FROM be_offers WHERE tap_id = ? AND ativo = 1 ORDER BY ordem, volume_ml', [$t['id']])),
+            'ofertas' => array_map(fn($o) => ['volume_ml' => (int)$o['volume_ml'], 'preco' => preco_vigente((float)$o['preco']), 'preco_cheio' => (float)$o['preco']], rows('SELECT volume_ml, preco FROM be_offers WHERE tap_id = ? AND ativo = 1 ORDER BY ordem, volume_ml', [$t['id']])),
             'nivel_pct' => $t['barril_ml'] ? (int)round(100 * $t['restante_ml'] / $t['barril_ml']) : 0, 'online' => device_online($t),
             'servindo_ml' => $ab ? (int)$ab['servido_ml'] : null];
     }
@@ -1413,7 +1466,7 @@ function r_pub_tv(): array {
     $hoje = (int)val("SELECT COALESCE(SUM(servido_ml),0) FROM be_pours WHERE location_id = ? AND inicio_em >= CURDATE()", [$loc['id']])
           + (int)val("SELECT COALESCE(SUM(d.servido_ml),0) FROM be_dispenses d JOIN be_orders o ON o.id = d.order_id WHERE o.location_id = ? AND d.created_at >= CURDATE()", [$loc['id']]);
     return ['ok' => true, 'local' => $loc['nome'], 'marca' => setting('marca_nome', 'Beer Express'), 'slogan' => setting('marca_slogan'), 'cor' => setting('marca_cor', '#F5B301'),
-        'mensagem' => setting('tv_mensagem'), 'torneiras' => $out, 'ranking' => $rank, 'litros_hoje' => round($hoje / 1000, 1), 'idade_minima' => (int)setting('idade_minima', 18)];
+        'mensagem' => setting('tv_mensagem'), 'torneiras' => $out, 'happy_hour' => happy_hour(), 'ranking' => $rank, 'litros_hoje' => round($hoje / 1000, 1), 'idade_minima' => (int)setting('idade_minima', 18)];
 }
 
 /* ============================== ROTEADOR ============================== */
@@ -1505,7 +1558,7 @@ try {
             $fn = ['pos/config' => 'r_pos_config', 'pos/menu' => 'r_pos_menu', 'pos/identify' => 'r_pos_identify', 'pos/order' => 'r_pos_order',
                 'pos/paid' => 'r_pos_paid', 'pos/payment_failed' => 'r_pos_payment_failed', 'pos/order_status' => 'r_pos_order_status',
                 'pos/serve' => 'r_pos_serve', 'pos/cancel' => 'r_pos_cancel', 'pos/wallet' => 'r_pos_wallet', 'pos/recharge' => 'r_pos_recharge',
-                'pos/link_card' => 'r_pos_link_card', 'pos/coupon' => 'r_pos_coupon', 'pos/card_block' => 'r_pos_card_block', 'pos/logout' => 'r_pos_logout'][$r] ?? null;
+                'pos/link_card' => 'r_pos_link_card', 'pos/coupon' => 'r_pos_coupon', 'pos/track' => 'r_pos_track', 'pos/rate' => 'r_pos_rate', 'pos/card_block' => 'r_pos_card_block', 'pos/logout' => 'r_pos_logout'][$r] ?? null;
             if ($r === 'pos/heartbeat') { q('UPDATE be_terminals SET app_version = COALESCE(?, app_version) WHERE id = ?', [arg('app_version'), $t['id']]); out(['ok' => true]); }
             if (!$fn) fail('rota', 'Rota inexistente', 404);
             out($fn($t));

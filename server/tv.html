@@ -37,6 +37,8 @@ aside{display:flex;flex-direction:column;gap:1.6vw}
 .msg{font-size:1.6vw;line-height:1.35}
 .b18{display:flex;gap:1vw;align-items:center;font-size:1.2vw;color:var(--mut);line-height:1.3}
 .b18 span{flex:none;width:3.4vw;height:3.4vw;border-radius:50%;border:.3vw solid var(--err);color:var(--err);font-weight:900;font-size:1.2vw;display:flex;align-items:center;justify-content:center}
+.hhb{background:linear-gradient(90deg,#ff3d6e,#ff8a00);color:#fff;font-weight:900;font-size:2vw;border-radius:1.2vw;padding:1vw 1.6vw;margin-bottom:1.6vw;display:none;animation:pl 2s infinite}
+.cp s{opacity:.55;margin-right:.4vw}
 .err{position:fixed;bottom:1vw;left:1vw;font-size:1vw;color:var(--err)}
 </style>
 </head>
@@ -44,6 +46,7 @@ aside{display:flex;flex-direction:column;gap:1.6vw}
 <div class="wrap">
   <main>
     <header><h1 id="marca">Beer <b>Express</b></h1><span id="local"></span></header>
+    <div class="hhb" id="hh"></div>
     <div class="taps" id="taps"></div>
   </main>
   <aside>
@@ -79,9 +82,11 @@ async function load(){
         <div class="info"><div class="n">${esc(t.torneira)}</div><h2>${esc(t.produto || '—')}</h2>
           <div class="est">${esc([t.estilo, t.abv ? String(t.abv).replace('.', ',') + '% ABV' : ''].filter(Boolean).join(' • '))}</div>
           <div class="pr">${t.preco_litro ? `<span class="pl">${brl(t.preco_litro)}<small> /litro</small></span>` : ''}
-            ${t.ofertas.map(o => `<span class="cp">${o.volume_ml} ml ${brl(o.preco)}</span>`).join('')}</div>
+            ${t.ofertas.map(o => `<span class="cp">${o.volume_ml} ml ${o.preco_cheio > o.preco ? `<s>${brl(o.preco_cheio)}</s>` : ''}${brl(o.preco)}</span>`).join('')}</div>
           <div class="lvl"><i style="width:${lv}%;background:${cor}"></i></div></div>
         ${t.servindo_ml !== null ? `<div class="live">🍺 ${t.servindo_ml} ml</div>` : ''}</div>`; }).join('');
+    const hh = d.happy_hour || {}; $('hh').style.display = hh.ativo ? 'block' : 'none';
+    if (hh.ativo) $('hh').textContent = `🎉 ${hh.nome} agora: −${Math.round(hh.pct)}% em todos os chopps até ${hh.ate}!`;
     $('rkBox').style.display = d.ranking.length ? 'block' : 'none';
     $('rk').innerHTML = d.ranking.map((r, i) => `<div class="rk"><span>${['🥇','🥈','🥉'][i] || (i + 1) + 'º'} ${esc(r.nome)}</span><b>${(r.ml / 1000).toFixed(1).replace('.', ',')} L</b></div>`).join('');
     $('err').textContent = '';
