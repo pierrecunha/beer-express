@@ -22,7 +22,15 @@ BE_URL=$(printf '%s' "${BE_URL:-}" | tr -d '\r' | sed 's/^[[:space:]]*//; s/[[:s
 PORT="${HOSTINGER_PORT:-65002}"
 if [ -n "${HOSTINGER_HOST_FP:-}" ]; then
   HOST="${HOSTINGER_SSH#*@}"; mkdir -p ~/.ssh
-  ssh-keyscan -p "$PORT" -t ed25519 "$HOST" 2>/dev/null > /tmp/be_hostkey
+  : > /tmp/be_hostkey
+  for t in 1 2 3; do
+    ssh-keyscan -T 15 -p "$PORT" -t ed25519 "$HOST" 2>/dev/null > /tmp/be_hostkey || true
+    [ -s /tmp/be_hostkey ] && break; sleep 5
+  done
+  if [ ! -s /tmp/be_hostkey ]; then
+    echo "::error::Não consegui falar com o SSH em $HOST porta $PORT (3 tentativas). Confira HOSTINGER_SSH (usuario@IP do hPanel → Acesso SSH, que pode ser diferente do IP do FTP), HOSTINGER_PORT (65002) e se o Acesso SSH está ATIVO no hPanel."
+    exit 1
+  fi
   FP=$(ssh-keygen -lf /tmp/be_hostkey | awk '{print $2}')
   [ "$FP" = "$HOSTINGER_HOST_FP" ] || { echo "CHAVE DO SERVIDOR DIFERENTE ($FP) — deploy cancelado"; exit 1; }
   cat /tmp/be_hostkey >> ~/.ssh/known_hosts
@@ -31,6 +39,7 @@ else
   SSH="ssh -p $PORT -o StrictHostKeyChecking=accept-new"
 fi
 SIM=""; [ "${1:-}" = "--simular" ] && SIM="--dry-run"
+echo "→ destino: ${HOSTINGER_SSH%%@*}@${HOSTINGER_SSH#*@} porta $PORT"
 
 python3 scripts/verificar-segredos.py
 scripts/lint.sh
