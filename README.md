@@ -1,6 +1,8 @@
 # 🍺 Beer Express — chopp self-service com liberação por telemetria
 
-Sistema completo: **app da maquininha** (verificação 18+, cardápio, pagamento), **servidor** (PHP/MySQL na Hostinger, igual ao WashEasy), **controlador ESP32** que libera o volume exato na torneira, **painel web** e **alertas no Telegram**.
+Sistema completo no modelo **BeerPass**: o cliente faz o cadastro 18+ uma vez, **recarrega crédito** na maquininha, **aproxima o cartão/pulseira na torneira** e se serve à vontade pagando **por ml** (tela na torneira mostra ml e R$ ao vivo). Continua existindo a venda de **copo fechado** (300/500 ml). Inclui **BeerList** para TV (`tv.html`) e ranking de consumo. Lista de compras e instalação: **[docs/HARDWARE.md](docs/HARDWARE.md)**.
+
+Componentes: **app da maquininha** (verificação 18+, recarga, cartão, cardápio, pagamento), **servidor** (PHP/MySQL na Hostinger, igual ao WashEasy), **controlador ESP32** que libera o volume exato na torneira, **painel web** e **alertas no Telegram**.
 
 ```
  Cliente ──► MAQUININHA (Android)                SERVIDOR (Hostinger)                 FREEZER
@@ -15,9 +17,9 @@ Sistema completo: **app da maquininha** (verificação 18+, cardápio, pagamento
 
 | Pasta | Conteúdo |
 |---|---|
-| `server/` | `api.php` (API única), `pos.html` (tela da maquininha), `painel.html` (gestão), `cron_tick.php`, `install.sql`, `config.php` |
+| `server/` | `api.php` (API única), `pos.html` (tela da maquininha), `painel.html` (gestão), `tv.html` (BeerList), `cron_tick.php`, `install.sql`, `config.php` |
 | `android/` | App nativo (casca) que roda o `pos.html` em modo quiosque e chama o pagamento da adquirente |
-| `firmware/` | `beer_express_esp32.ino` — controlador da chopeira |
+| `firmware/` | `beer_express_torneira` — torneira inteligente (tela + RFID, Beer Pass + copo) • `beer_express_esp32` — controlador central sem tela (copo, até 4 torneiras) |
 
 A tela da maquininha fica **no servidor**. Mudou preço, texto, layout? Atualiza o `pos.html` e todas as maquininhas recebem na hora, **sem reinstalar nem re-homologar o APK**.
 

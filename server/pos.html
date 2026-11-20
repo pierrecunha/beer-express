@@ -64,6 +64,17 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
 .tap h3{font-size:19px}.tap p{font-size:13px;color:var(--mut);margin-top:2px}
 .tap .pr{margin-top:6px;font-weight:800;color:var(--amber)}
 .tap.off{opacity:.45}.tap.off::after{content:"Indisponível";position:absolute;right:12px;top:12px;font-size:11px;background:#000a;padding:4px 8px;border-radius:99px}
+.wallet{display:flex;gap:8px;align-items:center;margin:-4px 0 12px}
+.wallet .sal{flex:1;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:8px 12px;font-size:12px;color:var(--mut)}
+.wallet .sal{min-width:0;white-space:nowrap}.wallet .sal b{display:block;font-size:19px;color:var(--txt);white-space:nowrap}
+.wallet button{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 12px;font-size:13px;font-weight:700;min-height:52px}
+.wallet button.pri{background:var(--amber);color:#1A1206;border-color:var(--amber)}
+.vals{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:8px 0}
+.val{background:var(--card);border:2px solid var(--line);border-radius:var(--r);padding:18px 8px;text-align:center}
+.val b{display:block;font-size:26px}.val span{font-size:12px;color:var(--ok);font-weight:700}
+.val.sel{border-color:var(--amber);background:#2b210c}
+.ext{font-size:13px;display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line)}
+.ext b{white-space:nowrap;margin-left:8px}.ext .neg{color:var(--err)}.ext .pos{color:var(--ok)}
 .hello{background:linear-gradient(90deg,#2b2109,#1f1810);border:1px solid #4a3a14;border-radius:14px;padding:10px 14px;font-size:14px;margin-bottom:12px}
 .cart{background:var(--bg2);border-top:1px solid var(--line);margin:0 -18px -14px;padding:12px 18px 14px;display:flex;gap:12px;align-items:center}
 .cart .t{flex:1}.cart .t b{font-size:22px}.cart .t small{display:block;color:var(--mut);font-size:12px}
@@ -191,6 +202,11 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
 <section class="scr" id="menu">
   <div class="top"><button class="back" onclick="toIdle()">✕</button><h2>Escolha seu chopp</h2></div>
   <div class="hello" id="hello"></div>
+  <div class="wallet" id="walletBar" style="display:none">
+    <div class="sal" onclick="openCarteira()">Saldo ›<b id="wSaldo">R$ 0,00</b></div>
+    <button class="pri" onclick="openRecarga()">＋ Recarregar</button>
+    <button onclick="openVincular()">💳 Cartão</button>
+  </div>
   <div class="list grow" id="taps"></div>
   <div class="cart">
     <div class="t"><small id="cartInfo">Carrinho vazio</small><b id="cartTotal">R$ 0,00</b></div>
@@ -233,6 +249,50 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
   <p class="mut c" id="svMl"></p>
   <div class="grow"></div>
   <button class="btn pri" id="svBtn" style="display:none" onclick="serveNow()">🍺 Servir agora</button>
+</section>
+
+<!-- RECARGA -->
+<section class="scr" id="recarga">
+  <div class="top"><button class="back" onclick="go('menu')">‹</button><h2>Recarregar Beer Pass</h2></div>
+  <p class="mut" style="font-size:14px">Crédito para se servir à vontade: aproxime o cartão na torneira e pague só os ml que beber.</p>
+  <div class="vals" id="vals"></div>
+  <p class="mut" id="passTaps" style="font-size:12.5px;margin-top:6px"></p>
+  <div class="grow"></div>
+  <p class="mut" style="margin-bottom:10px;font-size:14px">Pagar com:</p>
+  <div class="pays" id="rPays"></div>
+</section>
+
+<!-- VINCULAR CARTÃO -->
+<section class="scr" id="vincular">
+  <div class="top"><button class="back" onclick="go('menu')">‹</button><h2>Vincular cartão ou pulseira</h2></div>
+  <p class="mut" style="font-size:14px;line-height:1.4">1. Aproxime o cartão/pulseira no leitor da torneira.<br>2. A tela da torneira mostra um código de 4 números.<br>3. Digite o código aqui.</p>
+  <div class="disp ph" id="vDisp" style="margin-top:12px">____</div>
+  <div class="hint" id="vHint"></div>
+  <div class="pad" data-pad="vinc"></div>
+  <div class="grow"></div>
+  <button class="btn pri" id="vOk" disabled onclick="vincular()">Vincular</button>
+</section>
+
+<!-- CARTEIRA -->
+<section class="scr" id="carteira">
+  <div class="top"><button class="back" onclick="go('menu')">‹</button><h2>Minha carteira</h2></div>
+  <div class="card" style="background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-bottom:12px">
+    <span class="mut" style="font-size:12px">Saldo</span><div style="font-size:30px;font-weight:900" id="cSaldo"></div></div>
+  <h3 style="font-size:15px;margin-bottom:6px">Cartões</h3><div id="cCards"></div>
+  <h3 style="font-size:15px;margin:14px 0 6px">Últimos movimentos</h3><div id="cExt" class="grow" style="overflow:auto"></div>
+</section>
+
+<!-- RECARGA OK -->
+<section class="scr" id="recOk">
+  <div class="grow c" style="display:flex;flex-direction:column;justify-content:center">
+    <div class="okic">✓</div>
+    <h2 style="font-size:26px">Recarga aprovada!</h2>
+    <p class="mut" style="margin-top:8px">Seu saldo agora é</p>
+    <div style="font-size:40px;font-weight:900;color:var(--amber)" id="rokSaldo"></div>
+    <p class="mut" id="rokMsg" style="margin-top:14px;line-height:1.4"></p>
+  </div>
+  <button class="btn pri" onclick="go('menu')">Continuar</button>
+  <button class="btn sec" style="margin-top:8px" onclick="toIdle()">Concluir</button>
 </section>
 
 <!-- FIM -->
@@ -305,15 +365,16 @@ async function loadMenu(){ S.taps = (await api('pos/menu')).torneiras; renderIdl
 function renderIdleChips(){ $('idleChips').innerHTML = S.taps.map(t => `<span class="chip"><span class="dot" style="background:${t.disponivel?t.cor:'#555'}"></span>${esc(t.produto)}</span>`).join(''); }
 function esc(s){ return String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
-function toIdle(){ clearInterval(S.pollT); clearInterval(S.pixT); Object.assign(S, {cpf:'', nasc:'', nome:'', ver:null, cart:[], order:null});
+function toIdle(){ clearInterval(S.pollT); clearInterval(S.pixT); if (S.ver && S.ver.token) api('pos/logout', {token:S.ver.token}).catch(()=>{});
+  Object.assign(S, {cpf:'', nasc:'', nome:'', ver:null, cart:[], order:null, wallet:null, vinc:'', rec:null}); $('vDisp') && ($('vDisp').textContent='____');
   updCpf(); updNasc(); updNome(); closeSheet(); unload(); go('idle'); }
-function start(){ if (!S.taps.some(t => t.disponivel)) return modal('😕','Chopeira indisponível','Estamos sem chopp disponível agora. Volte em instantes!',[['OK']]); go('age'); }
+function start(){ if (!S.taps.some(t => t.online)) return modal('😕','Chopeira indisponível','Estamos sem chopp disponível agora. Volte em instantes!',[['OK']]); go('age'); }
 function minor(){ modal('🔞','Venda proibida','A venda de bebidas alcoólicas é proibida para menores de 18 anos.',[['Entendi', toIdle]]); }
 
 /* ================= Teclados ================= */
 function buildPads(){ document.querySelectorAll('[data-pad]').forEach(p => { const k = p.dataset.pad;
   p.innerHTML = [1,2,3,4,5,6,7,8,9,'⌫',0,'C'].map(n => `<button data-k="${n}">${n}</button>`).join('');
-  p.onclick = e => { const b = e.target.closest('button'); if (!b) return; k==='cpf' ? padCpf(b.dataset.k) : padNasc(b.dataset.k); }; }); }
+  p.onclick = e => { const b = e.target.closest('button'); if (!b) return; k==='cpf' ? padCpf(b.dataset.k) : k==='vinc' ? padVinc(b.dataset.k) : padNasc(b.dataset.k); }; }); }
 function buildKb(id, fn, alnum){ const rows = alnum ? ['1234567890','QWERTYUIOP','ASDFGHJKL','ZXCVBNM⌫'] : ['QWERTYUIOP','ASDFGHJKL','ZXCVBNM⌫'];
   let h = rows.map(r => '<div>' + [...r].map(c => `<button data-k="${c}" ${c==='⌫'?'class="w2"':''}>${c}</button>`).join('') + '</div>').join('');
   if (!alnum) h += '<div><button class="w" data-k=" ">espaço</button></div>';
@@ -350,7 +411,7 @@ async function identify(comNome){
     if (j.need_name) { S.nome=''; updNome(); go('nome'); return; }
     S.ver = j; S.cart = [];
     $('hello').innerHTML = `👋 Olá, <b>${esc(j.nome)}</b>! ${j.novo ? 'Seja bem-vindo(a).' : 'Bom te ver de novo.'}`;
-    await loadMenu(); renderMenu(); go('menu');
+    await loadMenu(); renderMenu(); await loadWallet(); go('menu');
   } catch(e){
     unload();
     const map = {menor_idade:['🔞','Venda proibida'], terminal_bloqueado:['🔒','Aguarde'], dados_nao_conferem:['❌','Dados não conferem'], nome_nao_confere:['❌','Nome não confere'],
@@ -397,9 +458,10 @@ function renderResumo(){ const tot=S.cart.reduce((s,c)=>s+c.preco*c.qtd,0);
 function rmItem(i){ S.cart.splice(i,1); renderCart(); if (!S.cart.length) go('menu'); else renderResumo(); }
 
 /* ================= Pagamento ================= */
-async function pagar(metodo){
-  loading('Criando pedido…');
-  try { S.order = await api('pos/order', {token:S.ver.token, metodo, itens:S.cart.map(c=>({offer_id:c.offer_id, qtd:c.qtd}))}); }
+async function pagar(metodo, recarga){
+  loading(recarga ? 'Gerando recarga…' : 'Criando pedido…');
+  try { S.order = recarga ? await api('pos/recharge', {token:S.ver.token, metodo, valor:S.rec}) : await api('pos/order', {token:S.ver.token, metodo, itens:S.cart.map(c=>({offer_id:c.offer_id, qtd:c.qtd}))});
+        S.order.recarga = !!recarga; }
   catch(e){ unload(); if (e.erro==='sessao') return modal('⏱️','Sessão expirada', e.mensagem, [['OK', toIdle]]); return modal('⚠️','Não foi possível', e.mensagem, [['Voltar', ()=>{ loadMenu().then(renderMenu); go('menu'); }]]); }
   unload();
   if (metodo === 'pix') return showPix();
@@ -410,9 +472,9 @@ async function pagar(metodo){
 window.__payResult = async function(json){
   const r = typeof json === 'string' ? JSON.parse(json) : json; unload();
   if (!r.aprovado) { api('pos/payment_failed', {ref:S.order.ref, motivo:r.motivo||''}).catch(()=>{}); S.order=null;
-    return modal('💳','Pagamento não aprovado', r.motivo || 'Tente novamente ou use outra forma de pagamento.', [['Tentar de novo', ()=>go('resumo')], ['Cancelar', toIdle, 'sec']]); }
+    return modal('💳','Pagamento não aprovado', r.motivo || 'Tente novamente ou use outra forma de pagamento.', [['Tentar de novo', ()=>go(S.rec ? 'recarga' : 'resumo')], ['Cancelar', toIdle, 'sec']]); }
   loading('Pagamento aprovado! Liberando…');
-  for (let i=0;i<5;i++){ try { await api('pos/paid', {ref:S.order.ref, metodo:S.order.metodo, pagamento_id:r.pagamento_id||'', nsu:r.nsu||'', bandeira:r.bandeira||'', final_cartao:r.final_cartao||''}); unload(); return startServe(); }
+  for (let i=0;i<5;i++){ try { await api('pos/paid', {ref:S.order.ref, metodo:S.order.metodo, pagamento_id:r.pagamento_id||'', nsu:r.nsu||'', bandeira:r.bandeira||'', final_cartao:r.final_cartao||''}); unload(); return afterPaid(); }
     catch(e){ if (e.erro!=='rede') break; await new Promise(z=>setTimeout(z, 2000)); } }
   unload(); modal('⚠️','Pagamento aprovado, mas sem conexão', 'Não se preocupe: seu pedido ' + S.order.ref + ' está registrado. Aguarde ou chame o responsável.', [['Tentar de novo', ()=>window.__payResult(r)]]);
 };
@@ -423,8 +485,37 @@ function showPix(){ const p=S.order.pix;
   let fim = Date.now() + (p.expira_min||5)*60000; clearInterval(S.pixT);
   S.pixT = setInterval(async () => { const s=Math.max(0,Math.round((fim-Date.now())/1000)); $('pixTimer').textContent = String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
     if (s===0){ clearInterval(S.pixT); cancelOrder(); return modal('⏱️','Pix expirado','O tempo para pagamento acabou.',[['OK', toIdle]]); }
-    if (s%3===0){ try { const st = await api('pos/order_status&ref='+S.order.ref); if (['pago','servindo'].includes(st.status)) { clearInterval(S.pixT); startServe(); } if (st.status==='cancelado'){ clearInterval(S.pixT); modal('⏱️','Pix cancelado','',[['OK',toIdle]]); } } catch(e){} } }, 1000); }
-async function simPixOk(){ clearInterval(S.pixT); await api('pos/paid', {ref:S.order.ref, metodo:'pix'}).catch(()=>{}); startServe(); }
+    if (s%3===0){ try { const st = await api('pos/order_status&ref='+S.order.ref); if (['pago','servindo','concluido'].includes(st.status)) { clearInterval(S.pixT); afterPaid(); } if (st.status==='cancelado'){ clearInterval(S.pixT); modal('⏱️','Pix cancelado','',[['OK',toIdle]]); } } catch(e){} } }, 1000); }
+async function simPixOk(){ clearInterval(S.pixT); await api('pos/paid', {ref:S.order.ref, metodo:'pix'}).catch(()=>{}); afterPaid(); }
+/* ================= Beer Pass: carteira, recarga, cartão ================= */
+function afterPaid(){ if (S.order && S.order.recarga) return recargaOk(); startServe(); }
+async function loadWallet(){ try { S.wallet = await api('pos/wallet', {token:S.ver.token}); } catch(e){ S.wallet = null; }
+  $('walletBar').style.display = S.wallet && S.wallet.pass ? 'flex' : 'none'; if (S.wallet) $('wSaldo').textContent = brl(S.wallet.saldo); }
+function openRecarga(){ const w=S.wallet; S.rec = null;
+  $('vals').innerHTML = w.recargas.map(r=>`<button class="val" data-v="${r.valor}" onclick="pickRec(${r.valor})"><b>${brl(r.valor).replace(',00','')}</b>${r.bonus?`<span>+ ${brl(r.bonus)} de bônus</span>`:'<span>&nbsp;</span>'}</button>`).join('');
+  $('passTaps').textContent = w.torneiras_pass.length ? 'Preço por litro: ' + w.torneiras_pass.map(t=>`${t.produto} ${brl(t.preco_litro)}/L`).join(' • ') : '';
+  const lbl = {credito:['💳','Crédito'], debito:['💳','Débito'], pix:['⚡','Pix']};
+  $('rPays').innerHTML = S.cfg.metodos.map(m=>`<button class="pay" disabled onclick="pagar('${m}', true)"><i>${lbl[m][0]}</i>${lbl[m][1]}</button>`).join('');
+  go('recarga'); }
+function pickRec(v){ S.rec = v; document.querySelectorAll('#vals .val').forEach(b=>b.classList.toggle('sel', +b.dataset.v===v)); document.querySelectorAll('#rPays .pay').forEach(b=>b.disabled=false); }
+async function recargaOk(){ unload(); let st={}; try { st = await api('pos/order_status&ref='+S.order.ref); } catch(e){}
+  await loadWallet(); $('rokSaldo').textContent = brl(st.saldo ?? (S.wallet ? S.wallet.saldo : 0));
+  $('rokMsg').textContent = (S.wallet && S.wallet.cartoes.some(c=>+c.ativo)) ? 'Aproxime seu cartão na torneira e sirva-se. A tela mostra os ml e o valor em tempo real.'
+    : 'Ainda não tem cartão? Aproxime um cartão ou pulseira Beer Express na torneira e toque em "Cartão" para vincular.';
+  S.rec = null; go('recOk'); }
+function openVincular(){ S.vinc=''; padVinc('C'); go('vincular'); }
+function padVinc(k){ if (k==='⌫') S.vinc=S.vinc.slice(0,-1); else if (k==='C') S.vinc=''; else if (S.vinc.length<4) S.vinc+=k;
+  $('vDisp').textContent = (S.vinc + '____').slice(0,4); $('vDisp').classList.toggle('ph', !S.vinc); $('vOk').disabled = S.vinc.length!==4; $('vHint').textContent=''; $('vHint').classList.remove('err'); }
+async function vincular(){ try { const r = await api('pos/link_card', {token:S.ver.token, codigo:S.vinc}); await loadWallet();
+    modal('💳','Cartão vinculado!', `Cartão ${r.final} pronto. Aproxime na torneira para se servir.`, [['OK', ()=>go('menu')]]); }
+  catch(e){ $('vHint').textContent = e.mensagem || 'Falha'; $('vHint').classList.add('err'); $('vDisp').classList.add('bad'); } }
+function openCarteira(){ const w=S.wallet; if (!w) return; $('cSaldo').textContent = brl(w.saldo);
+  $('cCards').innerHTML = w.cartoes.length ? w.cartoes.map(c=>`<div class="ext"><span>${esc(c.apelido||'Cartão')} ${c.final} ${+c.ativo?'':'<b style="color:var(--err)">bloqueado</b>'}</span>${+c.ativo?`<button class="btn sec" style="width:auto;min-height:34px;padding:0 12px;font-size:13px" onclick="bloquearCartao(${c.id})">Bloquear</button>`:''}</div>`).join('') : '<p class="mut" style="font-size:13px">Nenhum cartão vinculado.</p>';
+  const nomes = {recarga:'Recarga', bonus:'Bônus', consumo:'Consumo', estorno:'Estorno', ajuste:'Ajuste'};
+  $('cExt').innerHTML = w.extrato.map(e=>`<div class="ext"><span>${nomes[e.tipo]||e.tipo}<br><small class="mut">${esc(e.obs||'')} • ${e.created_at.slice(8,10)}/${e.created_at.slice(5,7)} ${e.created_at.slice(11,16)}</small></span><b class="${+e.valor<0?'neg':'pos'}">${+e.valor<0?'−':'+'} ${brl(Math.abs(e.valor))}</b></div>`).join('') || '<p class="mut" style="font-size:13px">Sem movimentos.</p>';
+  go('carteira'); }
+async function bloquearCartao(id){ modal('⚠️','Bloquear cartão?','Use se perdeu o cartão. Ele deixa de abrir as torneiras.', [['Bloquear', async ()=>{ await api('pos/card_block', {token:S.ver.token, card_id:id}).catch(()=>{}); await loadWallet(); openCarteira(); }], ['Cancelar', null, 'sec']]); }
+
 async function cancelOrder(){ clearInterval(S.pixT); if (S.order) await api('pos/cancel', {ref:S.order.ref}).catch(()=>{}); toIdle(); }
 
 /* ================= Servindo ================= */

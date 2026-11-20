@@ -104,11 +104,17 @@ async function dash(){
   const maxH=Math.max(1,...d.horas.map(x=>+x.n));
   $('#main').innerHTML=`<h1>Visão geral <span class="sp"></span><span class="mut" style="font-size:12px">atualiza a cada 20 s</span></h1>
   <div class="grid g4">
-   <div class="card kpi"><small>Hoje</small><b>${brl(d.hoje.s)}</b><span>${d.hoje.n} vendas • ${mlf(d.hoje.ml)} ${var_!==null?`• <span class="${var_>=0?'up':'dn'}">${var_>=0?'▲':'▼'} ${Math.abs(var_)}% vs ontem</span>`:''}</span></div>
+   <div class="card kpi"><small>Recebido hoje (copos + recargas)</small><b>${brl(d.hoje.s)}</b><span>${d.hoje.n} vendas • ${mlf(d.hoje.ml)} ${var_!==null?`• <span class="${var_>=0?'up':'dn'}">${var_>=0?'▲':'▼'} ${Math.abs(var_)}% vs ontem</span>`:''}</span></div>
    <div class="card kpi"><small>Ticket médio hoje</small><b>${brl(d.hoje.n?d.hoje.s/d.hoje.n:0)}</b><span>Ontem: ${brl(d.ontem.s)}</span></div>
    <div class="card kpi"><small>Mês</small><b>${brl(d.mes.s)}</b><span>${d.mes.n} vendas • ${mlf(d.mes.ml)}</span></div>
    <div class="card kpi"><small>Clientes verificados</small><b>${d.clientes.total||0}</b><span>${+d.clientes.hoje||0} novos hoje • 🔞 ${d.menores_hoje} menores barrados</span></div>
   </div>
+  ${d.pass?`<div class="grid g4 sec">
+   <div class="card kpi"><small>🎫 Beer Pass hoje (consumo)</small><b>${brl(d.pass.s)}</b><span>${d.pass.n} servidas • ${mlf(d.pass.ml)}</span></div>
+   <div class="card kpi"><small>Recargas hoje</small><b>${brl(d.pass.recargas.s)}</b><span>${d.pass.recargas.n} recargas • bônus ${brl(d.pass.recargas.b)}</span></div>
+   <div class="card kpi"><small>Saldo nas carteiras</small><b>${brl(d.pass.saldo_carteiras)}</b><span>crédito já recebido, ainda não consumido</span></div>
+   <div class="card kpi"><small>Servindo agora</small><b>${d.pass.abertas.length}</b><span>${d.pass.abertas.map(a=>`${esc(a.cliente)} ${a.servido_ml} ml (${esc(a.torneira)})`).join(' • ')||'nenhuma torneira aberta'}</span></div>
+  </div>`:''}
   <div class="grid g3 sec">
    <div class="card" style="grid-column:span 2"><h2>Faturamento — últimos 30 dias</h2><div class="chart">${dias.map(x=>`<div style="height:${Math.max(1,100*x.s/maxD)}%" data-t="${x.d.slice(8)}/${x.d.slice(5,7)}: ${brl(x.s)} (${x.n})"></div>`).join('')}</div></div>
    <div class="card"><h2>Horários de pico (30 dias)</h2><div class="chart" style="height:150px">${Array.from({length:24},(_,h)=>{const n=+(d.horas.find(x=>+x.h===h)?.n||0);return `<div style="height:${Math.max(1,100*n/maxH)}%;background:#6b5420" data-t="${h}h: ${n}"></div>`}).join('')}</div><p class="mut" style="font-size:11px;display:flex;justify-content:space-between"><span>0h</span><span>12h</span><span>23h</span></p></div>
@@ -125,9 +131,11 @@ async function dash(){
 
 /* ============ vendas ============ */
 let VF={de:new Date(Date.now()-6*864e5).toISOString().slice(0,10),ate:new Date().toISOString().slice(0,10),status:'',q:'',page:1};
+let VT='pedidos';
 async function vendas(){
+  if(VT==='pass') return servidas();
   const p=new URLSearchParams(VF).toString(), d=await api('admin/orders&'+p);
-  $('#main').innerHTML=`<h1>Vendas</h1><div class="card"><div class="row">
+  $('#main').innerHTML=`<h1>Vendas</h1>${vtabs()}<div class="card"><div class="row">
     <div><label>De</label><input type="date" value="${VF.de}" onchange="VF.de=this.value;VF.page=1;vendas()"></div>
     <div><label>Até</label><input type="date" value="${VF.ate}" onchange="VF.ate=this.value;VF.page=1;vendas()"></div>
     <div><label>Status</label><select onchange="VF.status=this.value;VF.page=1;vendas()"><option value="">Todos</option>${Object.keys(ST).slice(0,8).map(s=>`<option value="${s}" ${VF.status===s?'selected':''}>${ST[s][0]}</option>`).join('')}</select></div>
@@ -135,10 +143,19 @@ async function vendas(){
     <div style="flex:0"><button class="btn" onclick="exportCsv()">CSV</button></div></div>
    <p class="mut" style="margin:12px 0">${d.total} pedidos • faturado ${brl(d.soma)}</p>
    <div class="tw"><table><tr><th>Data</th><th>Pedido</th><th>Ponto</th><th>Cliente</th><th>Pagamento</th><th class="r">Volume</th><th class="r">Total</th><th>Status</th></tr>
-   ${d.pedidos.map(o=>`<tr class="click" onclick="pedido(${o.id})"><td class="nw">${dt(o.created_at)}</td><td class="nw">${o.ref}</td><td>${esc(o.loc)}</td><td>${esc(o.cliente||'—')}<br><small class="mut">${o.cpf||''}</small></td>
+   ${d.pedidos.map(o=>`<tr class="click" onclick="pedido(${o.id})"><td class="nw">${dt(o.created_at)}</td><td class="nw">${o.ref}${o.tipo==='recarga'?' <span class="pill p-ok">recarga</span>':''}</td><td>${esc(o.loc)}</td><td>${esc(o.cliente||'—')}<br><small class="mut">${o.cpf||''}</small></td>
      <td class="nw">${met(o.metodo)} ${o.final_cartao?'•••'+o.final_cartao:''} ${o.metodo&&o.metodo!=='pix'&&!+o.verificado_servidor?'<span title="não confirmado na API">⚠️</span>':''}</td><td class="r">${mlf(o.total_ml)}</td><td class="r">${brl(o.total)}</td><td>${pill(o.status)}</td></tr>`).join('')}</table></div>
    ${d.paginas>1?`<div class="row" style="margin-top:12px;justify-content:flex-end"><button class="btn sm" style="flex:0" ${VF.page<=1?'disabled':''} onclick="VF.page--;vendas()">‹</button><span style="flex:0" class="nw">${VF.page}/${d.paginas}</span><button class="btn sm" style="flex:0" ${VF.page>=d.paginas?'disabled':''} onclick="VF.page++;vendas()">›</button></div>`:''}</div>`;
   window._ped=d.pedidos}
+function vtabs(){return `<div class="tabs"><button class="${VT==='pedidos'?'on':''}" onclick="VT='pedidos';vendas()">Pedidos e recargas</button><button class="${VT==='pass'?'on':''}" onclick="VT='pass';vendas()">🎫 Servidas por ml (Beer Pass)</button></div>`}
+async function servidas(){const d=await api('admin/pours&de='+VF.de+'&ate='+VF.ate);
+  $('#main').innerHTML=`<h1>Vendas</h1>${vtabs()}<div class="card"><div class="row">
+    <div><label>De</label><input type="date" value="${VF.de}" onchange="VF.de=this.value;vendas()"></div><div><label>Até</label><input type="date" value="${VF.ate}" onchange="VF.ate=this.value;vendas()"></div></div>
+   <p class="mut" style="margin:12px 0">${d.total} servidas • ${mlf(d.ml)} • consumo ${brl(d.soma)}</p>
+   <div class="tw"><table><tr><th>Início</th><th>Ponto / torneira</th><th>Cliente</th><th>Chopp</th><th class="r">Servido</th><th class="r">R$/L</th><th class="r">Valor</th><th>Status</th></tr>
+   ${d.servidas.map(x=>`<tr><td class="nw">${dt(x.inicio_em)}</td><td>${esc(x.loc)} • ${esc(x.torneira)}</td><td>${esc(x.cliente)}<br><small class="mut">${x.cpf}</small></td><td>${esc(x.produto||'')}</td>
+     <td class="r">${mlf(x.servido_ml)}<br><small class="mut">limite ${mlf(x.limite_ml)}</small></td><td class="r">${brl(x.preco_litro)}</td><td class="r">${brl(x.valor)}</td>
+     <td><span class="pill ${x.status==='fechada'?'p-ok':x.status==='aberta'?'p-info':'p-warn'}">${x.status}</span>${x.motivo_fim?'<br><small class="mut">'+esc(x.motivo_fim)+'</small>':''}</td></tr>`).join('')}</table></div></div>`}
 function exportCsv(){const l=[['data','pedido','ponto','cliente','cpf','metodo','ml','total','status'],...(window._ped||[]).map(o=>[o.created_at,o.ref,o.loc,o.cliente,o.cpf,o.metodo,o.total_ml,String(o.total).replace('.',','),o.status])];
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['﻿'+l.map(r=>r.map(c=>'"'+String(c??'').replace(/"/g,'""')+'"').join(';')).join('\n')],{type:'text/csv'}));a.download='vendas.csv';a.click()}
 async function pedido(id){const d=await api('admin/order&id='+id), o=d.pedido;
@@ -158,10 +175,21 @@ let CQ='';
 async function clientes(){const d=await api('admin/customers&q='+encodeURIComponent(CQ));
   $('#main').innerHTML=`<h1>Clientes <span class="sp"></span><span class="mut" style="font-size:13px">${d.total} verificados</span></h1><div class="card">
   <input placeholder="Buscar por CPF ou nome e Enter" value="${esc(CQ)}" onkeydown="if(event.key==='Enter'){CQ=this.value;clientes()}">
-  <div class="tw" style="margin-top:12px"><table><tr><th>Cliente</th><th>CPF</th><th>Idade</th><th>Verificação</th><th class="r">Compras</th><th class="r">Consumo</th><th class="r">Gasto</th><th>Última</th><th></th></tr>
+  <div class="tw" style="margin-top:12px"><table><tr><th>Cliente</th><th>CPF</th><th>Idade</th><th>Verificação</th><th class="r">Compras</th><th class="r">Consumo</th><th class="r">Gasto</th><th class="r">Saldo Pass</th><th>Última</th><th></th></tr>
   ${d.clientes.map(c=>`<tr><td>${esc(c.nome)} ${+c.bloqueado?'<span class="pill p-err">bloqueado</span>':''}</td><td class="nw">${c.cpf}</td><td>${c.idade}</td><td><span class="pill ${c.verificado_por==='local'?'':'p-ok'}">${c.verificado_por}</span></td>
-   <td class="r">${c.compras}</td><td class="r">${mlf(c.total_ml)}</td><td class="r">${brl(c.total_gasto)}</td><td class="nw">${dt(c.ultima_compra)}</td>
-   <td><button class="btn sm ${+c.bloqueado?'':'dan'}" onclick="bloq(${c.id},${+c.bloqueado?0:1})">${+c.bloqueado?'Desbloquear':'Bloquear'}</button></td></tr>`).join('')}</table></div></div>`}
+   <td class="r">${c.compras}</td><td class="r">${mlf(c.total_ml)}</td><td class="r">${brl(c.total_gasto)}</td><td class="r"><a href="#" onclick="cliente(${c.id});return false">${brl(c.saldo)}</a>${+c.cartoes?`<br><small class="mut">${c.cartoes} cartão(ões)</small>`:''}</td><td class="nw">${dt(c.ultima_compra)}</td>
+   <td class="nw"><button class="btn sm" onclick="cliente(${c.id})">Carteira</button> <button class="btn sm ${+c.bloqueado?'':'dan'}" onclick="bloq(${c.id},${+c.bloqueado?0:1})">${+c.bloqueado?'Desbloquear':'Bloquear'}</button></td></tr>`).join('')}</table></div></div>`}
+async function cliente(id){const d=await api('admin/customer&id='+id), c=d.cliente;
+  const nomes={recarga:'Recarga',bonus:'Bônus',consumo:'Consumo',estorno:'Estorno',ajuste:'Ajuste'};
+  openM(`<h3>${esc(c.nome)}</h3><p class="mut">${c.cpf} • ${c.idade} anos • ${c.compras} compras • ${mlf(c.total_ml)}</p>
+   <div class="grid g2" style="margin:14px 0"><div class="card kpi"><small>Saldo Beer Pass</small><b>${brl(c.saldo)}</b></div>
+    <div class="card"><label style="margin-top:0">Ajuste manual (+ crédito / − débito)</label><div class="row"><input id="aj" placeholder="ex.: 10 ou -5,50"><input id="ajo" placeholder="motivo"></div><button class="btn sm" style="margin-top:8px" onclick="ajustar(${c.id})">Aplicar</button></div></div>
+   <h2>Cartões / pulseiras</h2><table>${d.cartoes.map(k=>`<tr><td>${esc(k.apelido||'Cartão')} <code>${esc(k.uid)}</code></td><td>${+k.ativo?'<span class="pill p-ok">ativo</span>':'<span class="pill p-err">bloqueado</span>'}</td><td class="mut">uso ${dt(k.ultimo_uso)}</td>
+     <td class="r nw"><button class="btn sm" onclick="cartao(${k.id},{ativo:${+k.ativo?0:1}},${c.id})">${+k.ativo?'Bloquear':'Desbloquear'}</button> <button class="btn sm dan" onclick="cartao(${k.id},{desvincular:1},${c.id})">Desvincular</button></td></tr>`).join('')||'<tr><td class="mut">Nenhum</td></tr>'}</table>
+   <h2 style="margin-top:16px">Extrato</h2><table>${d.extrato.map(e=>`<tr><td class="nw">${dt(e.created_at)}</td><td>${nomes[e.tipo]||e.tipo}<br><small class="mut">${esc(e.obs||'')}</small></td><td class="r ${+e.valor<0?'dn':'up'}">${brl(e.valor)}</td><td class="r mut">${brl(e.saldo_apos)}</td></tr>`).join('')||'<tr><td class="mut">Sem movimentos</td></tr>'}</table>
+   <div class="row" style="margin-top:16px;justify-content:flex-end"><button class="btn" style="flex:0" onclick="closeM()">Fechar</button></div>`)}
+async function ajustar(id){try{const r=await api('admin/wallet_adjust',{customer_id:id,valor:$('#aj').value,obs:$('#ajo').value});toast('Novo saldo: '+brl(r.saldo));cliente(id)}catch(e){toast(e.mensagem)}}
+async function cartao(id,dados,cid){if(dados.desvincular&&!confirm('Desvincular este cartão do cliente?'))return;await api('admin/card_update',{id,...dados});cliente(cid)}
 async function bloq(id,b){const m=b?prompt('Motivo do bloqueio:'):'';if(b&&m===null)return;await api('admin/customer_block',{id,bloqueado:b,motivo:m});clientes()}
 
 /* ============ equipamentos ============ */
@@ -170,23 +198,23 @@ async function equip(){CAT=await api('admin/catalog');const c=CAT, locN=id=>c.lo
   const tabs=[['torneiras','Torneiras e barris'],['produtos','Bebidas'],['devices','Controladores ESP32'],['terminais','Maquininhas'],['locations','Pontos']];
   let body='';
   if(ETAB==='torneiras') body=c.torneiras.map(t=>{const of=c.ofertas.filter(o=>o.tap_id==t.id), d=c.devices.find(x=>x.id==t.device_id), p=t.barril_ml?Math.round(100*t.restante_ml/t.barril_ml):0;
-    return `<div class="card" style="margin-bottom:12px"><div class="row" style="align-items:center"><div style="flex:2"><b style="font-size:16px">${esc(t.nome)}</b> — ${esc(t.produto||'sem bebida')} ${+t.ativo?'':'<span class="pill">inativa</span>'}<br><small class="mut">${onl(d?.online)}${esc(locN(d?.location_id))} • ${esc(devN(t.device_id))} • canal ${t.canal} • modo ${t.modo==='flow'?'válvula + fluxômetro ('+t.pulsos_por_litro+' pulsos/L)':'pulso ('+t.ml_por_pulso+' ml/pulso)'}</small></div>
+    return `<div class="card" style="margin-bottom:12px"><div class="row" style="align-items:center"><div style="flex:2"><b style="font-size:16px">${esc(t.nome)}</b> — ${esc(t.produto||'sem bebida')} ${+t.ativo?'':'<span class="pill">inativa</span>'}<br><small class="mut">${onl(d?.online)}${esc(locN(d?.location_id))} • ${esc(devN(t.device_id))} • canal ${t.canal}${t.preco_litro?` • 🎫 Pass ${brl(t.preco_litro)}/L (máx ${mlf(t.max_ml_servida)} por servida)`:''} • modo ${t.modo==='flow'?'válvula + fluxômetro ('+t.pulsos_por_litro+' pulsos/L)':'pulso ('+t.ml_por_pulso+' ml/pulso)'}</small></div>
      <div><div class="bar"><i style="width:${p}%;background:${p<=t.alerta_pct?'var(--err)':'var(--ok)'}"></i></div><small class="mut">${mlf(t.restante_ml)} de ${mlf(t.barril_ml)} (${p}%)</small></div>
      <div style="flex:none;display:flex;gap:6px;flex-wrap:wrap;max-width:100%"><button class="btn sm" onclick="trocaBarril(${t.id})">🛢️ Trocar barril</button><button class="btn sm" onclick="testar(${t.id})">🔓 Liberar teste</button><button class="btn sm" onclick="calibrar(${t.id})">🎯 Calibrar</button><button class="btn sm" onclick="edit('torneiras',${t.id})">✏️</button></div></div>
      <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">${of.map(o=>`<span class="pill ${+o.ativo?'p-info':''}" style="cursor:pointer;font-size:13px;padding:5px 12px" onclick="edit('ofertas',${o.id})">${o.volume_ml} ml • ${brl(o.preco)}</span>`).join('')}<button class="btn sm" onclick="edit('ofertas',0,{tap_id:${t.id},volume_ml:300,preco:'',ordem:${of.length+1},ativo:1})">+ tamanho</button></div></div>`}).join('')+`<button class="btn pri" onclick="edit('torneiras',0)">+ Nova torneira</button>`;
   else { const cols={produtos:[['nome','Bebida'],['estilo','Estilo'],['abv','ABV %'],['ativo','Ativo']],devices:[['nome','Controlador'],['location_id','Ponto'],['start_mode','Início'],['temperatura','Temp.'],['device_key','Chave do dispositivo'],['online','On']],
-      terminais:[['nome','Maquininha'],['location_id','Ponto'],['provider','Adquirente'],['codigo','Código de pareamento'],['serial','Serial'],['online','On']],locations:[['nome','Ponto'],['endereco','Endereço'],['ativo','Ativo']]}[ETAB];
-    const fmt=(k,v)=>k==='location_id'?esc(locN(v)):k==='online'?onl(v):k==='ativo'?(+v?'✅':'—'):k==='device_key'||k==='codigo'?`<code>${esc(v)}</code>`:k==='temperatura'&&v!==null?(+v).toFixed(1)+'°C':esc(v??'—');
+      terminais:[['nome','Maquininha'],['location_id','Ponto'],['provider','Adquirente'],['codigo','Código de pareamento'],['serial','Serial'],['online','On']],locations:[['nome','Ponto'],['endereco','Endereço'],['id','BeerList (TV)'],['ativo','Ativo']]}[ETAB];
+    const fmt=(k,v)=>k==='id'&&ETAB==='locations'?`<a href="tv.html?loc=${v}" target="_blank">abrir tela da TV ↗</a>`:k==='location_id'?esc(locN(v)):k==='online'?onl(v):k==='ativo'?(+v?'✅':'—'):k==='device_key'||k==='codigo'?`<code>${esc(v)}</code>`:k==='temperatura'&&v!==null?(+v).toFixed(1)+'°C':esc(v??'—');
     body=`<div class="card tw"><table><tr>${cols.map(c=>`<th>${c[1]}</th>`).join('')}<th></th></tr>${c[ETAB].map(r=>`<tr>${cols.map(([k])=>`<td>${fmt(k,r[k])}</td>`).join('')}<td class="r"><button class="btn sm" onclick="edit('${ETAB}',${r.id})">✏️</button></td></tr>`).join('')}</table>
       <button class="btn pri" style="margin-top:12px" onclick="edit('${ETAB}',0)">+ Adicionar</button>${ETAB==='terminais'?'<p class="mut" style="margin-top:10px">No app da maquininha, digite o <b>código de pareamento</b> na primeira abertura.</p>':ETAB==='devices'?'<p class="mut" style="margin-top:10px">Copie a <b>chave do dispositivo</b> para o portal de configuração do ESP32.</p>':''}</div>`}
   $('#main').innerHTML=`<h1>Chopeiras e barris</h1><div class="tabs">${tabs.map(([k,t])=>`<button class="${ETAB===k?'on':''}" onclick="ETAB='${k}';equip()">${t}</button>`).join('')}</div>${body}`}
 
 const FORMS={
   locations:[['nome','Nome do ponto'],['endereco','Endereço'],['ativo','Ativo','bool']],
-  devices:[['nome','Nome (ex.: Freezer 1)'],['location_id','Ponto','loc'],['start_mode','Como o cliente inicia o serviço','sel',[['button','Botão físico na torneira'],['pos','Botão SERVIR na tela da maquininha'],['auto','Automático (sem confirmação)']]],['arm_timeout_s','Tempo para retirar o copo (s)','num'],['temp_min','Temperatura mínima °C','num'],['temp_max','Temperatura máxima °C','num'],['ativo','Ativo','bool']],
+  devices:[['nome','Nome (ex.: Freezer 1)'],['tipo','Tipo de controlador','sel',[['torneira','Torneira inteligente (tela + leitor de cartão, 1 torneira)'],['central','Central (sem tela, até 4 torneiras)']]],['location_id','Ponto','loc'],['start_mode','Como o cliente inicia o serviço','sel',[['button','Botão físico na torneira'],['pos','Botão SERVIR na tela da maquininha'],['auto','Automático (sem confirmação)']]],['arm_timeout_s','Tempo para retirar o copo (s)','num'],['temp_min','Temperatura mínima °C','num'],['temp_max','Temperatura máxima °C','num'],['ativo','Ativo','bool']],
   terminais:[['nome','Nome (ex.: Maquininha 1)'],['location_id','Ponto','loc'],['provider','Adquirente','sel',[['mercadopago','Mercado Pago Point Smart'],['pagbank','PagBank Moderninha Smart'],['simulado','Simulado (testes)']]],['aceita_credito','Aceita crédito','bool'],['aceita_debito','Aceita débito','bool'],['aceita_pix','Aceita Pix (via API Mercado Pago)','bool'],['ativo','Ativa','bool']],
   produtos:[['nome','Nome'],['estilo','Estilo (Pilsen, IPA…)'],['descricao','Descrição curta'],['abv','Teor alcoólico %','num'],['imagem_url','URL da imagem (opcional)'],['cor','Cor do copo','color'],['ativo','Ativo','bool']],
-  torneiras:[['nome','Nome (ex.: Torneira 1)'],['device_id','Controlador','dev'],['canal','Canal no ESP32 (1-4)','num'],['product_id','Bebida','prod'],['modo','Modo de liberação','sel',[['flow','Válvula solenoide + fluxômetro (recomendado)'],['pulse','Pulsos para controladora externa']]],['pulsos_por_litro','Pulsos por litro (fluxômetro)','num'],['ml_por_pulso','ml por pulso (modo pulso)','num'],['barril_ml','Tamanho do barril (ml)','num'],['alerta_pct','Alerta de barril baixo (%)','num'],['ativo','Ativa','bool']],
+  torneiras:[['nome','Nome (ex.: Torneira 1)'],['device_id','Controlador','dev'],['canal','Canal no ESP32 (1-4)','num'],['product_id','Bebida','prod'],['modo','Modo de liberação','sel',[['flow','Válvula solenoide + fluxômetro (recomendado)'],['pulse','Pulsos para controladora externa']]],['pulsos_por_litro','Pulsos por litro (fluxômetro)','num'],['ml_por_pulso','ml por pulso (modo pulso)','num'],['preco_litro','Beer Pass: preço por litro (R$) — vazio = só copo','num'],['max_ml_servida','Beer Pass: máximo por servida (ml)','num'],['barril_ml','Tamanho do barril (ml)','num'],['alerta_pct','Alerta de barril baixo (%)','num'],['ativo','Ativa','bool']],
   ofertas:[['volume_ml','Volume (ml)','num'],['preco','Preço (R$)','num'],['ordem','Ordem','num'],['ativo','Ativo','bool']]};
 function edit(ent,id,def){const r=id?CAT[ent].find(x=>x.id==id):(def||{ativo:1}), f=FORMS[ent];
   const inp=([k,l,t,opt])=>{const v=r[k]??'';let h;
@@ -226,6 +254,10 @@ async function config(){const d=await api('admin/settings');SET=d.settings;const
    ${F('max_falhas_verificacao','Tentativas inválidas até bloquear','number')}${F('bloqueio_minutos','Minutos de bloqueio da maquininha','number')}
    ${F('falha_api_permite_local','Se a API cair, vender só com dígitos?','sel',[['0','Não (mais seguro)'],['1','Sim']])}</div>
    ${F('nfeio_api_key','Chave API NFE.io','password')}<div class="grid g2">${F('serpro_consumer_key','Serpro Consumer Key')}${F('serpro_consumer_secret','Serpro Consumer Secret','password')}</div>${F('serpro_url','URL Serpro (use {cpf}, {nasc} ou {nasc_dmy})')}</div>
+  <div class="card"><h2>🎫 Beer Pass (crédito + cobrança por ml)</h2><div class="grid g2">${F('pass_ativo','Ativo','sel',yn)}${F('recarga_valores','Valores de recarga (R$, vírgula)')}
+   ${F('recarga_bonus','Bônus (valor:bônus, ex.: 100:5,150:10)')}${F('pass_ml_minimo','Saldo mínimo para abrir (em ml)','number')}${F('pass_fim_inatividade_s','Fecha a torneira após (s) sem fluxo','number')}
+   ${F('tv_ranking','Ranking de consumo na TV (Nome S.)','sel',[['0','Não'],['1','Sim']])}</div>${F('tv_mensagem','Mensagem da TV (BeerList)','area')}
+   <p class="mut" style="margin-top:8px">O preço por litro é definido em cada torneira (Chopeiras e barris → ✏️).</p></div>
   <div class="card"><h2>🍻 Consumo responsável</h2><div class="grid g2">${F('limite_ml_dia_cpf','Limite por CPF por dia (ml, 0 = sem limite)','number')}${F('limite_copos_pedido','Máximo de copos por pedido','number')}</div></div>
   <div class="card"><h2>💳 Mercado Pago (Pix e conferência de cartão)</h2>${F('mp_access_token','Access Token de produção','password')}<div class="grid g2">${F('pix_expira_min','Validade do Pix (min)','number')}${F('mp_verificar_cartao','Conferir cartão na API do MP','sel',yn)}</div>${F('pix_email_padrao','E-mail do pagador padrão (Pix)')}
    <p class="mut" style="margin-top:10px">Webhook (Mercado Pago → Suas integrações → Webhooks → evento Pagamentos):<br><code>${esc(d.webhooks.mercadopago)}</code></p></div>

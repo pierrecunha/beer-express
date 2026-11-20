@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BeerList</title>
+<style>
+:root{--bg:#0B0906;--card:#18130C;--line:#2E2517;--txt:#FFF6E6;--mut:#B9A27F;--amber:#F5B301;--ok:#3DDC84;--err:#FF5A4E}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--txt);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden}
+.wrap{display:grid;grid-template-columns:1fr 26vw;gap:2vw;height:100vh;padding:3vh 2.5vw}
+header{display:flex;align-items:baseline;gap:1.2vw;margin-bottom:2.5vh}
+header h1{font-size:4.2vw;font-weight:900;letter-spacing:-.02em}header h1 b{color:var(--amber)}
+header span{color:var(--mut);font-size:1.4vw}
+.taps{display:grid;grid-template-columns:repeat(auto-fill,minmax(30vw,1fr));gap:1.6vw;align-content:start}
+.tap{background:var(--card);border:1px solid var(--line);border-radius:1.4vw;padding:1.6vw;display:flex;gap:1.6vw;position:relative;overflow:hidden}
+.tap.off{opacity:.35}
+.cup{width:6vw;height:8vw;flex:none;border-radius:.5vw .5vw 1.2vw 1.2vw;background:linear-gradient(180deg,#fff9 0 16%,var(--c) 16%);box-shadow:inset 0 -1vw 2vw #0005}
+.tap img{width:6vw;height:8vw;object-fit:cover;border-radius:1vw;flex:none}
+.info{flex:1;min-width:0}
+.n{font-size:1.1vw;color:var(--mut);letter-spacing:.08em;text-transform:uppercase}
+.tap h2{font-size:2.6vw;line-height:1.05;margin:.2vw 0}
+.est{font-size:1.3vw;color:var(--mut)}
+.pr{display:flex;gap:1vw;flex-wrap:wrap;margin-top:1vw;align-items:baseline}
+.pl{font-size:2.4vw;font-weight:900;color:var(--amber)}.pl small{font-size:1.1vw;color:var(--mut);font-weight:600}
+.cp{font-size:1.15vw;background:#241c10;border-radius:99px;padding:.3vw .9vw;color:var(--txt)}
+.lvl{height:.6vw;background:#2a2013;border-radius:1vw;margin-top:1.2vw;overflow:hidden}.lvl i{display:block;height:100%}
+.live{position:absolute;right:1.2vw;top:1.2vw;background:var(--ok);color:#03200f;font-weight:900;font-size:1.3vw;padding:.4vw 1vw;border-radius:99px;animation:pl 1.2s infinite}
+@keyframes pl{50%{box-shadow:0 0 0 .6vw #3ddc8433}}
+aside{display:flex;flex-direction:column;gap:1.6vw}
+.box{background:var(--card);border:1px solid var(--line);border-radius:1.4vw;padding:1.6vw}
+.box h3{font-size:1.4vw;color:var(--mut);text-transform:uppercase;letter-spacing:.08em;margin-bottom:1vw}
+.big{font-size:4.6vw;font-weight:900;color:var(--amber);line-height:1}
+.clock{font-size:3.4vw;font-weight:800;font-variant-numeric:tabular-nums}
+.rk{display:flex;justify-content:space-between;font-size:1.5vw;padding:.55vw 0;border-bottom:1px solid var(--line)}
+.rk b{color:var(--amber)}
+.msg{font-size:1.6vw;line-height:1.35}
+.b18{display:flex;gap:1vw;align-items:center;font-size:1.2vw;color:var(--mut);line-height:1.3}
+.b18 span{flex:none;width:3.4vw;height:3.4vw;border-radius:50%;border:.3vw solid var(--err);color:var(--err);font-weight:900;font-size:1.2vw;display:flex;align-items:center;justify-content:center}
+.err{position:fixed;bottom:1vw;left:1vw;font-size:1vw;color:var(--err)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <main>
+    <header><h1 id="marca">Beer <b>Express</b></h1><span id="local"></span></header>
+    <div class="taps" id="taps"></div>
+  </main>
+  <aside>
+    <div class="box"><div class="clock" id="clock">--:--</div><div style="color:var(--mut);font-size:1.3vw" id="data"></div></div>
+    <div class="box"><h3>Servidos hoje</h3><div class="big" id="litros">0 L</div></div>
+    <div class="box" id="rkBox" style="display:none"><h3>🏆 Ranking do mês</h3><div id="rk"></div></div>
+    <div class="box msg" id="msg"></div>
+    <div class="b18"><span>18+</span><div id="leg">Proibida a venda de bebidas alcoólicas para menores de 18 anos. Beba com moderação.</div></div>
+  </aside>
+</div>
+<div class="err" id="err"></div>
+<script>
+const loc = new URLSearchParams(location.search).get('loc') || '1';
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const brl = v => 'R$ ' + Number(v).toFixed(2).replace('.', ',');
+function clock(){ const d = new Date(); $('clock').textContent = d.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+  $('data').textContent = d.toLocaleDateString('pt-BR', {weekday:'long', day:'numeric', month:'long'}); }
+async function load(){
+  try {
+    const d = await fetch('api.php?r=pub/tv&loc=' + encodeURIComponent(loc), {cache:'no-store'}).then(r => r.json());
+    if (!d.ok) throw new Error(d.mensagem || 'erro');
+    const n = d.marca.split(' '); $('marca').innerHTML = esc(n[0]) + (n.length > 1 ? ' <b>' + esc(n.slice(1).join(' ')) + '</b>' : '');
+    document.documentElement.style.setProperty('--amber', d.cor || '#F5B301');
+    $('local').textContent = d.local; document.title = d.marca + ' • ' + d.local;
+    $('litros').textContent = String(d.litros_hoje).replace('.', ',') + ' L';
+    $('msg').textContent = d.mensagem || '';
+    $('leg').textContent = `Proibida a venda de bebidas alcoólicas para menores de ${d.idade_minima} anos. Beba com moderação. Se beber, não dirija.`;
+    $('taps').innerHTML = d.torneiras.map(t => {
+      const lv = t.nivel_pct, cor = lv <= 15 ? 'var(--err)' : lv <= 40 ? '#F5A524' : 'var(--ok)';
+      return `<div class="tap ${t.online && lv > 0 ? '' : 'off'}">
+        ${t.imagem_url ? `<img src="${esc(t.imagem_url)}" alt="">` : `<div class="cup" style="--c:${esc(t.cor)}"></div>`}
+        <div class="info"><div class="n">${esc(t.torneira)}</div><h2>${esc(t.produto || '—')}</h2>
+          <div class="est">${esc([t.estilo, t.abv ? String(t.abv).replace('.', ',') + '% ABV' : ''].filter(Boolean).join(' • '))}</div>
+          <div class="pr">${t.preco_litro ? `<span class="pl">${brl(t.preco_litro)}<small> /litro</small></span>` : ''}
+            ${t.ofertas.map(o => `<span class="cp">${o.volume_ml} ml ${brl(o.preco)}</span>`).join('')}</div>
+          <div class="lvl"><i style="width:${lv}%;background:${cor}"></i></div></div>
+        ${t.servindo_ml !== null ? `<div class="live">🍺 ${t.servindo_ml} ml</div>` : ''}</div>`; }).join('');
+    $('rkBox').style.display = d.ranking.length ? 'block' : 'none';
+    $('rk').innerHTML = d.ranking.map((r, i) => `<div class="rk"><span>${['🥇','🥈','🥉'][i] || (i + 1) + 'º'} ${esc(r.nome)}</span><b>${(r.ml / 1000).toFixed(1).replace('.', ',')} L</b></div>`).join('');
+    $('err').textContent = '';
+  } catch (e) { $('err').textContent = 'Sem conexão — tentando de novo…'; }
+}
+clock(); setInterval(clock, 10000); load(); setInterval(load, 4000);
+// Evita a TV/navegador entrar em descanso (quando suportado)
+if (navigator.wakeLock) navigator.wakeLock.request('screen').catch(() => {});
+</script>
+</body>
+</html>

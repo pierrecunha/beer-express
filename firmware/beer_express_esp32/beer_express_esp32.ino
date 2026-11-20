@@ -32,7 +32,7 @@
 #include <OneWire.h>
 #include <DallasTemperature.h>
 #include <esp_task_wdt.h>
-#include <driver/gpio.h>
+#include <soc/gpio_reg.h>
 
 #define FW_VERSION "1.0.0"
 
@@ -80,7 +80,8 @@ float temperatura = -127;
 void IRAM_ATTR onPulse(int ch) {
   pulseCount[ch]++;
   if (pulseTarget[ch] && pulseCount[ch] >= pulseTarget[ch]) {   // atingiu o volume → fecha já
-    gpio_set_level((gpio_num_t)valvePins[ch], VALVE_OFF);
+    uint8_t pin = valvePins[ch];   // escrita direta no registrador (segura dentro da interrupção; pinos < 32)
+    if (VALVE_OFF == LOW) REG_WRITE(GPIO_OUT_W1TC_REG, BIT(pin)); else REG_WRITE(GPIO_OUT_W1TS_REG, BIT(pin));
     pulseTarget[ch] = 0;
   }
 }

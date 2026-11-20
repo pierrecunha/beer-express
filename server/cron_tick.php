@@ -54,6 +54,13 @@ foreach (rows("SELECT * FROM be_dispenses WHERE status = 'servindo' AND COALESCE
     pedido_recalcular((int)$ds['order_id']);
 }
 
+/* 4b) Servidas por ml sem notícia do ESP32 há 10 min → fecha cobrando o último volume informado */
+foreach (rows("SELECT * FROM be_pours WHERE status = 'aberta' AND COALESCE(atualizado_em, inicio_em) < NOW() - INTERVAL 10 MINUTE") as $p) {
+    pour_fechar((int)$p['id'], (int)$p['servido_ml'], (int)$p['pulsos'], 'sem_resposta_do_controlador', 'erro');
+    log_event('aviso', 'pour_sem_resposta', "Servida #{$p['id']} ({$p['produto']}) fechada pelo sistema: a torneira parou de responder. Cobrado " . ml_fmt((int)$p['servido_ml']) . ".",
+        ['device_id' => $p['device_id'], 'location_id' => $p['location_id']], true);
+}
+
 /* 5) Pedidos pagos parados na fila (controlador offline) — alerta 1x */
 foreach (rows("SELECT o.* FROM be_orders o WHERE o.status = 'pago' AND o.pago_em < NOW() - INTERVAL 10 MINUTE
                AND NOT EXISTS (SELECT 1 FROM be_events e WHERE e.order_id = o.id AND e.tipo = 'pedido_parado')") as $o) {
