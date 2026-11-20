@@ -85,10 +85,10 @@ Todo `git push` na `main` que altera `server/` publica sozinho na Hostinger (Git
 
 | Tipo | Nome | Valor |
 |---|---|---|
-| Secret | `FTP_SERVER` | Host FTP da Hostinger (hPanel → Arquivos → Contas FTP), ex.: `ftp.lavafacilexpress.com` |
+| Secret | `FTP_SERVER` | IP do FTP sem `ftp://`, ex.: `147.93.38.110` |
 | Secret | `FTP_USERNAME` | Usuário FTP, ex.: `u338897690` |
 | Secret | `FTP_PASSWORD` | Senha FTP |
-| Secret | `FTP_SERVER_DIR` | Pasta de destino **terminando em /**, ex.: `/public_html/beerexpress/` (ou `/domains/lavafacilexpress.com/public_html/beerexpress/`, conforme a raiz da sua conta FTP) |
+| Secret | `FTP_SERVER_DIR` | `public_html/beerexpress/` (termina com /) |
 | Variable | `BE_URL` | `https://lavafacilexpress.com/beerexpress` (o deploy confere se a API respondeu) |
 
 Depois: aba **Actions → Deploy Hostinger → Run workflow** para o primeiro envio. Acompanhe o resultado ali mesmo (✅/❌).
