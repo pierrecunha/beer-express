@@ -1099,7 +1099,7 @@ if (PHP_SAPI === 'cli') {
         catch (Throwable $e) {
             $m = $e->getMessage();
             $dica = str_contains($m, '1049') || stripos($m, 'Unknown database') !== false ? "o banco '" . BE_DB_NAME . "' não existe — crie no hPanel → Bancos de dados MySQL"
-                : (str_contains($m, '1045') || stripos($m, 'Access denied') !== false ? "usuário/senha do banco recusados — confira BE_DB_USER e BE_DB_PASS (e se o usuário foi ligado ao banco no hPanel)"
+                : (str_contains($m, '1045') || stripos($m, 'Access denied') !== false ? "usuário/senha do banco recusados (usuário com " . strlen(BE_DB_USER) . " caracteres, senha com " . strlen(BE_DB_PASS) . ", banco com " . strlen(BE_DB_NAME) . ") — confira BE_DB_USER e BE_DB_PASS e se o usuário foi ligado ao banco no hPanel"
                 : (BE_DB_NAME === '' ? 'BE_DB_NAME vazio — cadastre os segredos BE_DB_* no GitHub' : $m));
             fwrite(STDERR, "ERRO no banco: $dica\n"); exit(1);
         }
