@@ -260,6 +260,31 @@ o = call("admin/orders", h=AD)[1]
 for p in o["pedidos"]:
     if p["ref"] in [RH] + EXTRAS: call("admin/order_refund", {"id": p["id"]}, AD)
 
+print("── simulador (demonstração)")
+st, r = call("admin/demo_seed", {}, AD)
+ok(r.get("ok") and r.get("device_key") and len(r.get("codigo", "")) == 6 and len(r.get("taps", [])) == 2, "cria ponto de demonstração", r)
+DK = {"X-Device-Key": r["device_key"]}
+r2 = call("admin/demo_seed", {}, AD)[1]
+ok(r2.get("location_id") == r["location_id"], "não duplica a demonstração")
+TD = {"X-Terminal-Token": call("pos/pair", {"codigo": r["codigo"], "serial": "SIM"})[1].get("token", "")}
+call("dev/poll&temp=3", h=DK)
+m = call("pos/menu", h=TD)[1]["torneiras"]
+ok(len(m) == 1 and m[0]["disponivel"] and m[0]["produto"] == "Pilsen da Casa", "totem simulado presa à torneira 1", m)
+call("admin/settings_save", {"settings": {"verificacao_idade": "declaracao"}}, AD)
+vt = call("pos/identify", {"declara_maior": True}, TD)[1]["token"]
+o = call("pos/order", {"token": vt, "metodo": "credito", "itens": [{"offer_id": m[0]["ofertas"][0]["id"], "qtd": 1}]}, TD)[1]
+call("pos/paid", {"ref": o["ref"], "metodo": "credito"}, TD)
+c = call("dev/poll", h=DK)[1].get("cmd") or {}
+ok(c.get("go") is True and c.get("espera_inicio_s") == 120, "demo usa alavanca: liberada após pagar", c)
+call("dev/report", {"id": c["id"], "status": "concluido", "servido_ml": 300, "pulsos": 578}, DK)
+ok(call(f"pos/order_status&ref={o['ref']}", h=TD)[1]["status"] == "concluido", "venda simulada concluída")
+call("admin/settings_save", {"settings": {"verificacao_idade": "cpf"}}, AD)
+st, r = call("admin/demo_clear", {}, AD)
+ok(r.get("removido") is True, "remove a demonstração", r)
+st, r = call("dev/poll", h=DK)
+ok(st == 401, "chopeira simulada deixa de existir", st)
+ok(not any(x["ref"] == o["ref"] for x in call("admin/orders", h=AD)[1]["pedidos"]), "vendas simuladas somem do painel")
+
 print("── segurança")
 for i in range(6): st, r = call("pos/identify", {"cpf": "123.456.789-00", "nascimento": "01/01/1990", "declara_maior": True}, T)
 ok(r.get("erro") == "terminal_bloqueado", "força bruta bloqueia a maquininha", r)

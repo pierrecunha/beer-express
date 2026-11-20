@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Beer Express • Simulador</title>
+<style>
+:root{--bg:#0F0D0A;--bg2:#16130E;--card:#1D1913;--line:#332B1F;--txt:#F7EFE2;--mut:#A9987E;--amber:#F5B301;--ok:#36C47A;--err:#F05252;--blue:#58A6FF}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--txt);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;min-height:100vh}
+button,input{font:inherit;color:inherit}
+header{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:14px 22px;border-bottom:1px solid var(--line);background:var(--bg2)}
+header h1{font-size:18px;margin-right:auto}header h1 b{color:var(--amber)}
+.btn{border:1px solid var(--line);background:var(--card);padding:8px 14px;border-radius:10px;cursor:pointer;font-weight:600;white-space:nowrap;text-decoration:none;color:var(--txt);display:inline-flex;align-items:center;gap:6px}
+.btn.pri{background:var(--amber);border-color:var(--amber);color:#1b1404}.btn.dan{border-color:#5a2424;color:#ff9b9b}.btn.on{border-color:var(--amber);color:var(--amber)}
+.btn:disabled{opacity:.4;cursor:default}
+main{display:grid;grid-template-columns:auto 1fr;gap:28px;padding:24px;align-items:start;max-width:1280px;margin:0 auto}
+.phone{width:384px;background:#000;border-radius:44px;padding:12px;box-shadow:0 30px 80px #000c,inset 0 0 0 2px #333}
+.phone .cap{text-align:center;color:var(--mut);font-size:12px;margin-bottom:8px}
+.phone iframe{width:360px;height:740px;border:0;border-radius:32px;display:block;background:#0E0B07}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;margin-bottom:16px}
+h2{font-size:16px;margin-bottom:4px}.mut{color:var(--mut)}
+.taps{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:16px;margin-top:14px}
+.tap{background:var(--bg2);border:2px solid var(--line);border-radius:16px;padding:16px;text-align:center;transition:border-color .3s}
+.tap.lib{border-color:var(--ok);box-shadow:0 0 0 4px #36c47a22}
+.tap h3{font-size:16px}.tap .st{display:inline-block;margin:8px 0 12px;padding:3px 10px;border-radius:99px;font-size:12px;font-weight:800;background:#2b2519;color:var(--mut)}
+.st.ok{background:#163525;color:#6ee7a8}.st.go{background:#163525;color:#6ee7a8;animation:pl 1s infinite}.st.wait{background:#172a3a;color:#8ecbff}.st.err{background:#3a1717;color:#ff9b9b}
+@keyframes pl{50%{opacity:.6}}
+.glass{width:90px;height:130px;margin:0 auto 10px;border:4px solid #fff9;border-top:0;border-radius:0 0 18px 18px;position:relative;overflow:hidden}
+.glass .beer{position:absolute;left:0;right:0;bottom:0;height:0;background:linear-gradient(180deg,var(--c,#ffd75e),#b77600);transition:height .15s linear}
+.glass .foam{position:absolute;left:0;right:0;bottom:0;height:14px;background:#fffbe9;opacity:0;transition:bottom .15s linear}
+.ml{font-size:22px;font-weight:900}.ml small{font-size:13px;color:var(--mut);font-weight:600}
+.lever{margin-top:12px;width:100%;padding:14px;border-radius:12px;border:0;background:var(--amber);color:#1b1404;font-weight:900;font-size:15px;cursor:pointer;user-select:none;touch-action:none}
+.lever:disabled{background:#2b2519;color:var(--mut);cursor:default}
+.lever.hold{transform:scale(.97);background:#ffd24a}
+.row{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.log{max-height:260px;overflow:auto;font-size:12.5px;font-family:ui-monospace,Menlo,monospace}
+.log div{padding:4px 0;border-bottom:1px solid #2a2419}.log .t{color:var(--mut);margin-right:8px}
+input[type=range]{width:180px;accent-color:var(--amber)}
+.steps li{margin:6px 0 6px 18px}
+.login{max-width:360px;margin:12vh auto;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:26px}
+.login input{width:100%;background:var(--bg2);border:1px solid var(--line);border-radius:9px;padding:9px 11px;margin-top:6px}
+.login label{display:block;margin-top:12px;font-size:12px;color:var(--mut)}
+@media(max-width:900px){main{grid-template-columns:1fr;justify-items:center}.side{width:100%}}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+const API = 'api.php';
+let JWT = localStorage.getItem('be_jwt') || '', DEMO = null, ON = true, TEMP = 3.5, VAZIO = false, POLL = null;
+const ST = {};   // por canal: {id, volume, servido, go, start_mode, estado, ultimoReport}
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+async function api(r, body, headers){
+  const res = await fetch(API + '?r=' + r, {method: body ? 'POST' : 'GET', headers: {'Content-Type':'application/json', ...(headers || {'Authorization':'Bearer ' + JWT})}, body: body ? JSON.stringify(body) : undefined});
+  const j = await res.json().catch(() => ({ok:false, mensagem:'Erro de comunicação'}));
+  if (res.status === 401 && j.erro === 'auth') { JWT = ''; localStorage.removeItem('be_jwt'); login(); throw j; }
+  if (!j.ok) throw j; return j;
+}
+const dev = (r, body) => api(r, body, {'X-Device-Key': DEMO.device_key});
+function log(m){ const l = $('#log'); if (!l) return; const d = document.createElement('div'); d.innerHTML = `<span class="t">${new Date().toLocaleTimeString('pt-BR')}</span>${esc(m)}`; l.prepend(d); }
+
+/* ---------- login (mesmo usuário do painel) ---------- */
+function login(){
+  $('#root').innerHTML = `<div class="login"><div style="font-size:40px">🍺</div><h2 style="font-size:20px;margin:6px 0">Simulador Beer Express</h2><p class="mut">Entre com o mesmo usuário do painel.</p>
+    <label>E-mail</label><input id="le" type="email"><label>Senha</label><input id="lp" type="password" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="btn pri" style="width:100%;margin-top:16px;justify-content:center" onclick="doLogin()">Entrar</button><p id="lerr" style="color:var(--err);margin-top:10px"></p></div>`;
+}
+async function doLogin(){ try { const j = await fetch(API+'?r=admin/login', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({email:$('#le').value, senha:$('#lp').value})}).then(r=>r.json());
+  if (!j.ok) throw j; JWT = j.token; localStorage.setItem('be_jwt', JWT); start(); } catch(e){ $('#lerr').textContent = e.mensagem || 'Falha'; } }
+
+/* ---------- montagem ---------- */
+async function start(){
+  $('#root').innerHTML = `<header><h1>🧪 Simulador <b>Beer Express</b></h1>
+     <span class="mut">Totem:</span><button class="btn" id="mTap" onclick="modo(true)">Maquininha da torneira (BeerPass)</button><button class="btn" id="mMenu" onclick="modo(false)">Cardápio com todas</button>
+     <a class="btn" href="painel.html" target="_blank">Abrir painel ↗</a><button class="btn" onclick="recarregar()">↻ Recomeçar totem</button><button class="btn dan" onclick="limpar()">Remover dados de demonstração</button></header>
+   <main><div class="phone"><div class="cap">Maquininha (simulada)</div><iframe id="pos" title="Maquininha"></iframe></div>
+   <div class="side">
+     <div class="card"><h2>🍺 Chopeira virtual</h2><p class="mut">Faz o papel do ESP32 na chopeira: recebe o copo pago, libera a torneira e mede os ml. Segure o botão para "puxar a alavanca".</p>
+       <div class="taps" id="taps"></div></div>
+     <div class="card"><h2>⚙️ Situações para testar</h2>
+       <div class="row" style="margin-top:10px"><label>🌡️ Temperatura do freezer: <b id="tv">3,5 °C</b></label><input type="range" min="-3" max="12" step="0.5" value="3.5" oninput="TEMP=+this.value;$('#tv').textContent=String(TEMP).replace('.',',')+' °C'"></div>
+       <div class="row" style="margin-top:10px"><button class="btn" id="bVazio" onclick="VAZIO=!VAZIO;this.classList.toggle('on',VAZIO);this.textContent=VAZIO?'🛢️ Barril VAZIO (ligado)':'🛢️ Simular barril vazio'">🛢️ Simular barril vazio</button>
+         <button class="btn" id="bOn" onclick="ligar()">🔌 Desligar chopeira</button></div>
+       <ol class="steps mut" style="margin-top:12px">
+         <li>Compre no totem (o pagamento é simulado: escolha "Aprovado" ou "Recusado").</li>
+         <li>Quando a torneira ficar verde, segure <b>Puxar alavanca</b> até encher.</li>
+         <li>Veja a venda no <a href="painel.html" target="_blank" style="color:var(--amber)">painel</a> (Visão geral, Vendas, funil) e no Telegram, se configurado.</li>
+         <li>Teste também: cupom (crie em Chopeiras e barris → Cupons), happy hour (Configurações), cartão recusado, barril vazio, temperatura alta (alerta após 10 min com o cron ligado) e chopeira desligada (offline após 3 min).</li></ol></div>
+     <div class="card"><h2>📜 O que a chopeira está fazendo</h2><div class="log" id="log"></div></div>
+   </div></main>`;
+  try { DEMO = await api('admin/demo_seed', {}); } catch(e){ return alert(e.mensagem || 'Falha ao criar a demonstração'); }
+  log('Ponto de demonstração pronto (Pilsen da Casa e IPA do Cerrado).');
+  $('#mTap').classList.toggle('on', DEMO.tap_id !== null); $('#mMenu').classList.toggle('on', DEMO.tap_id === null);
+  clearInterval(POLL); await poll(); POLL = setInterval(poll, 800);
+  await recarregar();
+}
+async function recarregar(){
+  const p = await fetch(API + '?r=pos/pair', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({codigo: DEMO.codigo, serial:'SIMULADOR', app_version:'simulador'})}).then(r=>r.json());
+  if (!p.ok) return alert(p.mensagem || 'Falha ao parear a maquininha simulada');
+  localStorage.setItem('be_tt', p.token);
+  $('#pos').src = 'pos.html?sim=' + Date.now();
+}
+async function modo(daTorneira){
+  await api('admin/save', {entity:'terminais', data:{id: DEMO.terminal_id, tap_id: daTorneira ? DEMO.taps[0] : ''}});
+  DEMO.tap_id = daTorneira ? DEMO.taps[0] : null; $('#mTap').classList.toggle('on', daTorneira); $('#mMenu').classList.toggle('on', !daTorneira);
+  log(daTorneira ? 'Totem preso à Torneira 1 (igual BeerPass).' : 'Totem mostrando o cardápio com todas as torneiras.'); recarregar();
+}
+async function limpar(){
+  if (!confirm('Remover o ponto de demonstração e todas as vendas simuladas?')) return;
+  clearInterval(POLL); await api('admin/demo_clear', {}); localStorage.removeItem('be_tt');
+  $('#root').innerHTML = `<div class="login" style="text-align:center"><div style="font-size:40px">🧹</div><h2 style="margin:8px 0">Demonstração removida</h2><p class="mut">As vendas simuladas saíram do painel.</p>
+    <button class="btn pri" style="margin-top:16px" onclick="start()">Criar de novo</button> <a class="btn" href="painel.html">Ir para o painel</a></div>`;
+}
+function ligar(){ ON = !ON; $('#bOn').textContent = ON ? '🔌 Desligar chopeira' : '🔌 Ligar chopeira'; $('#bOn').classList.toggle('on', !ON);
+  log(ON ? 'Chopeira ligada.' : 'Chopeira desligada — o totem mostra indisponível em até 3 min (com o cron) e você recebe o alerta.'); }
+
+/* ---------- ESP32 simulado ---------- */
+let TAPS = [];
+async function poll(){
+  if (!ON || !DEMO) return;
+  let r; try { r = await dev(`dev/poll&temp=${TEMP}&rssi=-58&fw=simulador&up=${Math.round(performance.now()/1000)}`); } catch(e){ return; }
+  if (JSON.stringify(r.taps.map(t=>[t.canal,t.produto,t.restante_ml])) !== JSON.stringify(TAPS.map(t=>[t.canal,t.produto,t.restante_ml]))) { TAPS = r.taps; desenhar(); }
+  const c = r.cmd;
+  for (const t of TAPS) { const s = ST[t.canal] || (ST[t.canal] = {estado:'livre'});
+    if (c && c.canal === t.canal) {
+      if (s.id !== c.id) { Object.assign(s, {id:c.id, volume:c.volume_ml, servido:0, estado:'armado', start_mode:c.start_mode});
+        log(`Copo #${c.id}: ${c.volume_ml} ml na torneira ${c.canal} — ${c.go ? 'liberado' : 'aguardando o cliente tocar SERVIR'}.`); }
+      s.go = c.go; if (c.go && s.estado === 'armado') s.estado = 'liberado';
+    } else if (s.estado === 'armado' || s.estado === 'liberado') { s.estado = 'livre'; s.id = null; }
+    pintar(t.canal);
+  }
+}
+function desenhar(){
+  $('#taps').innerHTML = TAPS.map(t => `<div class="tap" id="t${t.canal}"><h3>Torneira ${t.canal} • ${esc(t.produto)}</h3><span class="st" id="s${t.canal}">Livre</span>
+    <div class="glass" style="--c:${esc(t.cor)}"><div class="beer" id="b${t.canal}"></div><div class="foam" id="f${t.canal}"></div></div>
+    <div class="ml" id="m${t.canal}">0 <small>ml</small></div><div class="mut" style="font-size:12px">barril: ${(t.restante_ml/1000).toFixed(1).replace('.',',')} L</div>
+    <button class="lever" id="l${t.canal}" disabled>🍺 Puxar alavanca (segure)</button></div>`).join('');
+  for (const t of TAPS) { const b = $('#l' + t.canal);
+    const on = e => { e.preventDefault(); puxar(t.canal, true); }, off = () => puxar(t.canal, false);
+    b.addEventListener('pointerdown', on); b.addEventListener('pointerup', off); b.addEventListener('pointerleave', off); b.addEventListener('pointercancel', off); }
+}
+function pintar(canal){
+  const s = ST[canal] || {estado:'livre'}, st = $('#s' + canal), lv = $('#l' + canal), card = $('#t' + canal); if (!st) return;
+  const txt = {livre:['Livre',''], armado:['Aguardando SERVIR no totem','wait'], liberado:['Liberada — puxe a alavanca!','go'], servindo:['Servindo…','ok'], concluido:['Copo cheio ✓','ok'], erro:['Erro: barril vazio','err']}[s.estado];
+  st.textContent = txt[0]; st.className = 'st ' + txt[1]; card.classList.toggle('lib', s.estado === 'liberado' || s.estado === 'servindo');
+  lv.disabled = !(s.estado === 'liberado' || s.estado === 'servindo');
+  const pct = s.volume ? Math.min(100, 100 * (s.servido || 0) / s.volume) : (s.estado === 'concluido' ? 100 : 0);
+  $('#b' + canal).style.height = pct + '%'; $('#f' + canal).style.bottom = `calc(${pct}% - 6px)`; $('#f' + canal).style.opacity = pct > 2 ? 1 : 0;
+  $('#m' + canal).innerHTML = `${s.servido || 0} <small>/ ${s.volume || 0} ml</small>`;
+}
+const HOLD = {};
+function puxar(canal, segurando){
+  const s = ST[canal]; clearInterval(HOLD[canal]); $('#l' + canal)?.classList.toggle('hold', segurando);
+  if (!segurando || !s || !(s.estado === 'liberado' || s.estado === 'servindo')) return;
+  if (VAZIO) { s.estado = 'erro'; pintar(canal); report(s, 'erro', 'sem_fluxo (barril vazio — simulado)'); log(`Copo #${s.id}: sem chopp saindo — erro enviado (o painel e o Telegram avisam).`);
+    setTimeout(() => { if (ST[canal] === s && s.estado === 'erro') { s.estado = 'livre'; s.volume = 0; s.servido = 0; s.id = null; pintar(canal); } }, 3000); return; }
+  HOLD[canal] = setInterval(() => {
+    s.estado = 'servindo'; s.servido = Math.min(s.volume, s.servido + 20); pintar(canal);
+    if (s.servido >= s.volume) { clearInterval(HOLD[canal]); s.estado = 'concluido'; pintar(canal); report(s, 'concluido'); log(`Copo #${s.id}: ${s.volume} ml servidos — válvula fechada no volume certo.`);
+      setTimeout(() => { if (ST[canal] === s && s.estado === 'concluido') { s.estado = 'livre'; s.volume = 0; s.servido = 0; s.id = null; pintar(canal); } }, 2500); }
+    else if (!s.ultimo || Date.now() - s.ultimo > 600) { s.ultimo = Date.now(); report(s, 'servindo'); }
+  }, 80);
+}
+function report(s, status, erro){ dev('dev/report', {id:s.id, status, servido_ml:s.servido || 0, pulsos:Math.round((s.servido || 0) * 1.925), erro}).catch(()=>{}); }
+
+JWT ? start() : login();
+</script>
+</body>
+</html>

@@ -1378,6 +1378,72 @@ function r_admin_telemetry(): array {
     return ['ok' => true, 'pontos' => rows("SELECT created_at, temperatura, rssi FROM be_telemetry WHERE device_id = ? AND created_at >= NOW() - INTERVAL $h HOUR ORDER BY created_at", [(int)arg('device_id')])];
 }
 
+/* ---------- Simulador (demonstração sem hardware) ---------- */
+
+/** Cria (ou devolve) um ponto de demonstração com chopeira e maquininha simuladas. */
+function r_admin_demo_seed(array $u): array {
+    $ids = json_decode((string)setting('demo_ids'), true) ?: [];
+    if (!empty($ids['location']) && val('SELECT id FROM be_locations WHERE id = ?', [$ids['location']])) return demo_info($ids);
+    db()->beginTransaction();
+    q('INSERT INTO be_locations (nome, endereco) VALUES (?,?)', ['Demonstração (simulado)', 'Simulador no navegador']);
+    $ids['location'] = (int)db()->lastInsertId();
+    q('INSERT INTO be_devices (location_id, nome, tipo, device_key, start_mode, arm_timeout_s) VALUES (?,?,?,?,?,?)', [$ids['location'], 'Chopeira simulada', 'central', rand_token(16), 'auto', 120]);
+    $ids['device'] = (int)db()->lastInsertId();
+    $ids['products'] = []; $ids['taps'] = [];
+    $cardapio = [
+        ['Pilsen da Casa', 'Beer Express', 'Pilsen', 'Leve, dourada e refrescante.', 4.8, 10, '#F2B705', [[300, 9.90], [500, 14.90], [1000, 26.90]]],
+        ['IPA do Cerrado', 'Beer Express', 'IPA - Indian Pale Ale', 'Lupulada, cítrica e amarga na medida.', 6.5, 57, '#C46A0F', [[300, 12.90], [500, 19.90], [1000, 34.90]]],
+    ];
+    foreach ($cardapio as $i => [$nome, $cerv, $estilo, $desc, $abv, $ibu, $cor, $ofertas]) {
+        q('INSERT INTO be_products (nome, cervejaria, estilo, descricao, abv, ibu, cor) VALUES (?,?,?,?,?,?,?)', [$nome, $cerv, $estilo, $desc, $abv, $ibu, $cor]);
+        $pid = (int)db()->lastInsertId(); $ids['products'][] = $pid;
+        q('INSERT INTO be_taps (device_id, canal, nome, product_id, barril_ml, restante_ml, pulsos_por_litro) VALUES (?,?,?,?,30000,30000,1925)', [$ids['device'], $i + 1, 'Torneira ' . ($i + 1), $pid]);
+        $tid = (int)db()->lastInsertId(); $ids['taps'][] = $tid;
+        foreach ($ofertas as $k => [$ml, $preco]) q('INSERT INTO be_offers (tap_id, volume_ml, preco, ordem) VALUES (?,?,?,?)', [$tid, $ml, $preco, $k + 1]);
+    }
+    q('INSERT INTO be_terminals (location_id, tap_id, nome, codigo, provider) VALUES (?,?,?,?,"simulado")',
+        [$ids['location'], $ids['taps'][0], 'Maquininha simulada', strtoupper(substr(bin2hex(random_bytes(4)), 0, 6))]);
+    $ids['terminal'] = (int)db()->lastInsertId();
+    setting_set('demo_ids', json_encode($ids));
+    db()->commit();
+    log_event('info', 'demo', "Ponto de demonstração criado por {$u['nome']}", ['location_id' => $ids['location']]);
+    return demo_info($ids);
+}
+function demo_info(array $ids): array {
+    $t = row('SELECT codigo, tap_id FROM be_terminals WHERE id = ?', [$ids['terminal']]);
+    return ['ok' => true, 'location_id' => $ids['location'], 'device_key' => (string)val('SELECT device_key FROM be_devices WHERE id = ?', [$ids['device']]),
+        'codigo' => $t['codigo'], 'terminal_id' => $ids['terminal'], 'tap_id' => $t['tap_id'] !== null ? (int)$t['tap_id'] : null, 'taps' => $ids['taps']];
+}
+/** Remove o ponto de demonstração e tudo que foi vendido nele. */
+function r_admin_demo_clear(array $u): array {
+    $ids = json_decode((string)setting('demo_ids'), true) ?: [];
+    if (empty($ids['location'])) return ['ok' => true, 'removido' => false];
+    $loc = (int)$ids['location']; $dev = (int)$ids['device']; $term = (int)$ids['terminal'];
+    db()->beginTransaction();
+    $orders = array_column(rows('SELECT id FROM be_orders WHERE location_id = ?', [$loc]), 'id');
+    if ($orders) {
+        $in = implode(',', array_map('intval', $orders));
+        foreach (['be_order_items', 'be_dispenses', 'be_ratings'] as $tb) q("DELETE FROM $tb WHERE order_id IN ($in)");
+        q("DELETE FROM be_events WHERE order_id IN ($in)");
+    }
+    q('DELETE FROM be_orders WHERE location_id = ?', [$loc]);
+    q('DELETE FROM be_pours WHERE location_id = ?', [$loc]);
+    q('DELETE FROM be_events WHERE location_id = ? OR device_id = ? OR terminal_id = ?', [$loc, $dev, $term]);
+    q('DELETE FROM be_funnel WHERE terminal_id = ?', [$term]);
+    q('DELETE FROM be_verifications WHERE terminal_id = ?', [$term]);
+    q('DELETE FROM be_telemetry WHERE device_id = ?', [$dev]);
+    foreach ($ids['taps'] ?? [] as $tid) q('DELETE FROM be_offers WHERE tap_id = ?', [(int)$tid]);
+    q('DELETE FROM be_taps WHERE device_id = ?', [$dev]);
+    foreach ($ids['products'] ?? [] as $pid) q('DELETE FROM be_products WHERE id = ?', [(int)$pid]);
+    q('DELETE FROM be_terminals WHERE id = ?', [$term]);
+    q('DELETE FROM be_devices WHERE id = ?', [$dev]);
+    q('DELETE FROM be_locations WHERE id = ?', [$loc]);
+    setting_set('demo_ids', '');
+    db()->commit();
+    log_event('info', 'demo', "Ponto de demonstração removido por {$u['nome']}");
+    return ['ok' => true, 'removido' => true];
+}
+
 /* ---------- Painel: foto do chopp ---------- */
 
 /** Recebe a foto já reduzida pelo navegador (data URL JPEG/PNG/WebP), valida e salva em uploads/produtos/. */

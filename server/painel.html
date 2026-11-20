@@ -93,6 +93,7 @@ async function doLogin(setup){try{const j=await fetch(API+'?r=admin/'+(setup?'se
 /* ============ layout ============ */
 const MENU=[['dash','📊','Visão geral'],['vendas','🧾','Vendas'],['clientes','👤','Clientes'],['equip','🛢️','Chopeiras e barris'],['eventos','🔔','Eventos'],['config','⚙️','Configurações']];
 function shell(){$('#root').innerHTML=`<div class="app"><nav><div class="lg">🍺 Beer <b>Express</b></div>${MENU.map(([k,i,t])=>`<button data-p="${k}" onclick="nav('${k}')">${i} ${t}</button>`).join('')}
+  <a class="btn" href="simulador.html" target="_blank" style="display:block;text-align:center;margin:14px 4px 0">🧪 Simulador</a>
   <div class="bt"><a href="#" onclick="senha();return false">Alterar senha</a> · <a href="#" onclick="localStorage.removeItem('be_jwt');location.reload()">Sair</a></div></nav><main id="main"></main></div>`;nav(PAGE)}
 function nav(p){PAGE=p;clearInterval(TIMER);document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.p===p));
   ({dash,vendas,clientes,equip,eventos,config})[p]().catch(e=>$('#main').innerHTML=`<p style="color:var(--err)">${esc(e.mensagem||e)}</p>`)}
