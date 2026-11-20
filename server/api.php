@@ -1976,6 +1976,16 @@ if (PHP_SAPI === 'cli') {
                 echo "diag totem #{$tm['id']} ERRO na etapa $etapa: " . get_class($e) . ': ' . $e->getMessage() . ' @ linha ' . $e->getLine() . "\n";
             } finally { if (db()->inTransaction()) db()->rollBack(); }
         }
+        // O que aconteceu na demonstração (para achar erro do simulador sem acessar o banco)
+        $ids = json_decode((string)setting('demo_ids'), true) ?: [];
+        if (!empty($ids['terminal'])) {
+            foreach (rows('SELECT created_at, ok, motivo FROM be_verifications WHERE terminal_id = ? ORDER BY id DESC LIMIT 12', [$ids['terminal']]) as $v) echo "diag demo verif: {$v['created_at']} ok={$v['ok']} {$v['motivo']}\n";
+            foreach (rows('SELECT created_at, status, total, metodo FROM be_orders WHERE terminal_id = ? ORDER BY id DESC LIMIT 8', [$ids['terminal']]) as $v) echo "diag demo pedido: {$v['created_at']} {$v['status']} {$v['total']} {$v['metodo']}\n";
+            foreach (rows('SELECT created_at, status, volume_ml, servido_ml, erro FROM be_dispenses WHERE device_id = ? ORDER BY id DESC LIMIT 8', [$ids['device'] ?? 0]) as $v) echo "diag demo copo: {$v['created_at']} {$v['status']} {$v['servido_ml']}/{$v['volume_ml']} {$v['erro']}\n";
+            $t = row('SELECT tap_id, bloqueado_ate FROM be_terminals WHERE id = ?', [$ids['terminal']]);
+            echo 'diag demo maquininha: tap_id=' . ($t['tap_id'] ?? '-') . ' bloqueada_ate=' . ($t['bloqueado_ate'] ?? '-') . "\n";
+        }
+        foreach (rows("SELECT created_at, nivel, tipo, LEFT(msg, 160) msg FROM be_events WHERE nivel <> 'info' ORDER BY id DESC LIMIT 10") as $v) echo "diag evento: {$v['created_at']} {$v['nivel']} {$v['tipo']} {$v['msg']}\n";
         echo 'diag versoes: PHP ' . PHP_VERSION . ' | banco ' . val('SELECT VERSION()') . ' | sql_mode ' . val('SELECT @@SESSION.sql_mode') . "\n";
         echo 'diag ultimo_sinal: ' . val('SELECT MAX(last_seen) FROM be_devices') . "\n";
         exit(0);
