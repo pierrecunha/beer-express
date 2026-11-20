@@ -20,6 +20,7 @@ HOSTINGER_PATH=$(printf '%s' "${HOSTINGER_PATH:-}" | tr -d '\r' | sed 's/^[[:spa
 BE_URL=$(printf '%s' "${BE_URL:-}" | tr -d '\r' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//; s:/*$::')
 : "${HOSTINGER_SSH:?HOSTINGER_SSH vazio ou sem o formato usuario@ip}"; : "${HOSTINGER_PATH:?defina HOSTINGER_PATH}"
 PORT="${HOSTINGER_PORT:-65002}"
+echo "→ destino: ${HOSTINGER_SSH%%@*}@${HOSTINGER_SSH#*@} porta $PORT"
 if [ -n "${HOSTINGER_HOST_FP:-}" ]; then
   HOST="${HOSTINGER_SSH#*@}"; mkdir -p ~/.ssh
   : > /tmp/be_hostkey
@@ -39,7 +40,6 @@ else
   SSH="ssh -p $PORT -o StrictHostKeyChecking=accept-new"
 fi
 SIM=""; [ "${1:-}" = "--simular" ] && SIM="--dry-run"
-echo "→ destino: ${HOSTINGER_SSH%%@*}@${HOSTINGER_SSH#*@} porta $PORT"
 
 python3 scripts/verificar-segredos.py
 scripts/lint.sh
