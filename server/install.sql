@@ -320,7 +320,7 @@ INSERT IGNORE INTO be_settings (k, v) VALUES
  ('ultimo_resumo','');
 
 INSERT IGNORE INTO be_settings (k, v) VALUES
- ('pass_ativo','1'),
+ ('pass_ativo','0'),                     -- backlog: recarga/cartão/cobrança por ml prontos, desligados
  ('recarga_valores','20,50,100,150'),
  ('recarga_bonus','100:5,150:10'),      -- recarga >= R$100 ganha R$5; >= R$150 ganha R$10
  ('pass_ml_minimo','100'),              -- saldo precisa cobrir ao menos isso para abrir a torneira

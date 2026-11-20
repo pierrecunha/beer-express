@@ -107,6 +107,27 @@ pid = next(p["id"] for p in o["pedidos"] if p["ref"] == REF)
 st, r = call("admin/order_refund", {"id": pid}, AD)
 ok(r.get("ok") and r.get("automatico") is False, "estorno (manual, sem MP)", r)
 
+print("── foto do chopp pelo painel")
+import base64, zlib, struct
+def png(w, h):
+    raw = b"".join(b"\x00" + b"\xf5\xb3\x01" * w for _ in range(h))
+    ch = lambda t, d: struct.pack(">I", len(d)) + t + d + struct.pack(">I", zlib.crc32(t + d) & 0xffffffff)
+    return b"\x89PNG\r\n\x1a\n" + ch(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 2, 0, 0, 0)) + ch(b"IDAT", zlib.compress(raw)) + ch(b"IEND", b"")
+st, r = call("admin/product_image", {"id": prod, "imagem": "data:image/png;base64," + base64.b64encode(png(80, 80)).decode()}, AD)
+ok(r.get("ok") and r["imagem_url"].startswith("uploads/produtos/p%d_" % prod), "envia foto da bebida", r)
+m = call("pos/menu", h=T)[1]
+ok(m["torneiras"][0]["imagem_url"] == r.get("imagem_url"), "foto aparece no cardápio da maquininha", m["torneiras"][0].get("imagem_url"))
+st, r2 = call("admin/product_image", {"id": prod, "imagem": "data:image/png;base64," + base64.b64encode(b"<?php echo 1; ?>" * 10).decode()}, AD)
+ok(r2.get("erro") == "imagem", "recusa arquivo que não é imagem", r2)
+
+print("── Beer Pass desligado (backlog)")
+st, r = call("dev/card", {"uid": "04FFFFFFFF", "canal": 1}, D)
+ok(r.get("motivo") == "pass_off", "com Pass desligado, cartão não abre torneira", r)
+st, r = call("pos/identify", {"cpf": "52998224725", "nascimento": "10/05/1990", "declara_maior": True}, T)
+w = call("pos/wallet", {"token": r.get("token")}, T)[1]
+ok(w.get("pass") is False, "maquininha não mostra recarga", w.get("pass"))
+call("admin/settings_save", {"settings": {"pass_ativo": "1"}}, AD)
+
 print("── Modo Pass (crédito pré-pago + cobrança por ml)")
 save("torneiras", {"id": tap, "preco_litro": 30.0, "max_ml_servida": 1000})
 UID = "04A1B2C3D4E5F6"

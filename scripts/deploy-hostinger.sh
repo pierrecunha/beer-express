@@ -44,7 +44,7 @@ SIM=""; [ "${1:-}" = "--simular" ] && SIM="--dry-run"
 python3 scripts/verificar-segredos.py
 scripts/lint.sh
 
-EXCL=(--exclude '.env' --exclude '.env.*' --exclude '*.log' --exclude 'error_log' --exclude '.be_versao' --exclude '.gitkeep')
+EXCL=(--exclude '.env' --exclude '.env.*' --exclude '*.log' --exclude 'error_log' --exclude '.be_versao' --exclude '.gitkeep' --exclude 'uploads/produtos/')
 if [ -z "$SIM" ]; then
   STAMP=$(date +%Y%m%d_%H%M%S)
   echo "→ cópia de segurança do código que está no ar"

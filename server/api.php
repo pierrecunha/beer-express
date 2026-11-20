@@ -721,13 +721,13 @@ function r_pos_wallet(array $t): array {
         WHERE d.location_id = ? AND t.ativo = 1 AND t.preco_litro IS NOT NULL ORDER BY t.canal', [$t['location_id']]);
     $bonus = [];
     foreach (recarga_valores() as $v) $bonus[] = ['valor' => $v, 'bonus' => recarga_bonus($v)];
-    return ['ok' => true, 'pass' => setting('pass_ativo', '1') === '1' && count($taps) > 0, 'saldo' => (float)$c['saldo'], 'nome' => nome_exibicao($c['nome']),
+    return ['ok' => true, 'pass' => setting('pass_ativo', '0') === '1' && count($taps) > 0, 'saldo' => (float)$c['saldo'], 'nome' => nome_exibicao($c['nome']),
         'cartoes' => $cards, 'extrato' => $ext, 'recargas' => $bonus, 'torneiras_pass' => $taps];
 }
 
 function r_pos_recharge(array $t): array {
     [, $cust] = pos_sessao($t);
-    if (setting('pass_ativo', '1') !== '1') fail('pass_off', 'Recarga desativada neste ponto');
+    if (setting('pass_ativo', '0') !== '1') fail('pass_off', 'Recarga desativada neste ponto');
     $valor = round((float)arg('valor'), 2);
     if (!in_array($valor, recarga_valores(), false)) fail('valor', 'Valor de recarga inválido');
     $metodo = (string)arg('metodo', '');
@@ -824,7 +824,7 @@ function r_dev_poll(array $d): array {
         }
     }
     $resp = ['ok' => true, 'poll_ms' => 2000, 'taps' => $taps, 'server_time' => time(), 'cmd' => null,
-        'marca' => setting('marca_nome', 'Beer Express'), 'pass' => setting('pass_ativo', '1') === '1'];
+        'marca' => setting('marca_nome', 'Beer Express'), 'pass' => setting('pass_ativo', '0') === '1'];
     if ($disp) {
         $tap = row('SELECT * FROM be_taps WHERE id = ?', [$disp['tap_id']]);
         $resp['poll_ms'] = 700;
@@ -869,7 +869,7 @@ function r_dev_card(array $d): array {
     $uid = strtoupper(preg_replace('/[^0-9A-Fa-f]/', '', (string)arg('uid')));
     if (strlen($uid) < 8 || strlen($uid) > 32) fail('uid', 'Cartão ilegível');
     $tap = row('SELECT t.*, p.nome produto FROM be_taps t LEFT JOIN be_products p ON p.id = t.product_id WHERE t.device_id = ? AND t.canal = ? AND t.ativo = 1', [$d['id'], (int)arg('canal', 1)]);
-    if (!$tap || $tap['preco_litro'] === null || setting('pass_ativo', '1') !== '1') return ['ok' => false, 'motivo' => 'pass_off', 'msg' => 'Torneira sem venda por ml'];
+    if (!$tap || $tap['preco_litro'] === null || setting('pass_ativo', '0') !== '1') return ['ok' => false, 'motivo' => 'pass_off', 'msg' => 'Torneira sem venda por ml'];
     $res = fn(string $motivo, string $msg, array $x = []) => ['ok' => false, 'motivo' => $motivo, 'msg' => $msg] + $x;
 
     $card = row('SELECT * FROM be_cards WHERE uid = ?', [$uid]);
@@ -1061,7 +1061,7 @@ function r_admin_dashboard(): array {
     foreach ($pass['abertas'] as &$a) $a['cliente'] = nome_exibicao($a['cliente']);
     unset($a);
     return ['ok' => true, 'hoje' => $hoje, 'ontem' => $ontem, 'mes' => $mes, 'dias' => $dias, 'horas' => $horas, 'produtos' => $prods, 'devices' => $devices,
-        'terminais' => $terms, 'barris' => $barris, 'alertas' => $alertas, 'problemas' => $problemas, 'menores_hoje' => $menores, 'clientes' => $clientes, 'pass' => $pass];
+        'terminais' => $terms, 'barris' => $barris, 'alertas' => $alertas, 'problemas' => $problemas, 'menores_hoje' => $menores, 'clientes' => $clientes, 'pass' => $pass, 'pass_ativo' => setting('pass_ativo', '0') === '1'];
 }
 
 function r_admin_orders(): array {
@@ -1263,6 +1263,30 @@ function r_admin_telemetry(): array {
     return ['ok' => true, 'pontos' => rows("SELECT created_at, temperatura, rssi FROM be_telemetry WHERE device_id = ? AND created_at >= NOW() - INTERVAL $h HOUR ORDER BY created_at", [(int)arg('device_id')])];
 }
 
+/* ---------- Painel: foto do chopp ---------- */
+
+/** Recebe a foto já reduzida pelo navegador (data URL JPEG/PNG/WebP), valida e salva em uploads/produtos/. */
+function r_admin_product_image(array $u): array {
+    $id = (int)arg('id');
+    $p = row('SELECT * FROM be_products WHERE id = ?', [$id]);
+    if (!$p) fail('produto', 'Salve a bebida antes de enviar a foto');
+    if (!preg_match('#^data:image/(jpeg|png|webp);base64,(.+)$#s', (string)arg('imagem'), $m)) fail('imagem', 'Envie uma foto JPG, PNG ou WebP');
+    $bin = base64_decode($m[2], true);
+    if ($bin === false || strlen($bin) > 2 * 1024 * 1024) fail('imagem', 'Foto muito grande (máx. 2 MB)');
+    $info = @getimagesizefromstring($bin);
+    if (!$info || !in_array($info['mime'], ['image/jpeg', 'image/png', 'image/webp'], true) || $info[0] < 64 || $info[1] < 64) fail('imagem', 'Arquivo não é uma imagem válida');
+    $ext = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'][$info['mime']];
+    $dir = __DIR__ . '/uploads/produtos';
+    if (!is_dir($dir) && !@mkdir($dir, 0755, true)) fail('imagem', 'Sem permissão para salvar a foto no servidor', 500);
+    $nome = 'p' . $id . '_' . date('YmdHis') . '.' . $ext;
+    if (@file_put_contents("$dir/$nome", $bin) === false) fail('imagem', 'Falha ao gravar a foto', 500);
+    $antiga = (string)$p['imagem_url'];
+    if (str_starts_with($antiga, 'uploads/produtos/') && is_file(__DIR__ . '/' . $antiga)) @unlink(__DIR__ . '/' . $antiga);
+    q('UPDATE be_products SET imagem_url = ? WHERE id = ?', ["uploads/produtos/$nome", $id]);
+    log_event('info', 'foto_produto', "Foto de {$p['nome']} atualizada por {$u['nome']}");
+    return ['ok' => true, 'imagem_url' => "uploads/produtos/$nome"];
+}
+
 /* ---------- Painel: Modo Pass ---------- */
 
 function r_admin_pours(): array {
@@ -1313,7 +1337,7 @@ function r_pub_tv(): array {
         $ab = row("SELECT servido_ml, limite_ml FROM be_pours WHERE tap_id = ? AND status = 'aberta' ORDER BY id DESC LIMIT 1", [$t['id']]);
         $out[] = ['torneira' => $t['nome'], 'canal' => (int)$t['canal'], 'produto' => $t['produto'], 'estilo' => $t['estilo'], 'descricao' => $t['descricao'],
             'abv' => $t['abv'] !== null ? (float)$t['abv'] : null, 'cor' => $t['cor'] ?: '#F5B301', 'imagem_url' => $t['imagem_url'],
-            'preco_litro' => $t['preco_litro'] !== null ? (float)$t['preco_litro'] : null,
+            'preco_litro' => $t['preco_litro'] !== null && setting('pass_ativo', '0') === '1' ? (float)$t['preco_litro'] : null,
             'ofertas' => array_map(fn($o) => ['volume_ml' => (int)$o['volume_ml'], 'preco' => (float)$o['preco']], rows('SELECT volume_ml, preco FROM be_offers WHERE tap_id = ? AND ativo = 1 ORDER BY ordem, volume_ml', [$t['id']])),
             'nivel_pct' => $t['barril_ml'] ? (int)round(100 * $t['restante_ml'] / $t['barril_ml']) : 0, 'online' => device_online($t),
             'servindo_ml' => $ab ? (int)$ab['servido_ml'] : null];

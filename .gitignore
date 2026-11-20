@@ -19,3 +19,5 @@ tests/.run/
 __pycache__/
 error_log
 *.log
+server/uploads/*
+!server/uploads/.htaccess

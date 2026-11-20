@@ -109,7 +109,7 @@ async function dash(){
    <div class="card kpi"><small>Mês</small><b>${brl(d.mes.s)}</b><span>${d.mes.n} vendas • ${mlf(d.mes.ml)}</span></div>
    <div class="card kpi"><small>Clientes verificados</small><b>${d.clientes.total||0}</b><span>${+d.clientes.hoje||0} novos hoje • 🔞 ${d.menores_hoje} menores barrados</span></div>
   </div>
-  ${d.pass?`<div class="grid g4 sec">
+  ${d.pass&&d.pass_ativo?`<div class="grid g4 sec">
    <div class="card kpi"><small>🎫 Beer Pass hoje (consumo)</small><b>${brl(d.pass.s)}</b><span>${d.pass.n} servidas • ${mlf(d.pass.ml)}</span></div>
    <div class="card kpi"><small>Recargas hoje</small><b>${brl(d.pass.recargas.s)}</b><span>${d.pass.recargas.n} recargas • bônus ${brl(d.pass.recargas.b)}</span></div>
    <div class="card kpi"><small>Saldo nas carteiras</small><b>${brl(d.pass.saldo_carteiras)}</b><span>crédito já recebido, ainda não consumido</span></div>
@@ -202,9 +202,9 @@ async function equip(){CAT=await api('admin/catalog');const c=CAT, locN=id=>c.lo
      <div><div class="bar"><i style="width:${p}%;background:${p<=t.alerta_pct?'var(--err)':'var(--ok)'}"></i></div><small class="mut">${mlf(t.restante_ml)} de ${mlf(t.barril_ml)} (${p}%)</small></div>
      <div style="flex:none;display:flex;gap:6px;flex-wrap:wrap;max-width:100%"><button class="btn sm" onclick="trocaBarril(${t.id})">🛢️ Trocar barril</button><button class="btn sm" onclick="testar(${t.id})">🔓 Liberar teste</button><button class="btn sm" onclick="calibrar(${t.id})">🎯 Calibrar</button><button class="btn sm" onclick="edit('torneiras',${t.id})">✏️</button></div></div>
      <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">${of.map(o=>`<span class="pill ${+o.ativo?'p-info':''}" style="cursor:pointer;font-size:13px;padding:5px 12px" onclick="edit('ofertas',${o.id})">${o.volume_ml} ml • ${brl(o.preco)}</span>`).join('')}<button class="btn sm" onclick="edit('ofertas',0,{tap_id:${t.id},volume_ml:300,preco:'',ordem:${of.length+1},ativo:1})">+ tamanho</button></div></div>`}).join('')+`<button class="btn pri" onclick="edit('torneiras',0)">+ Nova torneira</button>`;
-  else { const cols={produtos:[['nome','Bebida'],['estilo','Estilo'],['abv','ABV %'],['ativo','Ativo']],devices:[['nome','Controlador'],['location_id','Ponto'],['start_mode','Início'],['temperatura','Temp.'],['device_key','Chave do dispositivo'],['online','On']],
+  else { const cols={produtos:[['imagem_url','Foto'],['nome','Bebida'],['estilo','Estilo'],['abv','ABV %'],['ativo','Ativo']],devices:[['nome','Controlador'],['location_id','Ponto'],['start_mode','Início'],['temperatura','Temp.'],['device_key','Chave do dispositivo'],['online','On']],
       terminais:[['nome','Maquininha'],['location_id','Ponto'],['provider','Adquirente'],['codigo','Código de pareamento'],['serial','Serial'],['online','On']],locations:[['nome','Ponto'],['endereco','Endereço'],['id','BeerList (TV)'],['ativo','Ativo']]}[ETAB];
-    const fmt=(k,v)=>k==='id'&&ETAB==='locations'?`<a href="tv.html?loc=${v}" target="_blank">abrir tela da TV ↗</a>`:k==='location_id'?esc(locN(v)):k==='online'?onl(v):k==='ativo'?(+v?'✅':'—'):k==='device_key'||k==='codigo'?`<code>${esc(v)}</code>`:k==='temperatura'&&v!==null?(+v).toFixed(1)+'°C':esc(v??'—');
+    const fmt=(k,v)=>k==='imagem_url'?(v?`<img src="${esc(v)}" style="width:44px;height:44px;object-fit:cover;border-radius:8px">`:'—'):k==='id'&&ETAB==='locations'?`<a href="tv.html?loc=${v}" target="_blank">abrir tela da TV ↗</a>`:k==='location_id'?esc(locN(v)):k==='online'?onl(v):k==='ativo'?(+v?'✅':'—'):k==='device_key'||k==='codigo'?`<code>${esc(v)}</code>`:k==='temperatura'&&v!==null?(+v).toFixed(1)+'°C':esc(v??'—');
     body=`<div class="card tw"><table><tr>${cols.map(c=>`<th>${c[1]}</th>`).join('')}<th></th></tr>${c[ETAB].map(r=>`<tr>${cols.map(([k])=>`<td>${fmt(k,r[k])}</td>`).join('')}<td class="r"><button class="btn sm" onclick="edit('${ETAB}',${r.id})">✏️</button></td></tr>`).join('')}</table>
       <button class="btn pri" style="margin-top:12px" onclick="edit('${ETAB}',0)">+ Adicionar</button>${ETAB==='terminais'?'<p class="mut" style="margin-top:10px">No app da maquininha, digite o <b>código de pareamento</b> na primeira abertura.</p>':ETAB==='devices'?'<p class="mut" style="margin-top:10px">Copie a <b>chave do dispositivo</b> para o portal de configuração do ESP32.</p>':''}</div>`}
   $('#main').innerHTML=`<h1>Chopeiras e barris</h1><div class="tabs">${tabs.map(([k,t])=>`<button class="${ETAB===k?'on':''}" onclick="ETAB='${k}';equip()">${t}</button>`).join('')}</div>${body}`}
@@ -213,22 +213,31 @@ const FORMS={
   locations:[['nome','Nome do ponto'],['endereco','Endereço'],['ativo','Ativo','bool']],
   devices:[['nome','Nome (ex.: Freezer 1)'],['tipo','Tipo de controlador','sel',[['torneira','Torneira inteligente (tela + leitor de cartão, 1 torneira)'],['central','Central (sem tela, até 4 torneiras)']]],['location_id','Ponto','loc'],['start_mode','Como o cliente inicia o serviço','sel',[['button','Botão físico na torneira'],['pos','Botão SERVIR na tela da maquininha'],['auto','Automático (sem confirmação)']]],['arm_timeout_s','Tempo para retirar o copo (s)','num'],['temp_min','Temperatura mínima °C','num'],['temp_max','Temperatura máxima °C','num'],['ativo','Ativo','bool']],
   terminais:[['nome','Nome (ex.: Maquininha 1)'],['location_id','Ponto','loc'],['provider','Adquirente','sel',[['mercadopago','Mercado Pago Point Smart'],['pagbank','PagBank Moderninha Smart'],['simulado','Simulado (testes)']]],['aceita_credito','Aceita crédito','bool'],['aceita_debito','Aceita débito','bool'],['aceita_pix','Aceita Pix (via API Mercado Pago)','bool'],['ativo','Ativa','bool']],
-  produtos:[['nome','Nome'],['estilo','Estilo (Pilsen, IPA…)'],['descricao','Descrição curta'],['abv','Teor alcoólico %','num'],['imagem_url','URL da imagem (opcional)'],['cor','Cor do copo','color'],['ativo','Ativo','bool']],
+  produtos:[['nome','Nome'],['estilo','Estilo (Pilsen, IPA…)'],['descricao','Descrição curta'],['abv','Teor alcoólico %','num'],['imagem_url','Foto','foto'],['cor','Cor do copo','color'],['ativo','Ativo','bool']],
   torneiras:[['nome','Nome (ex.: Torneira 1)'],['device_id','Controlador','dev'],['canal','Canal no ESP32 (1-4)','num'],['product_id','Bebida','prod'],['modo','Modo de liberação','sel',[['flow','Válvula solenoide + fluxômetro (recomendado)'],['pulse','Pulsos para controladora externa']]],['pulsos_por_litro','Pulsos por litro (fluxômetro)','num'],['ml_por_pulso','ml por pulso (modo pulso)','num'],['preco_litro','Beer Pass: preço por litro (R$) — vazio = só copo','num'],['max_ml_servida','Beer Pass: máximo por servida (ml)','num'],['barril_ml','Tamanho do barril (ml)','num'],['alerta_pct','Alerta de barril baixo (%)','num'],['ativo','Ativa','bool']],
   ofertas:[['volume_ml','Volume (ml)','num'],['preco','Preço (R$)','num'],['ordem','Ordem','num'],['ativo','Ativo','bool']]};
-function edit(ent,id,def){const r=id?CAT[ent].find(x=>x.id==id):(def||{ativo:1}), f=FORMS[ent];
+function edit(ent,id,def){FOTO=null;const r=id?CAT[ent].find(x=>x.id==id):(def||{ativo:1}), f=FORMS[ent];
   const inp=([k,l,t,opt])=>{const v=r[k]??'';let h;
     if(t==='bool')h=`<select data-k="${k}"><option value="1" ${+v?'selected':''}>Sim</option><option value="0" ${+v?'':'selected'}>Não</option></select>`;
     else if(t==='sel')h=`<select data-k="${k}">${opt.map(([a,b])=>`<option value="${a}" ${v==a?'selected':''}>${b}</option>`).join('')}</select>`;
+    else if(t==='foto')h=`<div style="display:flex;gap:10px;align-items:center"><img id="fotoPrev" src="${esc(v)}" style="width:64px;height:64px;object-fit:cover;border-radius:10px;background:#000;${v?'':'display:none'}">
+      <input type="file" accept="image/*" id="fotoFile" onchange="fotoEscolhida(this)"><input type="hidden" data-k="${k}" value="${esc(v)}"></div><small class="mut">JPG/PNG — reduzida automaticamente. Aparece na maquininha e na TV.</small>`;
     else if(t==='loc'||t==='dev'||t==='prod'){const L={loc:CAT.locations,dev:CAT.devices,prod:CAT.produtos}[t];h=`<select data-k="${k}">${L.map(o=>`<option value="${o.id}" ${v==o.id?'selected':''}>${esc(o.nome)}</option>`).join('')}</select>`}
     else h=`<input data-k="${k}" type="${t==='num'?'number':t==='color'?'color':'text'}" step="any" value="${esc(v)}">`;
     return `<div><label>${l}</label>${h}</div>`};
   openM(`<h3>${id?'Editar':'Adicionar'}</h3><div class="grid g2">${f.map(inp).join('')}</div><div class="row" style="margin-top:18px;justify-content:flex-end">
    ${id?`<button class="btn dan" style="flex:0" onclick="salvar('${ent}',${id},true)">Excluir</button>`:''}<button class="btn" style="flex:0" onclick="closeM()">Cancelar</button><button class="btn pri" style="flex:0" onclick="salvar('${ent}',${id})">Salvar</button></div>`);
   window._def=def}
+let FOTO=null;
+function fotoEscolhida(inp){const f=inp.files[0];if(!f)return;const img=new Image(),url=URL.createObjectURL(f);
+  img.onload=()=>{const m=800,k=Math.min(1,m/Math.max(img.width,img.height)),c=document.createElement('canvas');c.width=Math.round(img.width*k);c.height=Math.round(img.height*k);
+    c.getContext('2d').drawImage(img,0,0,c.width,c.height);FOTO=c.toDataURL('image/jpeg',0.85);$('#fotoPrev').src=FOTO;$('#fotoPrev').style.display='block';URL.revokeObjectURL(url)};
+  img.onerror=()=>toast('Não consegui abrir essa imagem');img.src=url}
 async function salvar(ent,id,del){if(del&&!confirm('Excluir definitivamente?'))return;const data={id,...(window._def&&!id?{tap_id:window._def.tap_id}:{})};
   if(del)data._delete=1;else document.querySelectorAll('#mIn [data-k]').forEach(e=>data[e.dataset.k]=e.value);
-  try{await api('admin/save',{entity:ent,data});closeM();toast('Salvo');equip()}catch(e){toast(e.mensagem)}}
+  try{const r=await api('admin/save',{entity:ent,data});
+    if(ent==='produtos'&&FOTO&&!del){await api('admin/product_image',{id:r.id||id,imagem:FOTO})}
+    FOTO=null;closeM();toast('Salvo');equip()}catch(e){toast(e.mensagem)}}
 async function trocaBarril(id){const t=CAT.torneiras.find(x=>x.id==id);const v=prompt('Novo barril cheio — volume em litros:',t.barril_ml/1000);if(!v)return;await api('admin/keg_change',{tap_id:id,barril_ml:Math.round(parseFloat(v.replace(',','.'))*1000)});toast('Barril registrado');equip()}
 async function testar(id){const v=prompt('Liberar quantos ml? (teste/calibração/cortesia — R$ 0,00)','200');if(!v)return;const m=prompt('Motivo:','teste')||'teste';try{const r=await api('admin/manual_release',{tap_id:id,volume_ml:+v,motivo:m});toast('Liberação enviada ('+r.ref+'). No modo "botão", aperte o botão da torneira.')}catch(e){toast(e.mensagem)}}
 function calibrar(id){openM(`<h3>Calibrar torneira</h3><p class="mut">1) Use "Liberar teste" com, por exemplo, 500 ml num copo medidor/proveta.<br>2) Meça o volume real e informe abaixo. O sistema corrige os pulsos automaticamente.</p>
@@ -254,7 +263,7 @@ async function config(){const d=await api('admin/settings');SET=d.settings;const
    ${F('max_falhas_verificacao','Tentativas inválidas até bloquear','number')}${F('bloqueio_minutos','Minutos de bloqueio da maquininha','number')}
    ${F('falha_api_permite_local','Se a API cair, vender só com dígitos?','sel',[['0','Não (mais seguro)'],['1','Sim']])}</div>
    ${F('nfeio_api_key','Chave API NFE.io','password')}<div class="grid g2">${F('serpro_consumer_key','Serpro Consumer Key')}${F('serpro_consumer_secret','Serpro Consumer Secret','password')}</div>${F('serpro_url','URL Serpro (use {cpf}, {nasc} ou {nasc_dmy})')}</div>
-  <div class="card"><h2>🎫 Beer Pass (crédito + cobrança por ml)</h2><div class="grid g2">${F('pass_ativo','Ativo','sel',yn)}${F('recarga_valores','Valores de recarga (R$, vírgula)')}
+  <div class="card"><h2>🎫 Beer Pass — recarga + cartão + cobrança por ml <span class="pill">backlog</span></h2><p class="mut" style="margin-bottom:6px">Pronto, mas desligado. Com "Ativo = Não", a maquininha, a TV e as torneiras mostram só a venda de copo.</p><div class="grid g2">${F('pass_ativo','Ativo','sel',yn)}${F('recarga_valores','Valores de recarga (R$, vírgula)')}
    ${F('recarga_bonus','Bônus (valor:bônus, ex.: 100:5,150:10)')}${F('pass_ml_minimo','Saldo mínimo para abrir (em ml)','number')}${F('pass_fim_inatividade_s','Fecha a torneira após (s) sem fluxo','number')}
    ${F('tv_ranking','Ranking de consumo na TV (Nome S.)','sel',[['0','Não'],['1','Sim']])}</div>${F('tv_mensagem','Mensagem da TV (BeerList)','area')}
    <p class="mut" style="margin-top:8px">O preço por litro é definido em cada torneira (Chopeiras e barris → ✏️).</p></div>
