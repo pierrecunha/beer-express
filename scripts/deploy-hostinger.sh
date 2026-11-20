@@ -75,6 +75,8 @@ if ! $SSH "$HOSTINGER_SSH" "cd '$HOSTINGER_PATH' && php api.php migrate"; then
   exit 1
 fi
 $SSH "$HOSTINGER_SSH" "echo '$(git rev-parse --short HEAD 2>/dev/null || echo manual) $(date -Iseconds)' > '$HOSTINGER_PATH/.be_versao'"
+echo "→ diagnóstico da rota da chopeira"
+$SSH "$HOSTINGER_SSH" "cd '$HOSTINGER_PATH' && php api.php diag" || true
 echo "→ conferindo no servidor (php api.php health)"
 if ! $SSH "$HOSTINGER_SSH" "cd '$HOSTINGER_PATH' && php api.php health"; then
   echo "SISTEMA COM ERRO NO SERVIDOR — volte com: ssh ... 'tar -xzf ~/beerexpress_deploys/antes_$STAMP.tar.gz -C $HOSTINGER_PATH'"

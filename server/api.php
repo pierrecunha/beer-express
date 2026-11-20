@@ -1609,7 +1609,19 @@ if (PHP_SAPI === 'cli') {
         echo json_encode($h, JSON_UNESCAPED_UNICODE) . "\n";
         exit($h['ok'] ? 0 : 1);
     }
-    fwrite(STDERR, "uso: php api.php health|migrate\n"); exit(2);
+    if ($cmd === 'diag') {   // diagnóstico usado pelo deploy: a rota da chopeira responde pela internet?
+        $ids = json_decode((string)setting('demo_ids'), true) ?: [];
+        $key = !empty($ids['device']) ? (string)val('SELECT device_key FROM be_devices WHERE id = ?', [$ids['device']]) : (string)val('SELECT device_key FROM be_devices WHERE ativo = 1 ORDER BY id LIMIT 1');
+        if (!$key) { echo "diag: nenhuma chopeira cadastrada\n"; exit(0); }
+        foreach (['cabecalho' => ["X-Device-Key: $key"], 'url' => []] as $modo => $hd) {
+            $url = BE_BASE_URL . '/api.php?r=dev/poll&fw=diag&temp=3' . ($modo === 'url' ? '&key=' . urlencode($key) : '');
+            $r = http_json('GET', $url, $hd, null, 15);
+            echo "diag chopeira ($modo): HTTP {$r['code']} " . substr(preg_replace('/\s+/', ' ', (string)$r['raw']), 0, 220) . ($r['error'] ? " erro={$r['error']}" : '') . "\n";
+        }
+        echo 'diag ultimo_sinal: ' . val('SELECT MAX(last_seen) FROM be_devices') . "\n";
+        exit(0);
+    }
+    fwrite(STDERR, "uso: php api.php health|migrate|diag\n"); exit(2);
 }
 
 header('Access-Control-Allow-Origin: *');
