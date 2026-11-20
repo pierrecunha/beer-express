@@ -1,0 +1,16 @@
+pluginManagement {
+    repositories { google(); mavenCentral(); gradlePluginPortal() }
+}
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        google()
+        mavenCentral()
+        // SDK PlugPag (PagBank Smart) — repositório oficial do PagSeguro
+        maven { url 'https://github.com/pagseguro/PlugPagServiceWrapper/raw/master' }
+        // SDK Mercado Pago (Point Smart): vem como .aar no "kit de integração" → coloque em app/libs
+        flatDir { dirs 'app/libs' }
+    }
+}
+rootProject.name = "BeerExpressPOS"
+include ':app'

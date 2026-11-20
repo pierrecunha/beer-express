@@ -1,0 +1,13 @@
+# Segredos — ficam só no servidor
+server/config.php
+android/*.jks
+android/local.properties
+android/app/libs/*.aar
+# Build
+android/.gradle/
+android/build/
+android/app/build/
+.idea/
+*.iml
+.DS_Store
+firmware/**/build/

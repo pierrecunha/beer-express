@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Beer Express • Painel</title>
+<style>
+:root{--bg:#0F0D0A;--bg2:#16130E;--card:#1D1913;--line:#332B1F;--txt:#F7EFE2;--mut:#A9987E;--amber:#F5B301;--ok:#36C47A;--warn:#F5A524;--err:#F05252;--r:14px}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--txt);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:var(--amber)}
+.app{display:grid;grid-template-columns:220px 1fr;min-height:100vh}
+nav{background:var(--bg2);border-right:1px solid var(--line);padding:18px 12px;position:sticky;top:0;height:100vh}
+nav .lg{font-weight:900;font-size:19px;padding:0 8px 18px}nav .lg b{color:var(--amber)}
+nav button{display:flex;gap:10px;width:100%;padding:10px 12px;border:0;background:none;border-radius:10px;text-align:left;cursor:pointer;color:var(--mut);font-weight:600}
+nav button.on,nav button:hover{background:var(--card);color:var(--txt)}
+nav .bt{position:absolute;bottom:14px;left:12px;right:12px;font-size:12px;color:var(--mut)}
+main{padding:22px 26px;min-width:0}
+h1{font-size:22px;margin-bottom:16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+h1 .sp{flex:1}
+h2{font-size:15px;margin-bottom:10px}
+.grid{display:grid;gap:14px}
+.g4{grid-template-columns:repeat(4,1fr)}.g3{grid-template-columns:repeat(3,1fr)}.g2{grid-template-columns:repeat(2,1fr)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px;min-width:0}
+.kpi small{color:var(--mut);font-size:12px;text-transform:uppercase;letter-spacing:.05em}.kpi b{display:block;font-size:26px;margin-top:4px}.kpi span{font-size:12px;color:var(--mut)}
+.up{color:var(--ok)!important}.dn{color:var(--err)!important}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;font-size:11.5px;color:var(--mut);text-transform:uppercase;letter-spacing:.04em;padding:8px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:9px 8px;border-bottom:1px solid #2a2419;vertical-align:middle}
+tr.click{cursor:pointer}tr.click:hover td{background:#231e16}
+.tw{overflow:auto}
+.pill{display:inline-block;padding:2px 9px;border-radius:99px;font-size:11.5px;font-weight:700;background:#2b2519;color:var(--mut);white-space:nowrap}
+.p-ok{background:#163525;color:#6ee7a8}.p-warn{background:#3a2c0e;color:#ffd166}.p-err{background:#3a1717;color:#ff9b9b}.p-info{background:#172a3a;color:#8ecbff}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px}
+.btn{border:1px solid var(--line);background:var(--card);padding:8px 14px;border-radius:10px;cursor:pointer;font-weight:600;white-space:nowrap}
+.btn.pri{background:var(--amber);border-color:var(--amber);color:#1b1404}.btn.dan{border-color:#5a2424;color:#ff9b9b}.btn.sm{padding:4px 10px;font-size:12.5px}
+.btn:disabled{opacity:.4}
+input,select,textarea{background:var(--bg2);border:1px solid var(--line);border-radius:9px;padding:8px 10px;width:100%;outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--amber)}
+label{display:block;font-size:12px;color:var(--mut);margin:10px 0 4px}
+.row{display:flex;gap:10px;align-items:end;flex-wrap:wrap}.row>*{flex:1;min-width:120px}
+.bar{height:8px;background:#2a2419;border-radius:9px;overflow:hidden}.bar i{display:block;height:100%}
+.mut{color:var(--mut)}.r{text-align:right}.nw{white-space:nowrap}
+.chart{display:flex;align-items:flex-end;gap:3px;height:150px;padding-top:10px}
+.chart div{flex:1;background:linear-gradient(180deg,var(--amber),#a87700);border-radius:4px 4px 0 0;min-height:2px;position:relative}
+.chart div:hover::after{content:attr(data-t);position:absolute;bottom:100%;left:50%;transform:translateX(-50%);background:#000;padding:3px 7px;border-radius:6px;font-size:11px;white-space:nowrap;z-index:2}
+.modal{position:fixed;inset:0;background:#000a;display:none;align-items:center;justify-content:center;z-index:50;padding:16px}
+.modal.on{display:flex}.modal .in{background:var(--bg2);border:1px solid var(--line);border-radius:18px;padding:20px;width:100%;max-width:640px;max-height:90vh;overflow:auto}
+.modal h3{margin-bottom:6px}
+.toast{position:fixed;right:18px;bottom:18px;background:#222;border:1px solid var(--line);padding:12px 16px;border-radius:12px;z-index:60;display:none;max-width:380px}
+.login{max-width:360px;margin:12vh auto;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:26px}
+.sec{margin-top:22px}.ev{font-size:13px;padding:8px 0;border-bottom:1px solid #2a2419}.ev small{color:var(--mut);display:block}
+code{background:#000;padding:2px 6px;border-radius:6px;font-size:12px;word-break:break-all}
+.tabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}.tabs button{border:1px solid var(--line);background:none;padding:6px 12px;border-radius:99px;cursor:pointer;color:var(--mut)}.tabs button.on{background:var(--amber);color:#1b1404;border-color:var(--amber);font-weight:700}
+@media(max-width:900px){.app{grid-template-columns:1fr}nav{position:sticky;height:auto;display:flex;overflow:auto;padding:8px;z-index:5}nav .lg,nav .bt{display:none}nav button{width:auto;white-space:nowrap}
+.g4{grid-template-columns:repeat(2,1fr)}.g3,.g2{grid-template-columns:1fr}main{padding:16px}}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<div class="modal" id="modal" onclick="if(event.target===this)closeM()"><div class="in" id="mIn"></div></div>
+<div class="toast" id="toast"></div>
+<script>
+const API='api.php';
+let JWT=localStorage.getItem('be_jwt')||'', CAT=null, SET=null, PAGE='dash', TIMER=null;
+const $=s=>document.querySelector(s), esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const brl=v=>'R$ '+Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+const mlf=ml=>(ml=+ml||0)>=1000?(ml/1000).toLocaleString('pt-BR',{maximumFractionDigits:1})+' L':ml+' ml';
+const dt=s=>s?new Date(s.replace(' ','T')).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'-';
+const ago=s=>{if(!s)return 'nunca';const m=Math.round((Date.now()-new Date(s.replace(' ','T')))/60000);return m<1?'agora':m<60?m+' min':m<1440?Math.round(m/60)+' h':Math.round(m/1440)+' d'};
+function toast(m){const t=$('#toast');t.textContent=m;t.style.display='block';clearTimeout(t._t);t._t=setTimeout(()=>t.style.display='none',3500)}
+function openM(h){$('#mIn').innerHTML=h;$('#modal').classList.add('on')} function closeM(){$('#modal').classList.remove('on')}
+async function api(r,body){const res=await fetch(API+'?r='+r,{method:body?'POST':'GET',headers:{'Content-Type':'application/json','Authorization':'Bearer '+JWT},body:body?JSON.stringify(body):undefined});
+  const j=await res.json().catch(()=>({ok:false,mensagem:'Erro de comunicação'}));
+  if(res.status===401&&j.erro==='auth'){JWT='';localStorage.removeItem('be_jwt');return login()}
+  if(!j.ok)throw j; return j}
+const ST={aguardando_pagamento:['Aguardando','p-info'],pago:['Pago','p-info'],servindo:['Servindo','p-info'],concluido:['Concluído','p-ok'],parcial:['Parcial','p-warn'],falhou:['Falhou','p-err'],cancelado:['Cancelado',''],estornado:['Estornado','p-warn'],
+  pendente:['Na fila',''],armado:['Aguardando cliente','p-info'],liberado:['Liberado','p-info'],timeout:['Tempo esgotado','p-warn'],erro:['Erro','p-err']};
+const pill=s=>{const[t,c]=ST[s]||[s,''];return `<span class="pill ${c}">${t}</span>`};
+const met=m=>({credito:'💳 Crédito',debito:'💳 Débito',pix:'⚡ Pix'})[m]||'—';
+const onl=o=>`<span class="dot" style="background:${o?'var(--ok)':'var(--err)'}"></span>`;
+
+/* ============ login ============ */
+async function login(){
+  const s=await fetch(API+'?r=admin/needs_setup').then(r=>r.json()).catch(()=>({}));
+  $('#root').innerHTML=`<div class="login"><div style="font-size:42px">🍺</div><h2 style="font-size:22px;margin:6px 0 2px">Beer Express</h2><p class="mut">${s.needs_setup?'Crie o usuário administrador':'Painel de gestão'}</p>
+   ${s.needs_setup?'<label>Seu nome</label><input id="ln" value="Pierre">':''}<label>E-mail</label><input id="le" type="email"><label>Senha</label><input id="lp" type="password" onkeydown="if(event.key==='Enter')doLogin(${!!s.needs_setup})">
+   <button class="btn pri" style="width:100%;margin-top:16px" onclick="doLogin(${!!s.needs_setup})">${s.needs_setup?'Criar e entrar':'Entrar'}</button><p id="lerr" style="color:var(--err);margin-top:10px"></p></div>`}
+async function doLogin(setup){try{const j=await fetch(API+'?r=admin/'+(setup?'setup':'login'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nome:$('#ln')?.value,email:$('#le').value,senha:$('#lp').value})}).then(r=>r.json());
+  if(!j.ok)throw j;JWT=j.token;localStorage.setItem('be_jwt',JWT);shell()}catch(e){$('#lerr').textContent=e.mensagem||'Falha'}}
+
+/* ============ layout ============ */
+const MENU=[['dash','📊','Visão geral'],['vendas','🧾','Vendas'],['clientes','👤','Clientes'],['equip','🛢️','Chopeiras e barris'],['eventos','🔔','Eventos'],['config','⚙️','Configurações']];
+function shell(){$('#root').innerHTML=`<div class="app"><nav><div class="lg">🍺 Beer <b>Express</b></div>${MENU.map(([k,i,t])=>`<button data-p="${k}" onclick="nav('${k}')">${i} ${t}</button>`).join('')}
+  <div class="bt"><a href="#" onclick="senha();return false">Alterar senha</a> · <a href="#" onclick="localStorage.removeItem('be_jwt');location.reload()">Sair</a></div></nav><main id="main"></main></div>`;nav(PAGE)}
+function nav(p){PAGE=p;clearInterval(TIMER);document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.p===p));
+  ({dash,vendas,clientes,equip,eventos,config})[p]().catch(e=>$('#main').innerHTML=`<p style="color:var(--err)">${esc(e.mensagem||e)}</p>`)}
+
+/* ============ dashboard ============ */
+async function dash(){
+  const d=await api('admin/dashboard'), var_=d.ontem.s>0?Math.round(100*(d.hoje.s-d.ontem.s)/d.ontem.s):null;
+  const maxD=Math.max(1,...d.dias.map(x=>+x.s)); const dias=[];for(let i=29;i>=0;i--){const k=new Date(Date.now()-i*864e5-new Date().getTimezoneOffset()*6e4).toISOString().slice(0,10);dias.push(d.dias.find(x=>x.d===k)||{d:k,n:0,s:0,ml:0})}
+  const maxH=Math.max(1,...d.horas.map(x=>+x.n));
+  $('#main').innerHTML=`<h1>Visão geral <span class="sp"></span><span class="mut" style="font-size:12px">atualiza a cada 20 s</span></h1>
+  <div class="grid g4">
+   <div class="card kpi"><small>Hoje</small><b>${brl(d.hoje.s)}</b><span>${d.hoje.n} vendas • ${mlf(d.hoje.ml)} ${var_!==null?`• <span class="${var_>=0?'up':'dn'}">${var_>=0?'▲':'▼'} ${Math.abs(var_)}% vs ontem</span>`:''}</span></div>
+   <div class="card kpi"><small>Ticket médio hoje</small><b>${brl(d.hoje.n?d.hoje.s/d.hoje.n:0)}</b><span>Ontem: ${brl(d.ontem.s)}</span></div>
+   <div class="card kpi"><small>Mês</small><b>${brl(d.mes.s)}</b><span>${d.mes.n} vendas • ${mlf(d.mes.ml)}</span></div>
+   <div class="card kpi"><small>Clientes verificados</small><b>${d.clientes.total||0}</b><span>${+d.clientes.hoje||0} novos hoje • 🔞 ${d.menores_hoje} menores barrados</span></div>
+  </div>
+  <div class="grid g3 sec">
+   <div class="card" style="grid-column:span 2"><h2>Faturamento — últimos 30 dias</h2><div class="chart">${dias.map(x=>`<div style="height:${Math.max(1,100*x.s/maxD)}%" data-t="${x.d.slice(8)}/${x.d.slice(5,7)}: ${brl(x.s)} (${x.n})"></div>`).join('')}</div></div>
+   <div class="card"><h2>Horários de pico (30 dias)</h2><div class="chart" style="height:150px">${Array.from({length:24},(_,h)=>{const n=+(d.horas.find(x=>+x.h===h)?.n||0);return `<div style="height:${Math.max(1,100*n/maxH)}%;background:#6b5420" data-t="${h}h: ${n}"></div>`}).join('')}</div><p class="mut" style="font-size:11px;display:flex;justify-content:space-between"><span>0h</span><span>12h</span><span>23h</span></p></div>
+  </div>
+  <div class="grid g3 sec">
+   <div class="card"><h2>Chopeiras</h2>${d.devices.map(x=>`<div class="ev">${onl(x.online)}<b>${esc(x.loc)}</b> / ${esc(x.nome)}<small>${x.temperatura!==null?`🌡️ <b style="color:${+x.temperatura>+x.temp_max||+x.temperatura<+x.temp_min?'var(--err)':'var(--txt)'}">${(+x.temperatura).toFixed(1)}°C</b> • `:''}${x.rssi?`📶 ${x.rssi} dBm • `:''}visto ${ago(x.last_seen)}${x.porta_aberta==1?' • 🚪 porta aberta':''}</small></div>`).join('')||'<p class="mut">Nenhuma cadastrada</p>'}
+     <h2 style="margin-top:14px">Maquininhas</h2>${d.terminais.map(x=>`<div class="ev">${onl(x.online)}<b>${esc(x.loc)}</b> / ${esc(x.nome)} <span class="pill">${x.provider}</span><small>visto ${ago(x.last_seen)}${x.bloqueado_ate?' • 🔒 bloqueada até '+dt(x.bloqueado_ate):''}</small></div>`).join('')||'<p class="mut">Nenhuma</p>'}</div>
+   <div class="card"><h2>Barris</h2>${d.barris.map(b=>{const p=b.barril_ml?Math.round(100*b.restante_ml/b.barril_ml):0;return `<div style="margin-bottom:12px"><div style="display:flex;justify-content:space-between"><span><b>${esc(b.produto||'-')}</b> <span class="mut">${esc(b.loc)} • ${esc(b.nome)}</span></span><span>${mlf(b.restante_ml)}</span></div><div class="bar"><i style="width:${p}%;background:${p<=b.alerta_pct?'var(--err)':p<=40?'var(--warn)':'var(--ok)'}"></i></div></div>`}).join('')||'<p class="mut">Nenhuma torneira</p>'}
+     <h2 style="margin-top:14px">Mais vendidos no mês</h2><table>${d.produtos.map(p=>`<tr><td>${esc(p.produto)}</td><td class="r">${p.copos} copos</td><td class="r">${mlf(p.ml)}</td><td class="r">${brl(p.s)}</td></tr>`).join('')}</table></div>
+   <div class="card"><h2>Alertas recentes</h2>${d.alertas.map(a=>`<div class="ev"><span class="pill ${a.nivel==='critico'?'p-err':'p-warn'}">${a.nivel}</span> ${esc(a.msg)}<small>${dt(a.created_at)}</small></div>`).join('')||'<p class="mut">Tudo certo por aqui ✅</p>'}
+     ${d.problemas.length?`<h2 style="margin-top:14px">Pedidos com problema (7 dias)</h2>${d.problemas.map(o=>`<div class="ev" style="cursor:pointer" onclick="pedido(${o.id})">${pill(o.status)} ${o.ref} — ${brl(o.total)}<small>${dt(o.created_at)}</small></div>`).join('')}`:''}</div>
+  </div>`;
+  TIMER=setInterval(()=>PAGE==='dash'&&!$('#modal').classList.contains('on')&&dash(),20000)}
+
+/* ============ vendas ============ */
+let VF={de:new Date(Date.now()-6*864e5).toISOString().slice(0,10),ate:new Date().toISOString().slice(0,10),status:'',q:'',page:1};
+async function vendas(){
+  const p=new URLSearchParams(VF).toString(), d=await api('admin/orders&'+p);
+  $('#main').innerHTML=`<h1>Vendas</h1><div class="card"><div class="row">
+    <div><label>De</label><input type="date" value="${VF.de}" onchange="VF.de=this.value;VF.page=1;vendas()"></div>
+    <div><label>Até</label><input type="date" value="${VF.ate}" onchange="VF.ate=this.value;VF.page=1;vendas()"></div>
+    <div><label>Status</label><select onchange="VF.status=this.value;VF.page=1;vendas()"><option value="">Todos</option>${Object.keys(ST).slice(0,8).map(s=>`<option value="${s}" ${VF.status===s?'selected':''}>${ST[s][0]}</option>`).join('')}</select></div>
+    <div style="flex:2"><label>Buscar (pedido, CPF ou nome)</label><input value="${esc(VF.q)}" onkeydown="if(event.key==='Enter'){VF.q=this.value;VF.page=1;vendas()}"></div>
+    <div style="flex:0"><button class="btn" onclick="exportCsv()">CSV</button></div></div>
+   <p class="mut" style="margin:12px 0">${d.total} pedidos • faturado ${brl(d.soma)}</p>
+   <div class="tw"><table><tr><th>Data</th><th>Pedido</th><th>Ponto</th><th>Cliente</th><th>Pagamento</th><th class="r">Volume</th><th class="r">Total</th><th>Status</th></tr>
+   ${d.pedidos.map(o=>`<tr class="click" onclick="pedido(${o.id})"><td class="nw">${dt(o.created_at)}</td><td class="nw">${o.ref}</td><td>${esc(o.loc)}</td><td>${esc(o.cliente||'—')}<br><small class="mut">${o.cpf||''}</small></td>
+     <td class="nw">${met(o.metodo)} ${o.final_cartao?'•••'+o.final_cartao:''} ${o.metodo&&o.metodo!=='pix'&&!+o.verificado_servidor?'<span title="não confirmado na API">⚠️</span>':''}</td><td class="r">${mlf(o.total_ml)}</td><td class="r">${brl(o.total)}</td><td>${pill(o.status)}</td></tr>`).join('')}</table></div>
+   ${d.paginas>1?`<div class="row" style="margin-top:12px;justify-content:flex-end"><button class="btn sm" style="flex:0" ${VF.page<=1?'disabled':''} onclick="VF.page--;vendas()">‹</button><span style="flex:0" class="nw">${VF.page}/${d.paginas}</span><button class="btn sm" style="flex:0" ${VF.page>=d.paginas?'disabled':''} onclick="VF.page++;vendas()">›</button></div>`:''}</div>`;
+  window._ped=d.pedidos}
+function exportCsv(){const l=[['data','pedido','ponto','cliente','cpf','metodo','ml','total','status'],...(window._ped||[]).map(o=>[o.created_at,o.ref,o.loc,o.cliente,o.cpf,o.metodo,o.total_ml,String(o.total).replace('.',','),o.status])];
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['﻿'+l.map(r=>r.map(c=>'"'+String(c??'').replace(/"/g,'""')+'"').join(';')).join('\n')],{type:'text/csv'}));a.download='vendas.csv';a.click()}
+async function pedido(id){const d=await api('admin/order&id='+id), o=d.pedido;
+  openM(`<h3>Pedido ${o.ref} ${pill(o.status)}</h3><p class="mut">${dt(o.created_at)} • ${esc(o.loc)} • ${esc(o.terminal)}</p>
+  <div class="grid g2" style="margin:14px 0"><div><label>Cliente</label>${esc(o.cliente||'—')} <span class="mut">${o.cpf||''}</span>${o.compras?`<br><small class="mut">${o.compras} compras</small>`:''}</div>
+   <div><label>Pagamento</label>${met(o.metodo)} ${esc(o.bandeira||'')} ${o.final_cartao?'•••'+o.final_cartao:''}<br><small class="mut">${o.provider||''} ${o.pagamento_id?'• ID '+esc(o.pagamento_id):''} ${o.nsu?'• NSU '+esc(o.nsu):''} ${o.metodo&&o.metodo!=='pix'?(+o.verificado_servidor?'• ✅ confirmado na API':'• ⚠️ não confirmado na API'):''}</small></div></div>
+  <table>${d.itens.map(i=>`<tr><td>${i.qtd}× ${esc(i.produto)} ${i.volume_ml} ml</td><td class="r">${brl(i.qtd*i.preco_unit)}</td></tr>`).join('')}<tr><td><b>Total</b></td><td class="r"><b>${brl(o.total)}</b></td></tr></table>
+  <h2 style="margin-top:16px">Copos</h2><table>${d.copos.map(c=>`<tr><td>#${c.seq} ${esc(c.torneira)}</td><td>${c.servido_ml}/${c.volume_ml} ml</td><td>${pill(c.status)} ${c.erro?'<small class="mut">'+esc(c.erro)+'</small>':''}</td><td class="r">${['erro','timeout'].includes(c.status)?`<button class="btn sm" onclick="reliberar(${c.id},${o.id})">Reliberar</button>`:''}</td></tr>`).join('')||'<tr><td class="mut">—</td></tr>'}</table>
+  ${o.obs?`<p class="mut" style="margin-top:10px">📝 ${esc(o.obs)}</p>`:''}
+  ${d.eventos.length?`<h2 style="margin-top:16px">Histórico</h2>${d.eventos.map(e=>`<div class="ev">${esc(e.msg)}<small>${dt(e.created_at)}</small></div>`).join('')}`:''}
+  <div class="row" style="margin-top:18px;justify-content:flex-end">${['pago','servindo','concluido','parcial','falhou'].includes(o.status)&&+o.total>0?`<button class="btn dan" style="flex:0" onclick="estornar(${o.id},${o.total})">Estornar</button>`:''}<button class="btn" style="flex:0" onclick="closeM()">Fechar</button></div>`)}
+async function reliberar(id,oid){if(!confirm('Liberar novamente o volume que faltou deste copo?'))return;try{const r=await api('admin/dispense_retry',{id});toast(`Reliberado: ${r.volume_ml} ml — o cliente precisa estar na chopeira`);pedido(oid)}catch(e){toast(e.mensagem)}}
+async function estornar(id,total){const v=prompt('Valor do estorno (R$):',String(total).replace('.',','));if(v===null)return;try{const r=await api('admin/order_refund',{id,valor:v.replace(',','.')});toast(r.mensagem);closeM();nav(PAGE)}catch(e){toast(e.mensagem)}}
+
+/* ============ clientes ============ */
+let CQ='';
+async function clientes(){const d=await api('admin/customers&q='+encodeURIComponent(CQ));
+  $('#main').innerHTML=`<h1>Clientes <span class="sp"></span><span class="mut" style="font-size:13px">${d.total} verificados</span></h1><div class="card">
+  <input placeholder="Buscar por CPF ou nome e Enter" value="${esc(CQ)}" onkeydown="if(event.key==='Enter'){CQ=this.value;clientes()}">
+  <div class="tw" style="margin-top:12px"><table><tr><th>Cliente</th><th>CPF</th><th>Idade</th><th>Verificação</th><th class="r">Compras</th><th class="r">Consumo</th><th class="r">Gasto</th><th>Última</th><th></th></tr>
+  ${d.clientes.map(c=>`<tr><td>${esc(c.nome)} ${+c.bloqueado?'<span class="pill p-err">bloqueado</span>':''}</td><td class="nw">${c.cpf}</td><td>${c.idade}</td><td><span class="pill ${c.verificado_por==='local'?'':'p-ok'}">${c.verificado_por}</span></td>
+   <td class="r">${c.compras}</td><td class="r">${mlf(c.total_ml)}</td><td class="r">${brl(c.total_gasto)}</td><td class="nw">${dt(c.ultima_compra)}</td>
+   <td><button class="btn sm ${+c.bloqueado?'':'dan'}" onclick="bloq(${c.id},${+c.bloqueado?0:1})">${+c.bloqueado?'Desbloquear':'Bloquear'}</button></td></tr>`).join('')}</table></div></div>`}
+async function bloq(id,b){const m=b?prompt('Motivo do bloqueio:'):'';if(b&&m===null)return;await api('admin/customer_block',{id,bloqueado:b,motivo:m});clientes()}
+
+/* ============ equipamentos ============ */
+let ETAB='torneiras';
+async function equip(){CAT=await api('admin/catalog');const c=CAT, locN=id=>c.locations.find(l=>l.id==id)?.nome||'-', devN=id=>c.devices.find(d=>d.id==id)?.nome||'-';
+  const tabs=[['torneiras','Torneiras e barris'],['produtos','Bebidas'],['devices','Controladores ESP32'],['terminais','Maquininhas'],['locations','Pontos']];
+  let body='';
+  if(ETAB==='torneiras') body=c.torneiras.map(t=>{const of=c.ofertas.filter(o=>o.tap_id==t.id), d=c.devices.find(x=>x.id==t.device_id), p=t.barril_ml?Math.round(100*t.restante_ml/t.barril_ml):0;
+    return `<div class="card" style="margin-bottom:12px"><div class="row" style="align-items:center"><div style="flex:2"><b style="font-size:16px">${esc(t.nome)}</b> — ${esc(t.produto||'sem bebida')} ${+t.ativo?'':'<span class="pill">inativa</span>'}<br><small class="mut">${onl(d?.online)}${esc(locN(d?.location_id))} • ${esc(devN(t.device_id))} • canal ${t.canal} • modo ${t.modo==='flow'?'válvula + fluxômetro ('+t.pulsos_por_litro+' pulsos/L)':'pulso ('+t.ml_por_pulso+' ml/pulso)'}</small></div>
+     <div><div class="bar"><i style="width:${p}%;background:${p<=t.alerta_pct?'var(--err)':'var(--ok)'}"></i></div><small class="mut">${mlf(t.restante_ml)} de ${mlf(t.barril_ml)} (${p}%)</small></div>
+     <div style="flex:none;display:flex;gap:6px;flex-wrap:wrap;max-width:100%"><button class="btn sm" onclick="trocaBarril(${t.id})">🛢️ Trocar barril</button><button class="btn sm" onclick="testar(${t.id})">🔓 Liberar teste</button><button class="btn sm" onclick="calibrar(${t.id})">🎯 Calibrar</button><button class="btn sm" onclick="edit('torneiras',${t.id})">✏️</button></div></div>
+     <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">${of.map(o=>`<span class="pill ${+o.ativo?'p-info':''}" style="cursor:pointer;font-size:13px;padding:5px 12px" onclick="edit('ofertas',${o.id})">${o.volume_ml} ml • ${brl(o.preco)}</span>`).join('')}<button class="btn sm" onclick="edit('ofertas',0,{tap_id:${t.id},volume_ml:300,preco:'',ordem:${of.length+1},ativo:1})">+ tamanho</button></div></div>`}).join('')+`<button class="btn pri" onclick="edit('torneiras',0)">+ Nova torneira</button>`;
+  else { const cols={produtos:[['nome','Bebida'],['estilo','Estilo'],['abv','ABV %'],['ativo','Ativo']],devices:[['nome','Controlador'],['location_id','Ponto'],['start_mode','Início'],['temperatura','Temp.'],['device_key','Chave do dispositivo'],['online','On']],
+      terminais:[['nome','Maquininha'],['location_id','Ponto'],['provider','Adquirente'],['codigo','Código de pareamento'],['serial','Serial'],['online','On']],locations:[['nome','Ponto'],['endereco','Endereço'],['ativo','Ativo']]}[ETAB];
+    const fmt=(k,v)=>k==='location_id'?esc(locN(v)):k==='online'?onl(v):k==='ativo'?(+v?'✅':'—'):k==='device_key'||k==='codigo'?`<code>${esc(v)}</code>`:k==='temperatura'&&v!==null?(+v).toFixed(1)+'°C':esc(v??'—');
+    body=`<div class="card tw"><table><tr>${cols.map(c=>`<th>${c[1]}</th>`).join('')}<th></th></tr>${c[ETAB].map(r=>`<tr>${cols.map(([k])=>`<td>${fmt(k,r[k])}</td>`).join('')}<td class="r"><button class="btn sm" onclick="edit('${ETAB}',${r.id})">✏️</button></td></tr>`).join('')}</table>
+      <button class="btn pri" style="margin-top:12px" onclick="edit('${ETAB}',0)">+ Adicionar</button>${ETAB==='terminais'?'<p class="mut" style="margin-top:10px">No app da maquininha, digite o <b>código de pareamento</b> na primeira abertura.</p>':ETAB==='devices'?'<p class="mut" style="margin-top:10px">Copie a <b>chave do dispositivo</b> para o portal de configuração do ESP32.</p>':''}</div>`}
+  $('#main').innerHTML=`<h1>Chopeiras e barris</h1><div class="tabs">${tabs.map(([k,t])=>`<button class="${ETAB===k?'on':''}" onclick="ETAB='${k}';equip()">${t}</button>`).join('')}</div>${body}`}
+
+const FORMS={
+  locations:[['nome','Nome do ponto'],['endereco','Endereço'],['ativo','Ativo','bool']],
+  devices:[['nome','Nome (ex.: Freezer 1)'],['location_id','Ponto','loc'],['start_mode','Como o cliente inicia o serviço','sel',[['button','Botão físico na torneira'],['pos','Botão SERVIR na tela da maquininha'],['auto','Automático (sem confirmação)']]],['arm_timeout_s','Tempo para retirar o copo (s)','num'],['temp_min','Temperatura mínima °C','num'],['temp_max','Temperatura máxima °C','num'],['ativo','Ativo','bool']],
+  terminais:[['nome','Nome (ex.: Maquininha 1)'],['location_id','Ponto','loc'],['provider','Adquirente','sel',[['mercadopago','Mercado Pago Point Smart'],['pagbank','PagBank Moderninha Smart'],['simulado','Simulado (testes)']]],['aceita_credito','Aceita crédito','bool'],['aceita_debito','Aceita débito','bool'],['aceita_pix','Aceita Pix (via API Mercado Pago)','bool'],['ativo','Ativa','bool']],
+  produtos:[['nome','Nome'],['estilo','Estilo (Pilsen, IPA…)'],['descricao','Descrição curta'],['abv','Teor alcoólico %','num'],['imagem_url','URL da imagem (opcional)'],['cor','Cor do copo','color'],['ativo','Ativo','bool']],
+  torneiras:[['nome','Nome (ex.: Torneira 1)'],['device_id','Controlador','dev'],['canal','Canal no ESP32 (1-4)','num'],['product_id','Bebida','prod'],['modo','Modo de liberação','sel',[['flow','Válvula solenoide + fluxômetro (recomendado)'],['pulse','Pulsos para controladora externa']]],['pulsos_por_litro','Pulsos por litro (fluxômetro)','num'],['ml_por_pulso','ml por pulso (modo pulso)','num'],['barril_ml','Tamanho do barril (ml)','num'],['alerta_pct','Alerta de barril baixo (%)','num'],['ativo','Ativa','bool']],
+  ofertas:[['volume_ml','Volume (ml)','num'],['preco','Preço (R$)','num'],['ordem','Ordem','num'],['ativo','Ativo','bool']]};
+function edit(ent,id,def){const r=id?CAT[ent].find(x=>x.id==id):(def||{ativo:1}), f=FORMS[ent];
+  const inp=([k,l,t,opt])=>{const v=r[k]??'';let h;
+    if(t==='bool')h=`<select data-k="${k}"><option value="1" ${+v?'selected':''}>Sim</option><option value="0" ${+v?'':'selected'}>Não</option></select>`;
+    else if(t==='sel')h=`<select data-k="${k}">${opt.map(([a,b])=>`<option value="${a}" ${v==a?'selected':''}>${b}</option>`).join('')}</select>`;
+    else if(t==='loc'||t==='dev'||t==='prod'){const L={loc:CAT.locations,dev:CAT.devices,prod:CAT.produtos}[t];h=`<select data-k="${k}">${L.map(o=>`<option value="${o.id}" ${v==o.id?'selected':''}>${esc(o.nome)}</option>`).join('')}</select>`}
+    else h=`<input data-k="${k}" type="${t==='num'?'number':t==='color'?'color':'text'}" step="any" value="${esc(v)}">`;
+    return `<div><label>${l}</label>${h}</div>`};
+  openM(`<h3>${id?'Editar':'Adicionar'}</h3><div class="grid g2">${f.map(inp).join('')}</div><div class="row" style="margin-top:18px;justify-content:flex-end">
+   ${id?`<button class="btn dan" style="flex:0" onclick="salvar('${ent}',${id},true)">Excluir</button>`:''}<button class="btn" style="flex:0" onclick="closeM()">Cancelar</button><button class="btn pri" style="flex:0" onclick="salvar('${ent}',${id})">Salvar</button></div>`);
+  window._def=def}
+async function salvar(ent,id,del){if(del&&!confirm('Excluir definitivamente?'))return;const data={id,...(window._def&&!id?{tap_id:window._def.tap_id}:{})};
+  if(del)data._delete=1;else document.querySelectorAll('#mIn [data-k]').forEach(e=>data[e.dataset.k]=e.value);
+  try{await api('admin/save',{entity:ent,data});closeM();toast('Salvo');equip()}catch(e){toast(e.mensagem)}}
+async function trocaBarril(id){const t=CAT.torneiras.find(x=>x.id==id);const v=prompt('Novo barril cheio — volume em litros:',t.barril_ml/1000);if(!v)return;await api('admin/keg_change',{tap_id:id,barril_ml:Math.round(parseFloat(v.replace(',','.'))*1000)});toast('Barril registrado');equip()}
+async function testar(id){const v=prompt('Liberar quantos ml? (teste/calibração/cortesia — R$ 0,00)','200');if(!v)return;const m=prompt('Motivo:','teste')||'teste';try{const r=await api('admin/manual_release',{tap_id:id,volume_ml:+v,motivo:m});toast('Liberação enviada ('+r.ref+'). No modo "botão", aperte o botão da torneira.')}catch(e){toast(e.mensagem)}}
+function calibrar(id){openM(`<h3>Calibrar torneira</h3><p class="mut">1) Use "Liberar teste" com, por exemplo, 500 ml num copo medidor/proveta.<br>2) Meça o volume real e informe abaixo. O sistema corrige os pulsos automaticamente.</p>
+  <div class="grid g2"><div><label>Volume liberado (ml)</label><input id="ce" type="number" value="500"></div><div><label>Volume real medido (ml)</label><input id="cr" type="number"></div></div>
+  <div class="row" style="margin-top:16px;justify-content:flex-end"><button class="btn" style="flex:0" onclick="closeM()">Cancelar</button><button class="btn pri" style="flex:0" onclick="doCal(${id})">Aplicar</button></div>`)}
+async function doCal(id){try{const r=await api('admin/calibrate',{tap_id:id,ml_esperado:+$('#ce').value,ml_real:+$('#cr').value});closeM();toast(`${r.campo}: ${r.antes} → ${r.depois}`);equip()}catch(e){toast(e.mensagem)}}
+
+/* ============ eventos ============ */
+let EN='';
+async function eventos(){const d=await api('admin/events&nivel='+EN);
+  $('#main').innerHTML=`<h1>Eventos</h1><div class="tabs">${[['','Todos'],['critico','Críticos'],['aviso','Avisos'],['info','Info']].map(([k,t])=>`<button class="${EN===k?'on':''}" onclick="EN='${k}';eventos()">${t}</button>`).join('')}</div>
+  <div class="card">${d.eventos.map(e=>`<div class="ev"><span class="pill ${e.nivel==='critico'?'p-err':e.nivel==='aviso'?'p-warn':''}">${e.tipo}</span> ${esc(e.msg)} ${e.order_id?`<a href="#" onclick="pedido(${e.order_id});return false">ver pedido</a>`:''}<small>${dt(e.created_at)}</small></div>`).join('')||'<p class="mut">Sem eventos</p>'}</div>`}
+
+/* ============ configurações ============ */
+async function config(){const d=await api('admin/settings');SET=d.settings;const s=SET;
+  const F=(k,l,t,opt)=>`<div><label>${l}</label>${t==='sel'?`<select data-s="${k}">${opt.map(([a,b])=>`<option value="${a}" ${s[k]==a?'selected':''}>${b}</option>`).join('')}</select>`:t==='area'?`<textarea data-s="${k}" rows="2">${esc(s[k])}</textarea>`:`<input data-s="${k}" type="${t||'text'}" value="${esc(s[k]??'')}">`}</div>`;
+  const yn=[['1','Sim'],['0','Não']];
+  $('#main').innerHTML=`<h1>Configurações <span class="sp"></span><button class="btn pri" onclick="salvarCfg()">Salvar tudo</button></h1>
+  <div class="grid g2">
+  <div class="card"><h2>🍺 Marca e textos</h2><div class="grid g2">${F('marca_nome','Nome')}${F('marca_slogan','Slogan')}${F('marca_cor','Cor principal','color')}</div>${F('msg_final','Mensagem ao final','area')}</div>
+  <div class="card"><h2>🔞 Verificação de idade</h2><div class="grid g2">${F('idade_minima','Idade mínima','number')}${F('cpf_provider','Conferência de CPF na Receita','sel',[['local','Somente dígitos + idade declarada'],['nfeio','NFE.io (CPF + nascimento → nome)'],['serpro','Serpro direto (Consulta CPF)']])}
+   ${F('nome_regra','Conferência do nome','sel',[['primeiro_e_sobrenome','Primeiro nome + 1 sobrenome'],['primeiro','Somente primeiro nome']])}${F('reverificar_dias','Reconsultar a Receita a cada (dias)','number')}
+   ${F('max_falhas_verificacao','Tentativas inválidas até bloquear','number')}${F('bloqueio_minutos','Minutos de bloqueio da maquininha','number')}
+   ${F('falha_api_permite_local','Se a API cair, vender só com dígitos?','sel',[['0','Não (mais seguro)'],['1','Sim']])}</div>
+   ${F('nfeio_api_key','Chave API NFE.io','password')}<div class="grid g2">${F('serpro_consumer_key','Serpro Consumer Key')}${F('serpro_consumer_secret','Serpro Consumer Secret','password')}</div>${F('serpro_url','URL Serpro (use {cpf}, {nasc} ou {nasc_dmy})')}</div>
+  <div class="card"><h2>🍻 Consumo responsável</h2><div class="grid g2">${F('limite_ml_dia_cpf','Limite por CPF por dia (ml, 0 = sem limite)','number')}${F('limite_copos_pedido','Máximo de copos por pedido','number')}</div></div>
+  <div class="card"><h2>💳 Mercado Pago (Pix e conferência de cartão)</h2>${F('mp_access_token','Access Token de produção','password')}<div class="grid g2">${F('pix_expira_min','Validade do Pix (min)','number')}${F('mp_verificar_cartao','Conferir cartão na API do MP','sel',yn)}</div>${F('pix_email_padrao','E-mail do pagador padrão (Pix)')}
+   <p class="mut" style="margin-top:10px">Webhook (Mercado Pago → Suas integrações → Webhooks → evento Pagamentos):<br><code>${esc(d.webhooks.mercadopago)}</code></p></div>
+  <div class="card"><h2>📲 Telegram</h2>${F('telegram_token','Token do bot (@BotFather)','password')}${F('telegram_chat_ids','Chat IDs (separados por vírgula)')}
+   <div class="grid g2">${F('tg_notificar_vendas','Avisar cada venda','sel',yn)}${F('tg_notificar_tentativa_menor','Avisar tentativa de menor','sel',yn)}${F('tg_resumo_diario','Resumo diário 23:55','sel',yn)}${F('offline_minutos','Considerar offline após (min)','number')}</div>
+   <button class="btn" style="margin-top:12px" onclick="tgTest()">Salvar e enviar teste + ativar comandos (/status /hoje /barris)</button></div>
+  </div>`}
+async function salvarCfg(silent){const st={};document.querySelectorAll('[data-s]').forEach(e=>st[e.dataset.s]=e.value);try{await api('admin/settings_save',{settings:st});if(!silent)toast('Configurações salvas');return true}catch(e){toast(e.mensagem)}}
+async function tgTest(){if(!await salvarCfg(true))return;try{const r=await api('admin/telegram_test',{registrar_webhook:1});toast(r.mensagem+(r.webhook?' • comandos ativos':''))}catch(e){toast(e.mensagem||'Falhou')}}
+function senha(){openM(`<h3>Alterar senha</h3><label>Senha atual</label><input id="sa" type="password"><label>Nova senha</label><input id="sn" type="password"><div class="row" style="margin-top:16px;justify-content:flex-end"><button class="btn" style="flex:0" onclick="closeM()">Cancelar</button><button class="btn pri" style="flex:0" onclick="api('admin/password',{atual:$('#sa').value,nova:$('#sn').value}).then(()=>{closeM();toast('Senha alterada')}).catch(e=>toast(e.mensagem))">Salvar</button></div>`)}
+
+JWT?shell():login();
+</script>
+</body>
+</html>

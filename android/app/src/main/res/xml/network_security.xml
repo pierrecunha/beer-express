@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Somente HTTPS. Para testar em rede local, adicione o IP do seu PC aqui. -->
+    <base-config cleartextTrafficPermitted="false" />
+</network-security-config>

@@ -1,0 +1,47 @@
+name: Deploy Hostinger
+
+# Cada push na main publica a pasta server/ na Hostinger via FTP.
+# Só envia arquivos alterados. Nunca sobrescreve config.php (fica só no servidor).
+on:
+  push:
+    branches: [main]
+    paths: ['server/**', '.github/workflows/deploy.yml']
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-hostinger
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Checar sintaxe PHP
+        run: for f in server/*.php; do php -l "$f"; done
+
+      - name: Enviar para a Hostinger (FTP)
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ftps
+          port: 21
+          local-dir: ./server/
+          server-dir: ${{ secrets.FTP_SERVER_DIR }}
+          exclude: |
+            **/.git*
+            **/.git*/**
+            config.php
+            config.example.php
+            install.sql
+
+      - name: Verificar se a API respondeu
+        if: ${{ vars.BE_URL != '' }}
+        run: |
+          sleep 5
+          code=$(curl -s -o /tmp/r.json -w '%{http_code}' "${{ vars.BE_URL }}/api.php?r=admin/needs_setup")
+          cat /tmp/r.json; echo
+          test "$code" = "200" || (echo "API não respondeu 200 (HTTP $code) — confira o config.php no servidor" && exit 1)

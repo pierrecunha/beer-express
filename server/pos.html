@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#0E0B07">
+<title>Beer Express</title>
+<style>
+:root{--bg:#0E0B07;--bg2:#17120B;--card:#1F1810;--line:#3A2E1C;--txt:#FFF6E6;--mut:#BFA98A;--amber:#F5B301;--amber2:#FFCF4A;--ok:#3DDC84;--err:#FF5A4E;--r:18px}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;user-select:none}
+html,body{height:100%;background:var(--bg);color:var(--txt);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
+.scr{position:absolute;inset:0;display:none;flex-direction:column;padding:18px 18px 14px}
+.scr.on{display:flex;animation:in .25s ease}
+@keyframes in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.top{display:flex;align-items:center;gap:10px;margin-bottom:14px;min-height:40px}
+.back{width:40px;height:40px;border-radius:12px;background:var(--card);font-size:22px;display:flex;align-items:center;justify-content:center}
+.top h2{font-size:19px;font-weight:700;flex:1}
+.step{font-size:12px;color:var(--mut);letter-spacing:.06em}
+.grow{flex:1;min-height:0}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:58px;border-radius:var(--r);font-size:18px;font-weight:800;letter-spacing:.02em}
+.btn.pri{background:linear-gradient(180deg,var(--amber2),var(--amber));color:#1A1206;box-shadow:0 6px 24px #f5b30133}
+.btn.sec{background:var(--card);border:1px solid var(--line)}
+.btn:disabled{opacity:.35}
+.btn:active{transform:scale(.98)}
+.mut{color:var(--mut)}
+.c{text-align:center}
+/* idle */
+#idle{justify-content:space-between;background:radial-gradient(120% 70% at 50% 0%,#3a2a08 0%,var(--bg) 60%)}
+.logo{font-size:64px;line-height:1;filter:drop-shadow(0 8px 30px #f5b30155)}
+.brand{font-size:34px;font-weight:900;letter-spacing:-.01em;margin-top:10px}
+.brand b{color:var(--amber)}
+.slog{color:var(--mut);margin-top:4px;font-size:15px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:18px}
+.chip{padding:8px 12px;border-radius:99px;background:var(--card);border:1px solid var(--line);font-size:13px;display:flex;gap:6px;align-items:center}
+.dot{width:9px;height:9px;border-radius:50%}
+.cta{font-size:22px;min-height:72px;animation:pulse 2.2s infinite}
+@keyframes pulse{50%{box-shadow:0 0 0 10px #f5b30111,0 6px 24px #f5b30144}}
+.legal{font-size:11.5px;color:var(--mut);text-align:center;margin-top:10px;line-height:1.35}
+.b18{display:inline-flex;width:26px;height:26px;border-radius:50%;border:2px solid var(--err);color:var(--err);font-weight:900;font-size:10px;align-items:center;justify-content:center;margin-right:6px;vertical-align:middle}
+/* age */
+.big18{font-size:96px;font-weight:900;color:var(--amber);line-height:1}
+.decl{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px;font-size:13.5px;color:var(--mut);line-height:1.45;margin:16px 0}
+/* entrada */
+.disp{background:var(--card);border:2px solid var(--line);border-radius:var(--r);height:72px;display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:800;letter-spacing:.04em;font-variant-numeric:tabular-nums}
+.disp.ph{color:#5d4d35}
+.disp.bad{border-color:var(--err);animation:shake .3s}
+@keyframes shake{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.hint{font-size:13px;color:var(--mut);margin:8px 2px 0;min-height:18px}
+.hint.err{color:var(--err)}
+.pad{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:14px 0 12px}
+.pad button{height:62px;border-radius:16px;background:var(--card);font-size:28px;font-weight:700}
+.pad button:active{background:#33281a}
+.kb{display:flex;flex-direction:column;gap:6px;margin:12px 0}
+.kb div{display:flex;gap:5px;justify-content:center}
+.kb button{flex:1;max-width:34px;height:48px;border-radius:10px;background:var(--card);font-size:17px;font-weight:700}
+.kb .w{max-width:none;flex:3}.kb .w2{max-width:none;flex:1.6}
+.namebox{font-size:22px;justify-content:flex-start;padding:0 16px;overflow:hidden;white-space:nowrap}
+/* menu */
+.list{display:flex;flex-direction:column;gap:12px;overflow:auto;padding-bottom:10px}
+.tap{display:flex;gap:14px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px;text-align:left;position:relative;overflow:hidden}
+.tap .cup{width:58px;height:70px;border-radius:8px 8px 14px 14px;flex:none;position:relative;background:linear-gradient(180deg,#fff8 0 18%,var(--c) 18% 100%);box-shadow:inset 0 -10px 20px #0004}
+.tap img{width:58px;height:70px;object-fit:cover;border-radius:12px;flex:none}
+.tap h3{font-size:19px}.tap p{font-size:13px;color:var(--mut);margin-top:2px}
+.tap .pr{margin-top:6px;font-weight:800;color:var(--amber)}
+.tap.off{opacity:.45}.tap.off::after{content:"Indisponível";position:absolute;right:12px;top:12px;font-size:11px;background:#000a;padding:4px 8px;border-radius:99px}
+.hello{background:linear-gradient(90deg,#2b2109,#1f1810);border:1px solid #4a3a14;border-radius:14px;padding:10px 14px;font-size:14px;margin-bottom:12px}
+.cart{background:var(--bg2);border-top:1px solid var(--line);margin:0 -18px -14px;padding:12px 18px 14px;display:flex;gap:12px;align-items:center}
+.cart .t{flex:1}.cart .t b{font-size:22px}.cart .t small{display:block;color:var(--mut);font-size:12px}
+.cart .btn{width:auto;padding:0 22px}
+/* sheet */
+.sheet{position:absolute;inset:0;background:#000b;display:none;align-items:flex-end;z-index:5}
+.sheet.on{display:flex}
+.sheet .in{background:var(--bg2);width:100%;border-radius:24px 24px 0 0;padding:20px 18px 18px;animation:up .25s ease}
+@keyframes up{from{transform:translateY(40px);opacity:0}}
+.sizes{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}
+.size{background:var(--card);border:2px solid var(--line);border-radius:var(--r);padding:16px 8px;text-align:center}
+.size b{display:block;font-size:26px}.size span{color:var(--amber);font-weight:800;font-size:18px}
+.size.sel{border-color:var(--amber);background:#2b210c}.size:disabled{opacity:.3}
+.qty{display:flex;align-items:center;justify-content:center;gap:24px;margin:6px 0 16px}
+.qty button{width:56px;height:56px;border-radius:50%;background:var(--card);font-size:30px;font-weight:700}
+.qty b{font-size:34px;min-width:40px;text-align:center}
+/* resumo */
+.line{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--line);font-size:16px}
+.line button{color:var(--err);font-size:13px;padding:6px 8px}
+.tot{display:flex;justify-content:space-between;font-size:22px;font-weight:900;padding:16px 0}
+.pays{display:grid;gap:10px}
+.pay{display:flex;align-items:center;gap:14px;background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px;font-size:19px;font-weight:800}
+.pay i{font-style:normal;font-size:28px;width:40px;text-align:center}
+/* pix */
+.qr{background:#fff;border-radius:18px;padding:12px;width:250px;height:250px;margin:6px auto 10px;display:flex;align-items:center;justify-content:center}
+.qr img{width:100%;height:100%}
+.timer{font-size:28px;font-weight:900;color:var(--amber)}
+/* servir */
+.glass{width:120px;height:170px;margin:8px auto 14px;border:4px solid #fff9;border-top:0;border-radius:0 0 26px 26px;position:relative;overflow:hidden}
+.glass .beer{position:absolute;left:0;right:0;bottom:0;height:0;background:linear-gradient(180deg,#ffd75e,#e39b00);transition:height .6s}
+.glass .foam{position:absolute;left:0;right:0;height:22px;background:#fffbe9;border-radius:10px 10px 0 0;bottom:0;transition:bottom .6s;opacity:0}
+.cups{display:flex;gap:6px;justify-content:center;margin-bottom:12px}
+.cups span{width:28px;height:6px;border-radius:9px;background:var(--line)}
+.cups .d{background:var(--ok)}.cups .a{background:var(--amber)}.cups .e{background:var(--err)}
+.serve h3{font-size:22px;text-align:center}
+.serve .tp{font-size:46px;font-weight:900;color:var(--amber);text-align:center;line-height:1.1}
+.bar{height:12px;background:var(--card);border-radius:9px;overflow:hidden;margin:14px 0 6px}
+.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--amber),var(--amber2));transition:width .5s}
+.okic{width:110px;height:110px;border-radius:50%;background:#3ddc8422;color:var(--ok);font-size:64px;display:flex;align-items:center;justify-content:center;margin:20px auto}
+/* modal */
+.modal{position:absolute;inset:0;background:#000c;display:none;align-items:center;justify-content:center;z-index:9;padding:24px}
+.modal.on{display:flex}
+.modal .in{background:var(--bg2);border:1px solid var(--line);border-radius:22px;padding:24px 20px;width:100%;text-align:center}
+.modal .ic{font-size:48px}.modal h3{font-size:20px;margin:8px 0}.modal p{color:var(--mut);margin-bottom:18px;line-height:1.4}
+.spin{width:52px;height:52px;border:5px solid var(--line);border-top-color:var(--amber);border-radius:50%;animation:sp 1s linear infinite;margin:10px auto}
+@keyframes sp{to{transform:rotate(360deg)}}
+.toast{position:absolute;left:18px;right:18px;bottom:90px;background:#2a1414;border:1px solid var(--err);color:#ffd6d3;border-radius:14px;padding:12px 14px;font-size:14px;z-index:20;display:none}
+.offbar{position:absolute;top:0;left:0;right:0;background:var(--err);color:#fff;font-size:12px;text-align:center;padding:3px;z-index:30;display:none}
+</style>
+</head>
+<body>
+<div class="offbar" id="offbar">Sem conexão com o servidor — tentando novamente…</div>
+
+<!-- PAREAMENTO -->
+<section class="scr" id="pair">
+  <div class="grow c" style="display:flex;flex-direction:column;justify-content:center">
+    <div class="logo">🍺</div><div class="brand">Parear maquininha</div>
+    <p class="mut" style="margin:10px 0 18px">Digite o código gerado no painel → Pontos e equipamentos → Maquininhas.</p>
+    <div class="disp ph" id="pairDisp">______</div>
+    <div class="hint" id="pairHint"></div>
+    <div class="kb" id="pairKb"></div>
+  </div>
+  <button class="btn pri" onclick="doPair()">Parear</button>
+</section>
+
+<!-- DESCANSO -->
+<section class="scr" id="idle" onclick="start()">
+  <div class="c" style="margin-top:30px">
+    <div class="logo">🍺</div>
+    <div class="brand" id="brandName">Beer <b>Express</b></div>
+    <div class="slog" id="brandSlogan">Chopp gelado, do seu jeito</div>
+    <div class="chips" id="idleChips"></div>
+  </div>
+  <div>
+    <button class="btn pri cta">Toque para começar</button>
+    <div class="legal"><span class="b18">18+</span>Proibida a venda de bebidas alcoólicas a menores de 18 anos (Lei 13.106/2015 – ECA art. 243). Será solicitado CPF e data de nascimento.</div>
+  </div>
+</section>
+
+<!-- IDADE -->
+<section class="scr" id="age">
+  <div class="top"><button class="back" onclick="toIdle()">✕</button><h2>Verificação de idade</h2><span class="step">1/4</span></div>
+  <div class="grow c" style="display:flex;flex-direction:column;justify-content:center">
+    <div class="big18">18+</div>
+    <h2 style="margin-top:10px;font-size:24px">Você tem 18 anos ou mais?</h2>
+    <div class="decl">Ao continuar, declaro ser maior de 18 anos e que os dados informados (CPF, data de nascimento e nome) são meus. Os dados são conferidos com a Receita Federal e usados apenas para controle legal de venda de bebida alcoólica, conforme a LGPD.</div>
+  </div>
+  <div style="display:grid;gap:10px">
+    <button class="btn pri" onclick="go('cpf')">Sim, tenho 18 anos ou mais</button>
+    <button class="btn sec" onclick="minor()">Não</button>
+  </div>
+</section>
+
+<!-- CPF -->
+<section class="scr" id="cpf">
+  <div class="top"><button class="back" onclick="go('age')">‹</button><h2>Digite seu CPF</h2><span class="step">2/4</span></div>
+  <div class="disp ph" id="cpfDisp">000.000.000-00</div>
+  <div class="hint" id="cpfHint">Somente números</div>
+  <div class="pad" data-pad="cpf"></div>
+  <div class="grow"></div>
+  <button class="btn pri" id="cpfOk" disabled onclick="cpfNext()">Continuar</button>
+</section>
+
+<!-- NASCIMENTO -->
+<section class="scr" id="nasc">
+  <div class="top"><button class="back" onclick="go('cpf')">‹</button><h2>Data de nascimento</h2><span class="step">3/4</span></div>
+  <div class="disp ph" id="nascDisp">DD/MM/AAAA</div>
+  <div class="hint" id="nascHint">Ex.: 25/08/1995</div>
+  <div class="pad" data-pad="nasc"></div>
+  <div class="grow"></div>
+  <button class="btn pri" id="nascOk" disabled onclick="nascNext()">Continuar</button>
+</section>
+
+<!-- NOME (primeiro acesso) -->
+<section class="scr" id="nome">
+  <div class="top"><button class="back" onclick="go('nasc')">‹</button><h2>Seu nome completo</h2><span class="step">4/4</span></div>
+  <div class="disp namebox ph" id="nomeDisp">NOME E SOBRENOME</div>
+  <div class="hint" id="nomeHint">Primeiro acesso: confira com a Receita Federal. Nas próximas compras basta o CPF.</div>
+  <div class="kb" id="nomeKb"></div>
+  <div class="grow"></div>
+  <button class="btn pri" id="nomeOk" disabled onclick="identify(true)">Confirmar</button>
+</section>
+
+<!-- CARDÁPIO -->
+<section class="scr" id="menu">
+  <div class="top"><button class="back" onclick="toIdle()">✕</button><h2>Escolha seu chopp</h2></div>
+  <div class="hello" id="hello"></div>
+  <div class="list grow" id="taps"></div>
+  <div class="cart">
+    <div class="t"><small id="cartInfo">Carrinho vazio</small><b id="cartTotal">R$ 0,00</b></div>
+    <button class="btn pri" id="cartBtn" disabled onclick="go('resumo');renderResumo()">Pagar</button>
+  </div>
+</section>
+
+<!-- RESUMO / PAGAMENTO -->
+<section class="scr" id="resumo">
+  <div class="top"><button class="back" onclick="go('menu')">‹</button><h2>Pagamento</h2></div>
+  <div id="resItens"></div>
+  <div class="tot"><span>Total</span><span id="resTotal"></span></div>
+  <div class="grow"></div>
+  <p class="mut" style="margin-bottom:10px;font-size:14px">Como você quer pagar?</p>
+  <div class="pays" id="pays"></div>
+</section>
+
+<!-- PIX -->
+<section class="scr" id="pix">
+  <div class="top"><button class="back" onclick="cancelOrder()">✕</button><h2>Pague com Pix</h2></div>
+  <div class="grow c">
+    <p class="mut">Abra o app do seu banco e escaneie o QR Code</p>
+    <div class="qr"><img id="pixImg" alt=""><span id="pixTxt" style="display:none;color:#333;font-size:12px;word-break:break-all;padding:8px"></span></div>
+    <div class="timer" id="pixTimer">05:00</div>
+    <p class="mut" style="margin-top:6px">Valor: <b style="color:var(--txt)" id="pixValor"></b></p>
+    <p class="mut" style="margin-top:14px;font-size:13px">Aguardando confirmação do pagamento…</p>
+    <div class="spin" style="width:32px;height:32px;border-width:4px"></div>
+  </div>
+  <button class="btn sec" id="pixSim" style="display:none" onclick="simPixOk()">[Teste] Simular Pix pago</button>
+</section>
+
+<!-- SERVINDO -->
+<section class="scr serve" id="serve">
+  <div class="cups" id="cups"></div>
+  <h3 id="svTitle">Preparando…</h3>
+  <p class="mut c" id="svSub" style="margin-top:4px"></p>
+  <div class="glass"><div class="beer" id="beer"></div><div class="foam" id="foam"></div></div>
+  <div class="tp" id="svTap"></div>
+  <div class="bar"><i id="svBar"></i></div>
+  <p class="mut c" id="svMl"></p>
+  <div class="grow"></div>
+  <button class="btn pri" id="svBtn" style="display:none" onclick="serveNow()">🍺 Servir agora</button>
+</section>
+
+<!-- FIM -->
+<section class="scr" id="fim">
+  <div class="grow c" style="display:flex;flex-direction:column;justify-content:center">
+    <div class="okic">✓</div>
+    <h2 style="font-size:28px">Saúde! 🍻</h2>
+    <p class="mut" id="fimMsg" style="margin-top:10px;font-size:16px;line-height:1.4"></p>
+  </div>
+  <button class="btn sec" onclick="toIdle()">Concluir</button>
+</section>
+
+<div class="sheet" id="sheet" onclick="if(event.target===this)closeSheet()"><div class="in">
+  <div style="display:flex;gap:14px;align-items:center"><div id="shCup"></div><div><h3 id="shNome" style="font-size:22px"></h3><p class="mut" id="shDesc" style="font-size:13px"></p></div></div>
+  <div class="sizes" id="shSizes"></div>
+  <div class="qty"><button onclick="qty(-1)">−</button><b id="shQty">1</b><button onclick="qty(1)">+</button></div>
+  <button class="btn pri" id="shAdd" onclick="addCart()">Adicionar</button>
+</div></div>
+
+<div class="modal" id="modal"><div class="in"><div class="ic" id="mIc"></div><h3 id="mT"></h3><p id="mP"></p><div id="mB"></div></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ================= Ponte com o app Android ================= */
+const NATIVE = typeof window.BeerPOS !== 'undefined';
+const API = 'api.php';
+const S = {cfg:null, taps:[], token:null, cpf:'', nasc:'', nome:'', ver:null, cart:[], order:null, sel:null, pollT:null, idleT:null, pixT:null};
+let TT = NATIVE ? (BeerPOS.getToken() || '') : (localStorage.getItem('be_tt') || '');
+
+const $ = id => document.getElementById(id);
+const brl = v => 'R$ ' + Number(v).toFixed(2).replace('.', ',');
+const mlf = ml => ml >= 1000 ? (ml/1000).toFixed(1).replace('.', ',') + ' L' : ml + ' ml';
+
+async function api(r, body, method){
+  const opt = {method: method || (body ? 'POST' : 'GET'), headers:{'X-Terminal-Token': TT, 'Content-Type':'application/json'}};
+  if (body) opt.body = JSON.stringify(body);
+  let res;
+  try { res = await fetch(API + '?r=' + r, opt); $('offbar').style.display='none'; }
+  catch(e){ $('offbar').style.display='block'; throw {erro:'rede', mensagem:'Sem conexão. Tente novamente.'}; }
+  const j = await res.json().catch(() => ({ok:false, erro:'json', mensagem:'Resposta inválida do servidor'}));
+  if (res.status === 401 && j.erro === 'terminal') { TT=''; NATIVE ? BeerPOS.saveToken('') : localStorage.removeItem('be_tt'); go('pair'); }
+  if (!j.ok && !j.need_name) throw j;
+  return j;
+}
+function go(id){ document.querySelectorAll('.scr').forEach(s => s.classList.toggle('on', s.id === id)); S.screen = id; armIdle(); }
+function toast(msg){ const t=$('toast'); t.textContent=msg; t.style.display='block'; clearTimeout(t._t); t._t=setTimeout(()=>t.style.display='none', 3800); }
+function modal(ic, t, p, btns){ $('mIc').innerHTML=ic; $('mT').textContent=t; $('mP').textContent=p||''; const b=$('mB'); b.innerHTML='';
+  (btns||[]).forEach(([txt, fn, cls]) => { const e=document.createElement('button'); e.className='btn '+(cls||'pri'); e.style.marginTop='8px'; e.textContent=txt; e.onclick=()=>{ $('modal').classList.remove('on'); fn&&fn(); }; b.appendChild(e); });
+  $('modal').classList.add('on'); }
+function loading(t){ modal('<div class="spin"></div>', t||'Aguarde…', ''); }
+function unload(){ $('modal').classList.remove('on'); }
+
+/* Volta ao descanso após inatividade (nunca durante pagamento/serviço) */
+function armIdle(){ clearTimeout(S.idleT); if (['idle','pair','pix','serve'].includes(S.screen)) return;
+  S.idleT = setTimeout(() => { if (S.screen==='fim' || !S.order || S.order.status==='cancelado') toIdle(); }, S.screen==='fim' ? 12000 : 60000); }
+document.addEventListener('touchstart', armIdle, {passive:true}); document.addEventListener('mousedown', armIdle);
+
+/* ================= Inicialização ================= */
+async function boot(){
+  buildPads(); buildKb('pairKb', k => padPair(k), true); buildKb('nomeKb', k => padNome(k));
+  if (!TT) return go('pair');
+  try { S.cfg = await api('pos/config'); applyBrand(); await loadMenu(); toIdle(); }
+  catch(e){ if (TT) { modal('⚠️','Sem conexão', e.mensagem || 'Verificando…'); setTimeout(boot, 5000); } }
+  setInterval(() => api('pos/heartbeat', {app_version: NATIVE ? BeerPOS.info() && JSON.parse(BeerPOS.info()).appVersion : 'web'}).catch(()=>{}), 60000);
+  setInterval(() => { if (S.screen === 'idle') loadMenu().catch(()=>{}); }, 30000);
+}
+function applyBrand(){ const n=S.cfg.marca.nome.split(' '); $('brandName').innerHTML = n[0] + (n.length>1 ? ' <b>'+n.slice(1).join(' ')+'</b>' : '');
+  $('brandSlogan').textContent = S.cfg.marca.slogan || ''; document.documentElement.style.setProperty('--amber', S.cfg.marca.cor || '#F5B301'); document.title = S.cfg.marca.nome; }
+async function loadMenu(){ S.taps = (await api('pos/menu')).torneiras; renderIdleChips(); }
+function renderIdleChips(){ $('idleChips').innerHTML = S.taps.map(t => `<span class="chip"><span class="dot" style="background:${t.disponivel?t.cor:'#555'}"></span>${esc(t.produto)}</span>`).join(''); }
+function esc(s){ return String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+function toIdle(){ clearInterval(S.pollT); clearInterval(S.pixT); Object.assign(S, {cpf:'', nasc:'', nome:'', ver:null, cart:[], order:null});
+  updCpf(); updNasc(); updNome(); closeSheet(); unload(); go('idle'); }
+function start(){ if (!S.taps.some(t => t.disponivel)) return modal('😕','Chopeira indisponível','Estamos sem chopp disponível agora. Volte em instantes!',[['OK']]); go('age'); }
+function minor(){ modal('🔞','Venda proibida','A venda de bebidas alcoólicas é proibida para menores de 18 anos.',[['Entendi', toIdle]]); }
+
+/* ================= Teclados ================= */
+function buildPads(){ document.querySelectorAll('[data-pad]').forEach(p => { const k = p.dataset.pad;
+  p.innerHTML = [1,2,3,4,5,6,7,8,9,'⌫',0,'C'].map(n => `<button data-k="${n}">${n}</button>`).join('');
+  p.onclick = e => { const b = e.target.closest('button'); if (!b) return; k==='cpf' ? padCpf(b.dataset.k) : padNasc(b.dataset.k); }; }); }
+function buildKb(id, fn, alnum){ const rows = alnum ? ['1234567890','QWERTYUIOP','ASDFGHJKL','ZXCVBNM⌫'] : ['QWERTYUIOP','ASDFGHJKL','ZXCVBNM⌫'];
+  let h = rows.map(r => '<div>' + [...r].map(c => `<button data-k="${c}" ${c==='⌫'?'class="w2"':''}>${c}</button>`).join('') + '</div>').join('');
+  if (!alnum) h += '<div><button class="w" data-k=" ">espaço</button></div>';
+  $(id).innerHTML = h; $(id).onclick = e => { const b = e.target.closest('button'); if (b) fn(b.dataset.k); }; }
+
+function cpfValido(c){ if (!/^\d{11}$/.test(c) || /^(\d)\1{10}$/.test(c)) return false;
+  for (let t=9; t<11; t++){ let s=0; for (let i=0;i<t;i++) s += +c[i]*((t+1)-i); if (+c[t] !== ((10*s)%11)%10) return false; } return true; }
+function padCpf(k){ if (k==='⌫') S.cpf=S.cpf.slice(0,-1); else if (k==='C') S.cpf=''; else if (S.cpf.length<11) S.cpf+=k; updCpf(); }
+function updCpf(){ const c=S.cpf, d=$('cpfDisp'); let f=c; if (c.length>3) f=c.slice(0,3)+'.'+c.slice(3); if (c.length>6) f=f.slice(0,7)+'.'+c.slice(6); if (c.length>9) f=f.slice(0,11)+'-'+c.slice(9);
+  d.textContent = f || '000.000.000-00'; d.classList.toggle('ph', !c); const ok = cpfValido(c); d.classList.toggle('bad', c.length===11 && !ok);
+  $('cpfHint').textContent = c.length===11 && !ok ? 'CPF inválido — confira os números' : 'Somente números'; $('cpfHint').classList.toggle('err', c.length===11 && !ok); $('cpfOk').disabled = !ok; }
+function cpfNext(){ go('nasc'); }
+
+function padNasc(k){ if (k==='⌫') S.nasc=S.nasc.slice(0,-1); else if (k==='C') S.nasc=''; else if (S.nasc.length<8) S.nasc+=k; updNasc(); }
+function nascInfo(){ const n=S.nasc; if (n.length<8) return null; const d=+n.slice(0,2), m=+n.slice(2,4), y=+n.slice(4);
+  const dt=new Date(y,m-1,d); if (dt.getFullYear()!==y || dt.getMonth()!==m-1 || dt.getDate()!==d || dt>new Date() || y<new Date().getFullYear()-120) return {valid:false};
+  const h=new Date(); let age=h.getFullYear()-y; if (h.getMonth()<m-1 || (h.getMonth()===m-1 && h.getDate()<d)) age--; return {valid:true, age}; }
+function updNasc(){ const n=S.nasc, d=$('nascDisp'); const mask='DD/MM/AAAA'; let f=''; let j=0;
+  for (let i=0;i<mask.length;i++){ if (mask[i]==='/') { f+='/'; continue; } f += j<n.length ? n[j++] : mask[i]; }
+  d.textContent = n ? f : mask; d.classList.toggle('ph', !n); const inf=nascInfo(); const bad = inf && !inf.valid;
+  d.classList.toggle('bad', !!bad); $('nascHint').textContent = bad ? 'Data inválida' : 'Ex.: 25/08/1995'; $('nascHint').classList.toggle('err', !!bad); $('nascOk').disabled = !(inf && inf.valid); }
+function nascNext(){ const inf=nascInfo(); if (inf.age < (S.cfg.idade_minima||18)) { identify(false); return; } identify(false); }
+
+function padNome(k){ if (k==='⌫') S.nome=S.nome.slice(0,-1); else if (S.nome.length<60 && !(k===' ' && (S.nome==='' || S.nome.endsWith(' ')))) S.nome+=k; updNome(); }
+function updNome(){ const d=$('nomeDisp'); d.textContent = S.nome || 'NOME E SOBRENOME'; d.classList.toggle('ph', !S.nome); d.scrollLeft = 9999;
+  const partes = S.nome.trim().split(/\s+/).filter(p => p.length>1); $('nomeOk').disabled = partes.length < (S.cfg && S.cfg.nome_regra==='primeiro' ? 1 : 2); }
+
+/* ================= Identificação ================= */
+async function identify(comNome){
+  loading('Verificando seus dados…');
+  try {
+    const n = S.nasc; const j = await api('pos/identify', {cpf:S.cpf, nascimento: n.slice(0,2)+'/'+n.slice(2,4)+'/'+n.slice(4), declara_maior:true, nome: comNome ? S.nome.trim() : ''});
+    unload();
+    if (j.need_name) { S.nome=''; updNome(); go('nome'); return; }
+    S.ver = j; S.cart = [];
+    $('hello').innerHTML = `👋 Olá, <b>${esc(j.nome)}</b>! ${j.novo ? 'Seja bem-vindo(a).' : 'Bom te ver de novo.'}`;
+    await loadMenu(); renderMenu(); go('menu');
+  } catch(e){
+    unload();
+    const map = {menor_idade:['🔞','Venda proibida'], terminal_bloqueado:['🔒','Aguarde'], dados_nao_conferem:['❌','Dados não conferem'], nome_nao_confere:['❌','Nome não confere'],
+      cpf_irregular:['⚠️','CPF irregular'], limite_diario:['🍺','Limite diário atingido'], bloqueado:['⛔','Cadastro bloqueado'], servico_indisponivel:['📡','Tente novamente']};
+    const [ic, t] = map[e.erro] || ['⚠️','Não foi possível continuar'];
+    const voltar = ['dados_nao_conferem','nascimento_invalido'].includes(e.erro) ? () => { S.nasc=''; updNasc(); go('nasc'); }
+      : e.erro === 'nome_nao_confere' || e.erro === 'nome_incompleto' ? () => go('nome') : e.erro === 'cpf_invalido' ? () => { S.cpf=''; updCpf(); go('cpf'); } : toIdle;
+    modal(ic, t, e.mensagem, [['OK', voltar]]);
+  }
+}
+
+/* ================= Cardápio / carrinho ================= */
+function cupHtml(t, w){ return t.imagem_url ? `<img src="${esc(t.imagem_url)}" alt="">` : `<div class="cup" style="--c:${esc(t.cor)}${w?';width:'+w+'px;height:'+(w*1.2)+'px':''}"></div>`; }
+function renderMenu(){
+  $('taps').innerHTML = S.taps.map((t,i) => { const min = t.ofertas.filter(o=>o.disponivel).sort((a,b)=>a.preco-b.preco)[0];
+    return `<button class="tap ${t.disponivel?'':'off'}" ${t.disponivel?`onclick="openSheet(${i})"`:''}>${cupHtml(t)}<div><h3>${esc(t.produto)}</h3>
+      <p>${esc([t.estilo, t.abv ? t.abv.toString().replace('.',',')+'% ABV' : ''].filter(Boolean).join(' • '))}</p>${t.descricao?`<p>${esc(t.descricao)}</p>`:''}
+      <div class="pr">${min ? 'a partir de ' + brl(min.preco) : ''}</div></div></button>`; }).join('') || '<p class="mut c">Nenhum chopp disponível.</p>';
+  renderCart();
+}
+function cartMl(){ return S.cart.reduce((s,c)=>s+c.volume_ml*c.qtd,0); }
+function cartCopos(){ return S.cart.reduce((s,c)=>s+c.qtd,0); }
+function renderCart(){ const tot=S.cart.reduce((s,c)=>s+c.preco*c.qtd,0), n=cartCopos();
+  $('cartTotal').textContent = brl(tot); $('cartInfo').textContent = n ? `${n} copo${n>1?'s':''} • ${mlf(cartMl())}` : 'Carrinho vazio'; $('cartBtn').disabled = !n; }
+function openSheet(i){ const t=S.taps[i]; S.sel={tap:t, offer:null, qtd:1};
+  $('shCup').innerHTML = cupHtml(t); $('shNome').textContent = t.produto; $('shDesc').textContent = [t.estilo, t.descricao].filter(Boolean).join(' — ');
+  $('shSizes').innerHTML = t.ofertas.map((o,j) => `<button class="size" ${o.disponivel?'':'disabled'} onclick="pickSize(${j})"><b>${o.volume_ml} ml</b><span>${brl(o.preco)}</span></button>`).join('');
+  let j = -1; t.ofertas.forEach((o,k) => { if (o.disponivel) j = k; }); pickSize(j);  // maior tamanho disponível
+  $('sheet').classList.add('on'); }
+function closeSheet(){ $('sheet').classList.remove('on'); }
+function pickSize(j){ S.sel.offer = S.sel.tap.ofertas[j]; [...$('shSizes').children].forEach((b,k)=>b.classList.toggle('sel', k===j)); S.sel.qtd=1; qty(0); }
+function qty(d){ const s=S.sel; if (!s.offer) return; const maxCopos=(S.cfg.limite_copos_pedido||4)-cartCopos(), maxMl=Math.floor(((S.ver?.restante_ml_dia ?? 99999)-cartMl())/s.offer.volume_ml);
+  const max=Math.max(0, Math.min(maxCopos, maxMl)); s.qtd = Math.max(1, Math.min(max||1, s.qtd+d)); $('shQty').textContent = s.qtd;
+  $('shAdd').disabled = max<1; $('shAdd').textContent = max<1 ? (maxCopos<1 ? 'Limite de copos por pedido' : 'Limite diário atingido') : 'Adicionar • ' + brl(s.offer.preco*s.qtd); }
+function addCart(){ const s=S.sel; const ex=S.cart.find(c=>c.offer_id===s.offer.id);
+  if (ex) ex.qtd+=s.qtd; else S.cart.push({offer_id:s.offer.id, produto:s.tap.produto, volume_ml:s.offer.volume_ml, preco:s.offer.preco, qtd:s.qtd});
+  closeSheet(); renderCart(); }
+
+function renderResumo(){ const tot=S.cart.reduce((s,c)=>s+c.preco*c.qtd,0);
+  $('resItens').innerHTML = S.cart.map((c,i)=>`<div class="line"><span>${c.qtd}× ${esc(c.produto)} <span class="mut">${c.volume_ml} ml</span></span><span>${brl(c.preco*c.qtd)} <button onclick="rmItem(${i})">remover</button></span></div>`).join('');
+  $('resTotal').textContent = brl(tot);
+  const lbl = {credito:['💳','Crédito'], debito:['💳','Débito'], pix:['⚡','Pix']};
+  $('pays').innerHTML = S.cfg.metodos.map(m=>`<button class="pay" onclick="pagar('${m}')"><i>${lbl[m][0]}</i>${lbl[m][1]}</button>`).join(''); }
+function rmItem(i){ S.cart.splice(i,1); renderCart(); if (!S.cart.length) go('menu'); else renderResumo(); }
+
+/* ================= Pagamento ================= */
+async function pagar(metodo){
+  loading('Criando pedido…');
+  try { S.order = await api('pos/order', {token:S.ver.token, metodo, itens:S.cart.map(c=>({offer_id:c.offer_id, qtd:c.qtd}))}); }
+  catch(e){ unload(); if (e.erro==='sessao') return modal('⏱️','Sessão expirada', e.mensagem, [['OK', toIdle]]); return modal('⚠️','Não foi possível', e.mensagem, [['Voltar', ()=>{ loadMenu().then(renderMenu); go('menu'); }]]); }
+  unload();
+  if (metodo === 'pix') return showPix();
+  if (NATIVE) { loading('Siga as instruções na maquininha'); BeerPOS.pay(JSON.stringify({ref:S.order.ref, centavos:S.order.total_centavos, metodo, descricao:S.order.descricao})); }
+  else modal('🧪','Modo teste (navegador)', 'Simular resultado do cartão de ' + brl(S.order.total) + '?', [['Aprovado', ()=>window.__payResult(JSON.stringify({aprovado:true, bandeira:'TESTE', final_cartao:'0000', nsu:'SIM'}))], ['Recusado', ()=>window.__payResult(JSON.stringify({aprovado:false, motivo:'Recusado (simulado)'}))]]);
+}
+/* Chamado pelo app Android ao terminar a transação */
+window.__payResult = async function(json){
+  const r = typeof json === 'string' ? JSON.parse(json) : json; unload();
+  if (!r.aprovado) { api('pos/payment_failed', {ref:S.order.ref, motivo:r.motivo||''}).catch(()=>{}); S.order=null;
+    return modal('💳','Pagamento não aprovado', r.motivo || 'Tente novamente ou use outra forma de pagamento.', [['Tentar de novo', ()=>go('resumo')], ['Cancelar', toIdle, 'sec']]); }
+  loading('Pagamento aprovado! Liberando…');
+  for (let i=0;i<5;i++){ try { await api('pos/paid', {ref:S.order.ref, metodo:S.order.metodo, pagamento_id:r.pagamento_id||'', nsu:r.nsu||'', bandeira:r.bandeira||'', final_cartao:r.final_cartao||''}); unload(); return startServe(); }
+    catch(e){ if (e.erro!=='rede') break; await new Promise(z=>setTimeout(z, 2000)); } }
+  unload(); modal('⚠️','Pagamento aprovado, mas sem conexão', 'Não se preocupe: seu pedido ' + S.order.ref + ' está registrado. Aguarde ou chame o responsável.', [['Tentar de novo', ()=>window.__payResult(r)]]);
+};
+function showPix(){ const p=S.order.pix;
+  if (p.qr_base64) { $('pixImg').style.display='block'; $('pixImg').src = 'data:image/png;base64,'+p.qr_base64; $('pixTxt').style.display='none'; }
+  else { $('pixImg').style.display='none'; $('pixTxt').style.display='block'; $('pixTxt').textContent = p.simulado ? 'QR Code de teste (modo simulado)' : p.copia_cola; }
+  $('pixValor').textContent = brl(S.order.total); $('pixSim').style.display = p.simulado ? 'flex' : 'none'; go('pix');
+  let fim = Date.now() + (p.expira_min||5)*60000; clearInterval(S.pixT);
+  S.pixT = setInterval(async () => { const s=Math.max(0,Math.round((fim-Date.now())/1000)); $('pixTimer').textContent = String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
+    if (s===0){ clearInterval(S.pixT); cancelOrder(); return modal('⏱️','Pix expirado','O tempo para pagamento acabou.',[['OK', toIdle]]); }
+    if (s%3===0){ try { const st = await api('pos/order_status&ref='+S.order.ref); if (['pago','servindo'].includes(st.status)) { clearInterval(S.pixT); startServe(); } if (st.status==='cancelado'){ clearInterval(S.pixT); modal('⏱️','Pix cancelado','',[['OK',toIdle]]); } } catch(e){} } }, 1000); }
+async function simPixOk(){ clearInterval(S.pixT); await api('pos/paid', {ref:S.order.ref, metodo:'pix'}).catch(()=>{}); startServe(); }
+async function cancelOrder(){ clearInterval(S.pixT); if (S.order) await api('pos/cancel', {ref:S.order.ref}).catch(()=>{}); toIdle(); }
+
+/* ================= Servindo ================= */
+function startServe(){ go('serve'); clearInterval(S.pollT); pollServe(); S.pollT = setInterval(pollServe, 900); }
+async function pollServe(){
+  let st; try { st = await api('pos/order_status&ref=' + S.order.ref); } catch(e){ return; }
+  S.order.status = st.status; const cs = st.copos;
+  $('cups').innerHTML = cs.map(c=>`<span class="${c.status==='concluido'?'d':['erro','timeout','cancelado'].includes(c.status)?'e':['armado','liberado','servindo'].includes(c.status)?'a':''}"></span>`).join('');
+  const cur = cs.find(c=>['armado','liberado','servindo'].includes(c.status)) || cs.find(c=>c.status==='pendente');
+  if (['concluido','parcial','falhou','estornado'].includes(st.status) || !cur) { clearInterval(S.pollT); return finish(st); }
+  const n = cs.length, pct = Math.min(100, Math.round(100*cur.servido_ml/cur.volume_ml));
+  $('svTitle').textContent = (n>1 ? `Copo ${cur.seq} de ${n} • ` : '') + `${cur.produto} ${cur.volume_ml} ml`;
+  $('svTap').textContent = 'Torneira ' + cur.canal;
+  $('beer').style.height = pct + '%'; $('foam').style.bottom = `calc(${pct}% - 8px)`; $('foam').style.opacity = pct>3?1:0;
+  $('svBar').style.width = pct + '%'; $('svMl').textContent = cur.status==='servindo' ? `${cur.servido_ml} de ${cur.volume_ml} ml` : '';
+  const btn = $('svBtn');
+  if (cur.status==='pendente') { $('svSub').textContent = 'Preparando a chopeira…'; btn.style.display='none'; }
+  else if (cur.status==='armado' && cur.start_mode==='pos') { $('svSub').textContent = 'Coloque o copo inclinado sob a torneira indicada e toque em SERVIR.'; btn.style.display='flex'; }
+  else if (cur.status==='armado') { $('svSub').textContent = 'Coloque o copo inclinado sob a torneira e aperte o botão iluminado.'; btn.style.display='none'; }
+  else { $('svSub').textContent = cur.status==='liberado' ? 'Liberando…' : 'Servindo… mantenha o copo na torneira.'; btn.style.display='none'; }
+}
+async function serveNow(){ const st = await api('pos/order_status&ref=' + S.order.ref).catch(()=>null); const cur = st && st.copos.find(c=>c.status==='armado');
+  if (cur) { $('svBtn').style.display='none'; await api('pos/serve', {dispense_id:cur.id}).catch(e=>toast(e.mensagem)); } }
+function finish(st){
+  if (st.status==='concluido') { $('fimMsg').textContent = S.cfg.msg_final || 'Beba com moderação.'; go('fim'); }
+  else { const serv = st.copos.reduce((s,c)=>s+c.servido_ml,0), tot = st.copos.reduce((s,c)=>s+c.volume_ml,0);
+    modal('⚠️', 'Tivemos um problema', `Foram servidos ${serv} de ${tot} ml. O responsável já foi avisado e vai liberar o restante ou estornar o valor. Pedido ${st.ref}.`, [['OK', toIdle]]); }
+}
+
+/* ================= Pareamento ================= */
+let pairCode='';
+function padPair(k){ if (k==='⌫') pairCode=pairCode.slice(0,-1); else if (pairCode.length<6) pairCode+=k; $('pairDisp').textContent = pairCode || '______'; $('pairDisp').classList.toggle('ph', !pairCode); }
+async function doPair(){
+  const info = NATIVE ? JSON.parse(BeerPOS.info()) : {serial:'WEB-'+navigator.userAgent.length, appVersion:'web'};
+  try { const r = await fetch(API+'?r=pos/pair', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({codigo:pairCode, serial:info.serial, app_version:info.appVersion})}).then(r=>r.json());
+    if (!r.ok) throw r; TT = r.token; NATIVE ? BeerPOS.saveToken(TT) : localStorage.setItem('be_tt', TT); boot(); }
+  catch(e){ $('pairHint').textContent = e.mensagem || 'Falha ao parear'; $('pairHint').classList.add('err'); }
+}
+
+boot();
+</script>
+</body>
+</html>

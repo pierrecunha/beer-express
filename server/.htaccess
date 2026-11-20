@@ -1,0 +1,5 @@
+# Beer Express — bloqueia acesso direto a arquivos internos
+Options -Indexes
+<FilesMatch "^(config\.php|config\.example\.php|install\.sql|.*\.md)$">
+  Require all denied
+</FilesMatch>
