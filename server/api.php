@@ -1618,6 +1618,10 @@ if (PHP_SAPI === 'cli') {
             $r = http_json('GET', $url, $hd, null, 15);
             echo "diag chopeira ($modo): HTTP {$r['code']} " . substr(preg_replace('/\s+/', ' ', (string)$r['raw']), 0, 220) . ($r['error'] ? " erro={$r['error']}" : '') . "\n";
         }
+        try { $_GET = ['fw' => 'diag-cli', 'temp' => '3']; $d = row('SELECT d.*, l.nome location_nome FROM be_devices d JOIN be_locations l ON l.id = d.location_id WHERE d.device_key = ?', [$key]);
+              $x = r_dev_poll($d); echo "diag cli: ok cmd=" . json_encode($x['cmd']) . "\n"; }
+        catch (Throwable $e) { echo 'diag cli ERRO: ' . get_class($e) . ': ' . $e->getMessage() . ' @ linha ' . $e->getLine() . "\n"; }
+        echo 'diag versoes: PHP ' . PHP_VERSION . ' | banco ' . val('SELECT VERSION()') . ' | sql_mode ' . val('SELECT @@SESSION.sql_mode') . "\n";
         echo 'diag ultimo_sinal: ' . val('SELECT MAX(last_seen) FROM be_devices') . "\n";
         exit(0);
     }
