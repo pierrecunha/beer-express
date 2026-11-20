@@ -54,11 +54,12 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 async function api(r, body, headers){
   const res = await fetch(API + '?r=' + r, {method: body ? 'POST' : 'GET', headers: {'Content-Type':'application/json', ...(headers || {'Authorization':'Bearer ' + JWT})}, body: body ? JSON.stringify(body) : undefined});
-  const j = await res.json().catch(() => ({ok:false, mensagem:'Erro de comunicação'}));
+  const j = await res.json().catch(() => ({ok:false, mensagem:`Resposta inválida do servidor (HTTP ${res.status})`}));
   if (res.status === 401 && j.erro === 'auth') { JWT = ''; localStorage.removeItem('be_jwt'); login(); throw j; }
   if (!j.ok) throw j; return j;
 }
-const dev = (r, body) => api(r, body, {'X-Device-Key': DEMO.device_key});
+const dev = (r, body) => api(r + '&key=' + encodeURIComponent(DEMO.device_key), body, {'X-Device-Key': DEMO.device_key});
+let ERRO_POLL = 0;
 function log(m){ const l = $('#log'); if (!l) return; const d = document.createElement('div'); d.innerHTML = `<span class="t">${new Date().toLocaleTimeString('pt-BR')}</span>${esc(m)}`; l.prepend(d); }
 
 /* ---------- login (mesmo usuário do painel) ---------- */
@@ -77,7 +78,7 @@ async function start(){
      <a class="btn" href="painel.html" target="_blank">Abrir painel ↗</a><button class="btn" onclick="recarregar()">↻ Recomeçar totem</button><button class="btn dan" onclick="limpar()">Remover dados de demonstração</button></header>
    <main><div class="phone"><div class="cap">Maquininha (simulada)</div><iframe id="pos" title="Maquininha"></iframe></div>
    <div class="side">
-     <div class="card"><h2>🍺 Chopeira virtual</h2><p class="mut">Faz o papel do ESP32 na chopeira: recebe o copo pago, libera a torneira e mede os ml. Segure o botão para "puxar a alavanca".</p>
+     <div class="card"><h2>🍺 Chopeira virtual <span class="mut" id="conn" style="font-size:13px;font-weight:600;margin-left:8px">⏳ conectando…</span></h2><p class="mut">Faz o papel do ESP32 na chopeira: recebe o copo pago, libera a torneira e mede os ml. Segure o botão para "puxar a alavanca".</p>
        <div class="taps" id="taps"></div></div>
      <div class="card"><h2>⚙️ Situações para testar</h2>
        <div class="row" style="margin-top:10px"><label>🌡️ Temperatura do freezer: <b id="tv">3,5 °C</b></label><input type="range" min="-3" max="12" step="0.5" value="3.5" oninput="TEMP=+this.value;$('#tv').textContent=String(TEMP).replace('.',',')+' °C'"></div>
@@ -90,7 +91,7 @@ async function start(){
          <li>Teste também: cupom (crie em Chopeiras e barris → Cupons), happy hour (Configurações), cartão recusado, barril vazio, temperatura alta (alerta após 10 min com o cron ligado) e chopeira desligada (offline após 3 min).</li></ol></div>
      <div class="card"><h2>📜 O que a chopeira está fazendo</h2><div class="log" id="log"></div></div>
    </div></main>`;
-  try { DEMO = await api('admin/demo_seed', {}); } catch(e){ return alert(e.mensagem || 'Falha ao criar a demonstração'); }
+  try { DEMO = await api('admin/demo_seed', {}); } catch(e){ log('⚠️ Falha ao criar a demonstração: ' + (e.mensagem || 'erro')); return; }
   log('Ponto de demonstração pronto (Pilsen da Casa e IPA do Cerrado).');
   $('#mTap').classList.toggle('on', DEMO.tap_id !== null); $('#mMenu').classList.toggle('on', DEMO.tap_id === null);
   clearInterval(POLL); await poll(); POLL = setInterval(poll, 800);
@@ -120,7 +121,9 @@ function ligar(){ ON = !ON; $('#bOn').textContent = ON ? '🔌 Desligar chopeira
 let TAPS = [];
 async function poll(){
   if (!ON || !DEMO) return;
-  let r; try { r = await dev(`dev/poll&temp=${TEMP}&rssi=-58&fw=simulador&up=${Math.round(performance.now()/1000)}`); } catch(e){ return; }
+  let r; try { r = await dev(`dev/poll&temp=${TEMP}&rssi=-58&fw=simulador&up=${Math.round(performance.now()/1000)}`); }
+  catch(e){ if (Date.now() - ERRO_POLL > 10000) { ERRO_POLL = Date.now(); log('⚠️ A chopeira não conseguiu falar com o servidor: ' + (e.mensagem || e.erro || e.message || 'sem resposta')); } $('#conn').textContent = '🔴 sem conexão'; return; }
+  $('#conn').textContent = '🟢 conectada ao servidor';
   if (JSON.stringify(r.taps.map(t=>[t.canal,t.produto,t.restante_ml])) !== JSON.stringify(TAPS.map(t=>[t.canal,t.produto,t.restante_ml]))) { TAPS = r.taps; desenhar(); }
   const c = r.cmd;
   for (const t of TAPS) { const s = ST[t.canal] || (ST[t.canal] = {estado:'livre'});

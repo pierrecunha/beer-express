@@ -298,8 +298,10 @@ function mp_pagamento_aprovado_ref(string $ref, float $total): ?array {
 
 /* ============================ REGRAS DE NEGÓCIO ============================ */
 
+/** Online = visto nos últimos X min. Compara com o relógio do PRÓPRIO banco (imune a fuso diferente entre PHP e MySQL). */
+function db_agora(): int { static $t = null; return $t ??= strtotime((string)val('SELECT NOW()')); }
 function device_online(array $d): bool {
-    return $d['last_seen'] && strtotime($d['last_seen']) >= time() - 60 * (int)setting('offline_minutos', 3);
+    return $d['last_seen'] && strtotime($d['last_seen']) >= db_agora() - 60 * (int)setting('offline_minutos', 3);
 }
 function ml_hoje_cliente(int $cid): int {
     return (int)val("SELECT COALESCE(SUM(total_ml),0) FROM be_orders WHERE customer_id = ? AND tipo = 'copo' AND status IN ('pago','servindo','concluido','parcial') AND created_at >= CURDATE()", [$cid])
@@ -557,7 +559,7 @@ function r_pos_menu(array $t): array {
 }
 
 function r_pos_identify(array $t): array {
-    if ($t['bloqueado_ate'] && strtotime($t['bloqueado_ate']) > time())
+    if ($t['bloqueado_ate'] && strtotime($t['bloqueado_ate']) > db_agora())
         fail('terminal_bloqueado', 'Muitas tentativas inválidas. Aguarde alguns minutos.', 429, ['ate' => $t['bloqueado_ate']]);
 
     $cpf = cpf_digits((string)arg('cpf', ''));
@@ -599,7 +601,7 @@ function r_pos_identify(array $t): array {
     if ($cust && $cust['nascimento'] !== $nasc) $falha('dados_nao_conferem', 'CPF e data de nascimento não conferem.');
 
     $validoAte = $cust ? strtotime($cust['verificado_em'] . ' +' . (int)setting('reverificar_dias', 365) . ' days') : 0;
-    $precisaVerificar = !$cust || $validoAte < time() || (setting('cpf_provider', 'local') !== 'local' && $cust['verificado_por'] === 'local');
+    $precisaVerificar = !$cust || $validoAte < db_agora() || (setting('cpf_provider', 'local') !== 'local' && $cust['verificado_por'] === 'local');
 
     if ($precisaVerificar) {
         if ($nome === '') {
@@ -638,7 +640,7 @@ function r_pos_identify(array $t): array {
 /** Sessão do cliente na maquininha (após identificação 18+). Vale 10 min e se renova a cada uso. */
 function pos_sessao(array $t): array {
     $ver = row('SELECT * FROM be_verifications WHERE token = ? AND terminal_id = ? AND ok = 1', [(string)arg('token'), $t['id']]);
-    if (!$ver || $ver['usado'] || strtotime($ver['expira_em']) < time()) fail('sessao', 'Sessão expirada. Identifique-se novamente.', 401);
+    if (!$ver || $ver['usado'] || strtotime($ver['expira_em']) < db_agora()) fail('sessao', 'Sessão expirada. Identifique-se novamente.', 401);
     $cust = $ver['customer_id'] ? row('SELECT * FROM be_customers WHERE id = ?', [$ver['customer_id']])
         : ['id' => 0, 'cpf' => '', 'nome' => 'Cliente', 'saldo' => 0, 'bloqueado' => 0, 'compras' => 0];   // modo declaração (sem CPF)
     if (!$cust || $cust['bloqueado']) fail('bloqueado', 'Cadastro bloqueado. Procure o responsável pelo ponto.', 403);
@@ -898,7 +900,7 @@ function r_dev_poll(array $d): array {
 
     // Telemetria a cada 5 min
     $ult = val('SELECT MAX(created_at) FROM be_telemetry WHERE device_id = ?', [$d['id']]);
-    if (!$ult || strtotime($ult) < time() - 290)
+    if (!$ult || strtotime($ult) < db_agora() - 290)
         q('INSERT INTO be_telemetry (device_id, temperatura, rssi, heap, uptime_s) VALUES (?,?,?,?,?)',
             [$d['id'], $temp, $_GET['rssi'] ?? null, $_GET['heap'] ?? null, $_GET['up'] ?? null]);
 
@@ -983,7 +985,7 @@ function r_dev_card(array $d): array {
     if (!$card) { q('INSERT INTO be_cards (uid) VALUES (?)', [$uid]); $card = row('SELECT * FROM be_cards WHERE uid = ?', [$uid]); }
     if (!$card['ativo']) return $res('cartao_bloqueado', 'Cartão bloqueado');
     if (!$card['customer_id']) {
-        $cod = ($card['codigo_vinculo'] && strtotime((string)$card['codigo_expira']) > time()) ? $card['codigo_vinculo'] : null;
+        $cod = ($card['codigo_vinculo'] && strtotime((string)$card['codigo_expira']) > db_agora()) ? $card['codigo_vinculo'] : null;
         for ($i = 0; !$cod && $i < 20; $i++) {
             $try = str_pad((string)random_int(0, 9999), 4, '0', STR_PAD_LEFT);
             if (!val('SELECT id FROM be_cards WHERE codigo_vinculo = ? AND codigo_expira > NOW()', [$try])) $cod = $try;
@@ -1549,6 +1551,7 @@ function be_health(): array {
             $c = val("SELECT v FROM be_settings WHERE k = 'cron_ultimo'");
             $h['cron_min'] = $c ? (int)floor((time() - (int)$c) / 60) : null;
             $h['devices_online'] = (int)val('SELECT COUNT(*) FROM be_devices WHERE ativo = 1 AND online = 1');
+            $h['relogio'] = ['php' => date('Y-m-d H:i:s'), 'banco' => (string)val('SELECT NOW()'), 'ultimo_sinal_chopeira' => val('SELECT MAX(last_seen) FROM be_devices')];
             $h['terminais_online'] = (int)val('SELECT COUNT(*) FROM be_terminals WHERE ativo = 1 AND online = 1');
         }
         $h['ok'] = $h['db'] && $h['instalado'];
