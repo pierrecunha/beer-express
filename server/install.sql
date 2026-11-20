@@ -18,10 +18,18 @@ CREATE TABLE IF NOT EXISTS be_users (
   nome VARCHAR(120) NOT NULL,
   email VARCHAR(160) NOT NULL UNIQUE,
   senha_hash VARCHAR(255) NOT NULL,
-  role ENUM('admin','operador') NOT NULL DEFAULT 'admin',
+  role ENUM('admin','dono','operador') NOT NULL DEFAULT 'admin',   -- admin = plataforma; dono = só os pontos de be_user_locations
   ativo TINYINT(1) NOT NULL DEFAULT 1,
   last_login DATETIME NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Quais pontos (quiosques) cada dono enxerga e edita no painel
+CREATE TABLE IF NOT EXISTS be_user_locations (
+  user_id INT NOT NULL,
+  location_id INT NOT NULL,
+  PRIMARY KEY (user_id, location_id),
+  KEY (location_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Pontos de venda (cada ponto = 1 freezer/quiosque)
@@ -91,6 +99,7 @@ CREATE TABLE IF NOT EXISTS be_products (
   imagem_url VARCHAR(255) NULL,
   cor VARCHAR(9) NULL DEFAULT '#F5B301',
   ativo TINYINT(1) NOT NULL DEFAULT 1,
+  dono_id INT NULL,                      -- bebida criada por um dono de quiosque (NULL = da plataforma)
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 

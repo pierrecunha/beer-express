@@ -18,7 +18,8 @@
  *     admin/manual_release  admin/customers  admin/customer_block
  *     admin/catalog  admin/save  admin/keg_change  admin/calibrate
  *     admin/events  admin/settings  admin/settings_save  admin/telegram_test
- *     admin/telemetry  admin/password
+ *     admin/telemetry  admin/password  admin/bebidas  admin/bebida_salvar  admin/bebida_trocar
+ *     admin/torneira_remover  admin/usuarios  admin/usuario_salvar
  * ===================================================================== */
 
 require_once __DIR__ . '/config.php';
@@ -157,8 +158,43 @@ function require_admin(): array {
     if (!$pl) fail('auth', 'Sessão expirada', 401);
     $u = row('SELECT id, nome, email, role FROM be_users WHERE id = ? AND ativo = 1', [$pl['uid']]);
     if (!$u) fail('auth', 'Usuário inativo', 401);
+    $GLOBALS['BE_U'] = $u;
     return $u;
 }
+
+/* ---------- Acesso por quiosque: o "dono" só vê e edita os pontos dele ---------- */
+/** null = vê tudo (administrador da plataforma / operador); array = ids dos pontos liberados para o dono. */
+function locs_do(?array $u = null): ?array {
+    $u = $u ?? ($GLOBALS['BE_U'] ?? null);
+    if (!$u || $u['role'] !== 'dono') return null;
+    static $cache = [];
+    return $cache[$u['id']] ??= array_map('intval', array_column(rows('SELECT location_id FROM be_user_locations WHERE user_id = ?', [$u['id']]), 'location_id'));
+}
+/** Pontos considerados agora: os do usuário, ou só o ponto escolhido no seletor do painel (BE_FILTRO). */
+function locs_ef(): ?array { $f = $GLOBALS['BE_FILTRO'] ?? null; return $f ? [(int)$f] : locs_do(); }
+/** Trecho SQL " AND col IN (...)" para o usuário logado ('' quando vê tudo). */
+function so_meus(string $col): string {
+    $l = locs_ef();
+    if ($l === null) return '';
+    return $l ? " AND $col IN (" . implode(',', $l) . ')' : ' AND 1=0';
+}
+/** Eventos ligados aos pontos do dono (por ponto, chopeira, maquininha ou pedido). */
+function so_meus_eventos(string $a = ''): string {
+    $l = locs_ef();
+    if ($l === null) return '';
+    if (!$l) return ' AND 1=0';
+    $in = implode(',', $l); $a = $a ? "$a." : '';
+    return " AND ({$a}location_id IN ($in) OR {$a}device_id IN (SELECT id FROM be_devices WHERE location_id IN ($in))
+        OR {$a}terminal_id IN (SELECT id FROM be_terminals WHERE location_id IN ($in)) OR {$a}order_id IN (SELECT id FROM be_orders WHERE location_id IN ($in)))";
+}
+function exige_ponto($location_id): void {
+    $l = locs_do();
+    if ($l !== null && !in_array((int)$location_id, $l, true)) fail('acesso', 'Você não tem acesso a este ponto', 403);
+}
+function ponto_da_torneira(int $tap_id): int { return (int)val('SELECT d.location_id FROM be_taps t JOIN be_devices d ON d.id = t.device_id WHERE t.id = ?', [$tap_id]); }
+/** Rotas que só o administrador da plataforma usa (configurações gerais, carteiras, usuários, demonstração). */
+const ROTAS_SO_ADMIN = ['admin/settings', 'admin/settings_save', 'admin/telegram_test', 'admin/demo_seed', 'admin/demo_clear', 'admin/customer_block',
+    'admin/wallet_adjust', 'admin/card_update', 'admin/usuarios', 'admin/usuario_salvar'];
 
 /* ============================ CPF / IDADE ============================ */
 
@@ -1133,7 +1169,7 @@ function r_admin_login(): array {
     $u = row('SELECT * FROM be_users WHERE email = ? AND ativo = 1', [strtolower(trim((string)arg('email')))]);
     if (!$u || !password_verify((string)arg('senha'), $u['senha_hash'])) { usleep(600000); fail('login', 'E-mail ou senha incorretos', 401); }
     q('UPDATE be_users SET last_login = NOW() WHERE id = ?', [$u['id']]);
-    return ['ok' => true, 'token' => jwt_make(['uid' => (int)$u['id']]), 'user' => ['nome' => $u['nome'], 'email' => $u['email'], 'role' => $u['role']]];
+    return ['ok' => true, 'token' => jwt_make(['uid' => (int)$u['id']]), 'user' => ['id' => (int)$u['id'], 'nome' => $u['nome'], 'email' => $u['email'], 'role' => $u['role']]];
 }
 function r_admin_password(array $u): array {
     $full = row('SELECT * FROM be_users WHERE id = ?', [$u['id']]);
@@ -1145,6 +1181,10 @@ function r_admin_password(array $u): array {
 
 function r_admin_dashboard(): array {
     $pagos = "status IN ('pago','servindo','concluido','parcial')";
+    if ($f = (int)arg('location_id')) { exige_ponto($f); $GLOBALS['BE_FILTRO'] = $f; }
+    $L = so_meus('location_id'); $Lo = so_meus('o.location_id'); $Ld = so_meus('d.location_id'); $Lt = so_meus('t.location_id');
+    $Lterm = locs_ef() === null ? '' : ' AND terminal_id IN (SELECT id FROM be_terminals WHERE 1=1' . so_meus('location_id') . ')';
+    $pagos .= $L;
     $k = fn($w) => row("SELECT COUNT(*) n, COALESCE(SUM(total),0) s, COALESCE(SUM(total_ml),0) ml FROM be_orders WHERE $pagos AND $w");
     $hoje = $k('created_at >= CURDATE()'); $ontem = $k('created_at >= CURDATE() - INTERVAL 1 DAY AND created_at < CURDATE()');
     $mes = $k("created_at >= DATE_FORMAT(CURDATE(), '%Y-%m-01')");
@@ -1152,28 +1192,29 @@ function r_admin_dashboard(): array {
     $horas = rows("SELECT HOUR(created_at) h, COUNT(*) n FROM be_orders WHERE $pagos AND created_at >= CURDATE() - INTERVAL 29 DAY GROUP BY HOUR(created_at) ORDER BY h");
     $prods = rows("SELECT produto, SUM(copos) copos, SUM(ml) ml, SUM(s) s FROM (
             SELECT i.produto, SUM(i.qtd) copos, SUM(i.qtd * i.volume_ml) ml, SUM(i.qtd * i.preco_unit) s FROM be_order_items i JOIN be_orders o ON o.id = i.order_id
-             WHERE o.$pagos AND o.created_at >= DATE_FORMAT(CURDATE(), '%Y-%m-01') GROUP BY i.produto
+             WHERE o.status IN ('pago','servindo','concluido','parcial')$Lo AND o.created_at >= DATE_FORMAT(CURDATE(), '%Y-%m-01') GROUP BY i.produto
             UNION ALL
-            SELECT produto, COUNT(*) copos, SUM(servido_ml) ml, SUM(valor) s FROM be_pours WHERE status <> 'aberta' AND servido_ml > 0 AND inicio_em >= DATE_FORMAT(CURDATE(), '%Y-%m-01') GROUP BY produto
+            SELECT produto, COUNT(*) copos, SUM(servido_ml) ml, SUM(valor) s FROM be_pours WHERE status <> 'aberta'$L AND servido_ml > 0 AND inicio_em >= DATE_FORMAT(CURDATE(), '%Y-%m-01') GROUP BY produto
         ) x GROUP BY produto ORDER BY s DESC");
-    $devices = rows('SELECT d.id, d.nome, d.last_seen, d.temperatura, d.rssi, d.fw_version, d.temp_min, d.temp_max, d.porta_aberta, l.nome loc FROM be_devices d JOIN be_locations l ON l.id = d.location_id WHERE d.ativo = 1');
+    $devices = rows('SELECT d.id, d.nome, d.last_seen, d.temperatura, d.rssi, d.fw_version, d.temp_min, d.temp_max, d.porta_aberta, l.nome loc FROM be_devices d JOIN be_locations l ON l.id = d.location_id WHERE d.ativo = 1' . $Ld);
     foreach ($devices as &$d) $d['online'] = device_online($d);
-    $terms = rows('SELECT t.id, t.nome, t.last_seen, t.provider, t.bloqueado_ate, l.nome loc FROM be_terminals t JOIN be_locations l ON l.id = t.location_id WHERE t.ativo = 1');
+    $terms = rows('SELECT t.id, t.nome, t.last_seen, t.provider, t.bloqueado_ate, l.nome loc FROM be_terminals t JOIN be_locations l ON l.id = t.location_id WHERE t.ativo = 1' . $Lt);
     foreach ($terms as &$t) $t['online'] = device_online($t);
     $barris = rows('SELECT t.id, t.nome, t.restante_ml, t.barril_ml, t.alerta_pct, p.nome produto, l.nome loc FROM be_taps t JOIN be_devices d ON d.id = t.device_id
-        JOIN be_locations l ON l.id = d.location_id LEFT JOIN be_products p ON p.id = t.product_id WHERE t.ativo = 1 ORDER BY l.id, t.canal');
-    $alertas = rows("SELECT id, nivel, tipo, msg, created_at FROM be_events WHERE nivel <> 'info' ORDER BY id DESC LIMIT 8");
-    $problemas = rows("SELECT id, ref, status, total, created_at FROM be_orders WHERE status IN ('parcial','falhou') AND created_at >= CURDATE() - INTERVAL 7 DAY ORDER BY id DESC LIMIT 10");
-    $menores = (int)val("SELECT COUNT(*) FROM be_verifications WHERE motivo = 'menor_idade' AND created_at >= CURDATE()");
-    $clientes = row("SELECT COUNT(*) total, SUM(created_at >= CURDATE()) hoje FROM be_customers");
-    $pass = row("SELECT COUNT(*) n, COALESCE(SUM(valor),0) s, COALESCE(SUM(servido_ml),0) ml FROM be_pours WHERE status <> 'aberta' AND inicio_em >= CURDATE()");
-    $pass['recargas'] = row("SELECT COUNT(*) n, COALESCE(SUM(total),0) s, COALESCE(SUM(bonus),0) b FROM be_orders WHERE tipo = 'recarga' AND status = 'concluido' AND created_at >= CURDATE()");
+        JOIN be_locations l ON l.id = d.location_id LEFT JOIN be_products p ON p.id = t.product_id WHERE t.ativo = 1' . $Ld . ' ORDER BY l.id, t.canal');
+    $alertas = rows("SELECT id, nivel, tipo, msg, created_at FROM be_events WHERE nivel <> 'info'" . so_meus_eventos() . " ORDER BY id DESC LIMIT 8");
+    $problemas = rows("SELECT id, ref, status, total, created_at FROM be_orders WHERE status IN ('parcial','falhou')$L AND created_at >= CURDATE() - INTERVAL 7 DAY ORDER BY id DESC LIMIT 10");
+    $menores = (int)val("SELECT COUNT(*) FROM be_verifications WHERE motivo = 'menor_idade'$Lterm AND created_at >= CURDATE()");
+    $clientes = locs_ef() === null ? row("SELECT COUNT(*) total, SUM(created_at >= CURDATE()) hoje FROM be_customers")
+        : row("SELECT COUNT(*) total, SUM(c.created_at >= CURDATE()) hoje FROM be_customers c WHERE c.id IN (SELECT customer_id FROM be_orders WHERE 1=1$L)");
+    $pass = row("SELECT COUNT(*) n, COALESCE(SUM(valor),0) s, COALESCE(SUM(servido_ml),0) ml FROM be_pours WHERE status <> 'aberta'$L AND inicio_em >= CURDATE()");
+    $pass['recargas'] = row("SELECT COUNT(*) n, COALESCE(SUM(total),0) s, COALESCE(SUM(bonus),0) b FROM be_orders WHERE tipo = 'recarga'$L AND status = 'concluido' AND created_at >= CURDATE()");
     $funil = [];
-    foreach (rows("SELECT etapa, COUNT(*) n FROM be_funnel WHERE created_at >= CURDATE() - INTERVAL 6 DAY GROUP BY etapa") as $f) $funil[$f['etapa']] = (int)$f['n'];
-    $nps = row("SELECT COUNT(*) n, ROUND(AVG(nota),1) media, SUM(nota >= 4) bons, SUM(nota <= 2) ruins FROM be_ratings WHERE created_at >= CURDATE() - INTERVAL 29 DAY");
-    $motivos = rows("SELECT motivo, COUNT(*) n FROM be_ratings WHERE motivo IS NOT NULL AND created_at >= CURDATE() - INTERVAL 29 DAY GROUP BY motivo ORDER BY n DESC LIMIT 5");
-    $pass['saldo_carteiras'] = (float)val('SELECT COALESCE(SUM(saldo),0) FROM be_customers');
-    $pass['abertas'] = rows("SELECT p.id, p.produto, p.servido_ml, p.limite_ml, t.nome torneira, c.nome cliente FROM be_pours p JOIN be_taps t ON t.id = p.tap_id JOIN be_customers c ON c.id = p.customer_id WHERE p.status = 'aberta'");
+    foreach (rows("SELECT etapa, COUNT(*) n FROM be_funnel WHERE created_at >= CURDATE() - INTERVAL 6 DAY$Lterm GROUP BY etapa") as $f) $funil[$f['etapa']] = (int)$f['n'];
+    $nps = row("SELECT COUNT(*) n, ROUND(AVG(nota),1) media, SUM(nota >= 4) bons, SUM(nota <= 2) ruins FROM be_ratings WHERE created_at >= CURDATE() - INTERVAL 29 DAY$Lterm");
+    $motivos = rows("SELECT motivo, COUNT(*) n FROM be_ratings WHERE motivo IS NOT NULL$Lterm AND created_at >= CURDATE() - INTERVAL 29 DAY GROUP BY motivo ORDER BY n DESC LIMIT 5");
+    $pass['saldo_carteiras'] = locs_ef() === null ? (float)val('SELECT COALESCE(SUM(saldo),0) FROM be_customers') : null;
+    $pass['abertas'] = rows("SELECT p.id, p.produto, p.servido_ml, p.limite_ml, t.nome torneira, c.nome cliente FROM be_pours p JOIN be_taps t ON t.id = p.tap_id JOIN be_customers c ON c.id = p.customer_id WHERE p.status = 'aberta'" . so_meus('p.location_id'));
     foreach ($pass['abertas'] as &$a) $a['cliente'] = nome_exibicao($a['cliente']);
     unset($a);
     return ['ok' => true, 'hoje' => $hoje, 'ontem' => $ontem, 'mes' => $mes, 'dias' => $dias, 'horas' => $horas, 'produtos' => $prods, 'devices' => $devices,
@@ -1182,7 +1223,7 @@ function r_admin_dashboard(): array {
 }
 
 function r_admin_orders(): array {
-    $w = ['1=1']; $p = [];
+    $w = ['1=1' . so_meus('o.location_id')]; $p = [];
     if (arg('de')) { $w[] = 'o.created_at >= ?'; $p[] = arg('de') . ' 00:00:00'; }
     if (arg('ate')) { $w[] = 'o.created_at <= ?'; $p[] = arg('ate') . ' 23:59:59'; }
     if (arg('status')) { $w[] = 'o.status = ?'; $p[] = arg('status'); }
@@ -1200,6 +1241,7 @@ function r_admin_order(): array {
     $o = row('SELECT o.*, l.nome loc, t.nome terminal, c.nome cliente, c.cpf, c.nascimento, c.compras FROM be_orders o JOIN be_locations l ON l.id = o.location_id
         JOIN be_terminals t ON t.id = o.terminal_id LEFT JOIN be_customers c ON c.id = o.customer_id WHERE o.id = ?', [(int)arg('id')]);
     if (!$o) fail('pedido', 'Não encontrado', 404);
+    exige_ponto($o['location_id']);
     unset($o['pix_qr_base64']);
     $o['cpf'] = $o['cpf'] ? cpf_mask($o['cpf']) : null;
     return ['ok' => true, 'pedido' => $o, 'itens' => rows('SELECT * FROM be_order_items WHERE order_id = ?', [$o['id']]),
@@ -1209,6 +1251,7 @@ function r_admin_order(): array {
 function r_admin_order_refund(array $u): array {
     $o = row('SELECT * FROM be_orders WHERE id = ?', [(int)arg('id')]);
     if (!$o || !in_array($o['status'], ['pago', 'servindo', 'concluido', 'parcial', 'falhou'], true)) fail('pedido', 'Pedido não pode ser estornado');
+    exige_ponto($o['location_id']);
     $valor = arg('valor') !== null && arg('valor') !== '' ? round((float)arg('valor'), 2) : (float)$o['total'];
     $auto = false; $det = 'Estorno manual (faça na maquininha/app da adquirente)';
     if ($o['pagamento_id'] && ctype_digit((string)$o['pagamento_id']) && mp_token()) {
@@ -1231,6 +1274,7 @@ function r_admin_order_refund(array $u): array {
 function r_admin_dispense_retry(array $u): array {
     $d = row('SELECT * FROM be_dispenses WHERE id = ?', [(int)arg('id')]);
     if (!$d || !in_array($d['status'], ['timeout', 'erro', 'cancelado'], true)) fail('copo', 'Só copos com erro/tempo esgotado podem ser reliberados');
+    exige_ponto(ponto_da_torneira((int)$d['tap_id']));
     $falta = max(0, (int)$d['volume_ml'] - (int)$d['servido_ml']);
     if ($falta < 50) fail('copo', 'Esse copo já foi praticamente todo servido');
     q('INSERT INTO be_dispenses (order_id, item_id, tap_id, device_id, seq, volume_ml) VALUES (?,?,?,?,?,?)', [$d['order_id'], $d['item_id'], $d['tap_id'], $d['device_id'], $d['seq'], $falta]);
@@ -1243,6 +1287,7 @@ function r_admin_dispense_retry(array $u): array {
 function r_admin_manual_release(array $u): array {
     $tap = row('SELECT t.*, d.location_id, p.nome produto FROM be_taps t JOIN be_devices d ON d.id = t.device_id LEFT JOIN be_products p ON p.id = t.product_id WHERE t.id = ?', [(int)arg('tap_id')]);
     if (!$tap) fail('tap', 'Torneira não encontrada');
+    exige_ponto($tap['location_id']);
     $ml = max(50, min(2000, (int)arg('volume_ml', 300)));
     $term = (int)val('SELECT id FROM be_terminals WHERE location_id = ? ORDER BY id LIMIT 1', [$tap['location_id']]);
     if (!$term) fail('terminal', 'Cadastre ao menos uma maquininha neste ponto');
@@ -1258,12 +1303,14 @@ function r_admin_manual_release(array $u): array {
 
 function r_admin_customers(): array {
     $w = '1=1'; $p = [];
-    if (arg('q')) { $w = '(cpf LIKE ? OR nome LIKE ?)'; $s = '%' . preg_replace('/[.\-]/', '', (string)arg('q')) . '%'; $p = [$s, '%' . arg('q') . '%']; }
+    if (locs_do() !== null) $w .= ' AND (id IN (SELECT customer_id FROM be_orders WHERE 1=1' . so_meus('location_id') . ') OR id IN (SELECT customer_id FROM be_pours WHERE 1=1' . so_meus('location_id') . '))';
+    if (arg('q')) { $w .= ' AND (cpf LIKE ? OR nome LIKE ?)'; $s = '%' . preg_replace('/[.\-]/', '', (string)arg('q')) . '%'; $p = [$s, '%' . arg('q') . '%']; }
     $lst = rows("SELECT id, cpf, nome, nascimento, verificado_por, verificado_em, bloqueado, motivo_bloqueio, compras, total_ml, total_gasto, saldo, ultima_compra, created_at,
         (SELECT COUNT(*) FROM be_cards k WHERE k.customer_id = be_customers.id AND k.ativo = 1) cartoes
         FROM be_customers WHERE $w ORDER BY COALESCE(ultima_compra, created_at) DESC LIMIT 200", $p);
     foreach ($lst as &$c) { $c['cpf'] = cpf_mask($c['cpf']); $c['idade'] = idade($c['nascimento']); unset($c['nascimento']); }
-    return ['ok' => true, 'clientes' => $lst, 'total' => (int)val('SELECT COUNT(*) FROM be_customers')];
+    $total = locs_do() === null ? (int)val('SELECT COUNT(*) FROM be_customers') : (int)val('SELECT COUNT(DISTINCT customer_id) FROM be_orders WHERE customer_id > 0' . so_meus('location_id'));
+    return ['ok' => true, 'clientes' => $lst, 'total' => $total];
 }
 function r_admin_customer_block(array $u): array {
     $b = (int)(bool)arg('bloqueado');
@@ -1273,17 +1320,35 @@ function r_admin_customer_block(array $u): array {
 }
 
 function r_admin_catalog(): array {
-    $devices = rows('SELECT * FROM be_devices ORDER BY id');
-    foreach ($devices as &$d) $d['online'] = device_online($d);
-    $terms = rows('SELECT id, location_id, tap_id, nome, codigo, provider, serial, app_version, last_seen, aceita_pix, aceita_credito, aceita_debito, bloqueado_ate, ativo, (token IS NOT NULL) pareado FROM be_terminals ORDER BY id');
+    $dono = locs_do() !== null;
+    $devices = rows('SELECT * FROM be_devices WHERE 1=1' . so_meus('location_id') . ' ORDER BY id');
+    foreach ($devices as &$d) { $d['online'] = device_online($d); if ($dono) unset($d['device_key']); }
+    unset($d);
+    $terms = rows('SELECT id, location_id, tap_id, nome, codigo, provider, serial, app_version, last_seen, aceita_pix, aceita_credito, aceita_debito, bloqueado_ate, ativo, (token IS NOT NULL) pareado FROM be_terminals WHERE 1=1' . so_meus('location_id') . ' ORDER BY id');
     foreach ($terms as &$t) $t['online'] = device_online($t);
+    $tapW = $dono ? ' WHERE t.device_id IN (SELECT id FROM be_devices WHERE 1=1' . so_meus('location_id') . ')' : '';
     return ['ok' => true,
-        'locations' => rows('SELECT * FROM be_locations ORDER BY id'),
+        'locations' => rows('SELECT * FROM be_locations WHERE 1=1' . so_meus('id') . ' ORDER BY id'),
         'devices' => $devices, 'terminais' => $terms,
-        'produtos' => rows('SELECT * FROM be_products ORDER BY ativo DESC, nome'),
-        'torneiras' => rows('SELECT t.*, p.nome produto FROM be_taps t LEFT JOIN be_products p ON p.id = t.product_id ORDER BY t.device_id, t.canal'),
-        'ofertas' => rows('SELECT * FROM be_offers ORDER BY tap_id, ordem, volume_ml'),
-        'cupons' => rows('SELECT * FROM be_coupons ORDER BY ativo DESC, id DESC')];
+        'produtos' => rows('SELECT * FROM be_products WHERE 1=1' . produtos_visiveis() . ' ORDER BY ativo DESC, nome'),
+        'torneiras' => rows("SELECT t.*, p.nome produto FROM be_taps t LEFT JOIN be_products p ON p.id = t.product_id$tapW ORDER BY t.device_id, t.canal"),
+        'ofertas' => rows('SELECT * FROM be_offers WHERE 1=1' . ($dono ? ' AND tap_id IN (SELECT t.id FROM be_taps t' . $tapW . ')' : '') . ' ORDER BY tap_id, ordem, volume_ml'),
+        'cupons' => $dono ? [] : rows('SELECT * FROM be_coupons ORDER BY ativo DESC, id DESC')];
+}
+/** Bebidas que o dono enxerga: as dele e as que estão nas torneiras dos pontos dele. */
+function produtos_visiveis(): string {
+    $u = $GLOBALS['BE_U'] ?? null;
+    if (locs_do() === null) return '';
+    return ' AND (dono_id = ' . (int)$u['id'] . ' OR id IN (SELECT t.product_id FROM be_taps t JOIN be_devices d ON d.id = t.device_id WHERE t.product_id IS NOT NULL' . so_meus('d.location_id') . '))';
+}
+/** Bebida pode ser editada pelo dono sem afetar outros quiosques? (dele e só usada nos pontos dele) */
+function produto_exclusivo(int $pid): bool {
+    $u = $GLOBALS['BE_U'] ?? null;
+    if (locs_do() === null) return true;
+    $p = row('SELECT dono_id FROM be_products WHERE id = ?', [$pid]);
+    if (!$p || (int)$p['dono_id'] !== (int)$u['id']) return false;
+    $l = locs_do();
+    return !(int)val('SELECT COUNT(*) FROM be_taps t JOIN be_devices d ON d.id = t.device_id WHERE t.product_id = ?' . ($l ? ' AND d.location_id NOT IN (' . implode(',', $l) . ')' : ''), [$pid]);
 }
 
 /** Salvar/excluir genérico com lista branca de campos. */
@@ -1302,6 +1367,21 @@ function r_admin_save(array $u): array {
     [$tab, $campos] = $map[$ent];
     $data = (array)arg('data', []);
     $id = (int)($data['id'] ?? 0);
+    if (locs_do() !== null) {   // dono: só bebidas, torneiras, tamanhos e maquininhas dos próprios pontos
+        if (!in_array($ent, ['produtos', 'torneiras', 'ofertas', 'terminais'], true)) fail('acesso', 'Só o administrador da plataforma pode alterar isso', 403);
+        if ($ent === 'produtos') { if ($id && !produto_exclusivo($id)) fail('acesso', 'Esta bebida é usada em outros pontos — edite pela tela Bebidas', 403); if (!$id) $data['dono_id'] = $u['id']; $campos[] = 'dono_id'; }
+        if ($ent === 'torneiras') {
+            if ($id) exige_ponto(ponto_da_torneira($id));
+            if (isset($data['device_id'])) exige_ponto((int)val('SELECT location_id FROM be_devices WHERE id = ?', [(int)$data['device_id']]));
+            elseif (!$id) fail('dados', 'Escolha o controlador');
+            if (!empty($data['product_id']) && !(int)val('SELECT COUNT(*) FROM be_products WHERE id = ?' . produtos_visiveis(), [(int)$data['product_id']])) fail('acesso', 'Bebida não encontrada', 403);
+        }
+        if ($ent === 'ofertas') { exige_ponto(ponto_da_torneira($id ? (int)val('SELECT tap_id FROM be_offers WHERE id = ?', [$id]) : (int)($data['tap_id'] ?? 0)));
+            if (isset($data['tap_id'])) exige_ponto(ponto_da_torneira((int)$data['tap_id'])); }
+        if ($ent === 'terminais') { if (!$id) fail('acesso', 'Peça ao administrador para cadastrar a maquininha', 403);
+            exige_ponto((int)val('SELECT location_id FROM be_terminals WHERE id = ?', [$id])); unset($data['location_id'], $data['provider']);
+            if (!empty($data['tap_id'])) exige_ponto(ponto_da_torneira((int)$data['tap_id'])); }
+    }
     if (!empty($data['_delete']) && $id) {
         if ($ent === 'locations' && val('SELECT COUNT(*) FROM be_orders WHERE location_id = ?', [$id])) fail('uso', 'Ponto com vendas — desative em vez de excluir');
         if ($ent === 'torneiras' && val('SELECT COUNT(*) FROM be_order_items WHERE tap_id = ?', [$id])) fail('uso', 'Torneira com vendas — desative em vez de excluir');
@@ -1328,6 +1408,7 @@ function r_admin_save(array $u): array {
 function r_admin_keg_change(array $u): array {
     $t = row('SELECT * FROM be_taps WHERE id = ?', [(int)arg('tap_id')]);
     if (!$t) fail('tap', 'Torneira não encontrada');
+    exige_ponto(ponto_da_torneira((int)$t['id']));
     $ml = (int)arg('barril_ml', $t['barril_ml']);
     q('UPDATE be_taps SET barril_ml = ?, restante_ml = ?, alerta_enviado = 0, product_id = COALESCE(?, product_id) WHERE id = ?', [$ml, $ml, arg('product_id') ?: null, $t['id']]);
     log_event('info', 'troca_barril', "🛢️ Barril trocado em {$t['nome']}: " . ml_fmt($ml) . " por {$u['nome']}", ['device_id' => $t['device_id']], true);
@@ -1338,6 +1419,7 @@ function r_admin_calibrate(array $u): array {
     $t = row('SELECT * FROM be_taps WHERE id = ?', [(int)arg('tap_id')]);
     $esp = (float)arg('ml_esperado'); $real = (float)arg('ml_real');
     if (!$t || $esp <= 0 || $real <= 0) fail('dados', 'Informe ml esperado e ml real medido');
+    exige_ponto(ponto_da_torneira((int)$t['id']));
     $campo = $t['modo'] === 'flow' ? 'pulsos_por_litro' : 'ml_por_pulso';
     $novo = $t['modo'] === 'flow' ? round($t['pulsos_por_litro'] * $esp / $real, 2) : round($t['ml_por_pulso'] * $real / $esp, 2);
     q("UPDATE be_taps SET $campo = ? WHERE id = ?", [$novo, $t['id']]);
@@ -1345,7 +1427,7 @@ function r_admin_calibrate(array $u): array {
     return ['ok' => true, 'campo' => $campo, 'antes' => (float)$t[$campo], 'depois' => $novo];
 }
 function r_admin_events(): array {
-    $w = '1=1'; $p = [];
+    $w = '1=1' . so_meus_eventos(); $p = [];
     if (arg('nivel')) { $w .= ' AND nivel = ?'; $p[] = arg('nivel'); }
     if (arg('tipo')) { $w .= ' AND tipo = ?'; $p[] = arg('tipo'); }
     return ['ok' => true, 'eventos' => rows("SELECT * FROM be_events WHERE $w ORDER BY id DESC LIMIT 300", $p)];
@@ -1380,6 +1462,7 @@ function r_admin_telegram_test(): array {
 }
 function r_admin_telemetry(): array {
     $h = max(1, min(720, (int)arg('horas', 24)));
+    exige_ponto((int)val('SELECT location_id FROM be_devices WHERE id = ?', [(int)arg('device_id')]));
     return ['ok' => true, 'pontos' => rows("SELECT created_at, temperatura, rssi FROM be_telemetry WHERE device_id = ? AND created_at >= NOW() - INTERVAL $h HOUR ORDER BY created_at", [(int)arg('device_id')])];
 }
 
@@ -1456,7 +1539,13 @@ function r_admin_product_image(array $u): array {
     $id = (int)arg('id');
     $p = row('SELECT * FROM be_products WHERE id = ?', [$id]);
     if (!$p) fail('produto', 'Salve a bebida antes de enviar a foto');
-    if (!preg_match('#^data:image/(jpeg|png|webp);base64,(.+)$#s', (string)arg('imagem'), $m)) fail('imagem', 'Envie uma foto JPG, PNG ou WebP');
+    if (!produto_exclusivo($id)) fail('acesso', 'Esta bebida é usada em outros pontos — troque a foto pela tela Bebidas', 403);
+    $url = foto_salvar($p, (string)arg('imagem'));
+    log_event('info', 'foto_produto', "Foto de {$p['nome']} atualizada por {$u['nome']}");
+    return ['ok' => true, 'imagem_url' => $url];
+}
+function foto_salvar(array $p, string $dataUrl): string {
+    if (!preg_match('#^data:image/(jpeg|png|webp);base64,(.+)$#s', $dataUrl, $m)) fail('imagem', 'Envie uma foto JPG, PNG ou WebP');
     $bin = base64_decode($m[2], true);
     if ($bin === false || strlen($bin) > 2 * 1024 * 1024) fail('imagem', 'Foto muito grande (máx. 2 MB)');
     $info = @getimagesizefromstring($bin);
@@ -1464,19 +1553,192 @@ function r_admin_product_image(array $u): array {
     $ext = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'][$info['mime']];
     $dir = __DIR__ . '/uploads/produtos';
     if (!is_dir($dir) && !@mkdir($dir, 0755, true)) fail('imagem', 'Sem permissão para salvar a foto no servidor', 500);
-    $nome = 'p' . $id . '_' . date('YmdHis') . '.' . $ext;
+    $nome = 'p' . (int)$p['id'] . '_' . date('YmdHis') . '_' . substr(rand_token(3), 0, 4) . '.' . $ext;
     if (@file_put_contents("$dir/$nome", $bin) === false) fail('imagem', 'Falha ao gravar a foto', 500);
-    $antiga = (string)$p['imagem_url'];
-    if (str_starts_with($antiga, 'uploads/produtos/') && is_file(__DIR__ . '/' . $antiga)) @unlink(__DIR__ . '/' . $antiga);
-    q('UPDATE be_products SET imagem_url = ? WHERE id = ?', ["uploads/produtos/$nome", $id]);
-    log_event('info', 'foto_produto', "Foto de {$p['nome']} atualizada por {$u['nome']}");
-    return ['ok' => true, 'imagem_url' => "uploads/produtos/$nome"];
+    foto_apagar((string)$p['imagem_url'], (int)$p['id']);
+    q('UPDATE be_products SET imagem_url = ? WHERE id = ?', ["uploads/produtos/$nome", $p['id']]);
+    return "uploads/produtos/$nome";
+}
+/** Apaga o arquivo da foto antiga se nenhuma outra bebida usa o mesmo arquivo. */
+function foto_apagar(string $url, int $pid): void {
+    if (str_starts_with($url, 'uploads/produtos/') && !str_contains($url, '..') && is_file(__DIR__ . '/' . $url)
+        && !(int)val('SELECT COUNT(*) FROM be_products WHERE imagem_url = ? AND id <> ?', [$url, $pid])) @unlink(__DIR__ . '/' . $url);
+}
+
+/* ---------- Painel: "Minhas bebidas" (editor simples, pensado para o celular) ---------- */
+
+/** Tudo que a tela Bebidas precisa numa chamada: torneiras dos pontos do usuário com a bebida, tamanhos e barril. */
+function r_admin_bebidas(array $u): array {
+    $Ld = so_meus('d.location_id');
+    $taps = rows("SELECT t.*, d.nome device_nome, d.location_id, d.last_seen, d.ativo dev_ativo, l.nome loc FROM be_taps t JOIN be_devices d ON d.id = t.device_id
+        JOIN be_locations l ON l.id = d.location_id WHERE 1=1$Ld ORDER BY l.nome, d.id, t.canal");
+    $out = [];
+    foreach ($taps as $t) {
+        $p = $t['product_id'] ? row('SELECT * FROM be_products WHERE id = ?', [$t['product_id']]) : null;
+        if ($p) { $p['exclusivo'] = produto_exclusivo((int)$p['id']); $p['torneiras'] = (int)val('SELECT COUNT(*) FROM be_taps WHERE product_id = ?', [$p['id']]); }
+        $ofs = rows('SELECT o.id, o.volume_ml, o.preco, o.ativo, (SELECT COUNT(*) FROM be_order_items i WHERE i.offer_id = o.id) vendas FROM be_offers o WHERE o.tap_id = ? ORDER BY o.ativo DESC, o.ordem, o.volume_ml', [$t['id']]);
+        $out[] = ['id' => (int)$t['id'], 'nome' => $t['nome'], 'canal' => (int)$t['canal'], 'ativo' => (int)$t['ativo'], 'location_id' => (int)$t['location_id'], 'loc' => $t['loc'],
+            'device_id' => (int)$t['device_id'], 'device_nome' => $t['device_nome'], 'online' => $t['dev_ativo'] && device_online($t),
+            'barril_ml' => (int)$t['barril_ml'], 'restante_ml' => (int)$t['restante_ml'], 'alerta_pct' => (int)$t['alerta_pct'], 'produto' => $p,
+            'ofertas' => array_map(fn($o) => ['id' => (int)$o['id'], 'volume_ml' => (int)$o['volume_ml'], 'preco' => (float)$o['preco'], 'ativo' => (int)$o['ativo'], 'vendas' => (int)$o['vendas']], $ofs),
+            'vendidos_hoje' => (int)val("SELECT COALESCE(SUM(i.qtd),0) FROM be_order_items i JOIN be_orders o ON o.id = i.order_id WHERE i.tap_id = ? AND o.status IN ('pago','servindo','concluido','parcial') AND o.created_at >= CURDATE()", [$t['id']])];
+    }
+    $devs = rows('SELECT d.id, d.nome, d.tipo, d.location_id, l.nome loc FROM be_devices d JOIN be_locations l ON l.id = d.location_id WHERE d.ativo = 1' . $Ld . ' ORDER BY l.nome, d.id');
+    foreach ($devs as &$d) $d['canais_usados'] = array_map('intval', array_column(rows('SELECT canal FROM be_taps WHERE device_id = ?', [$d['id']]), 'canal'));
+    unset($d);
+    return ['ok' => true, 'torneiras' => $out, 'controladores' => $devs,
+        'pontos' => rows('SELECT id, nome FROM be_locations WHERE ativo = 1' . so_meus('id') . ' ORDER BY nome'),
+        'biblioteca' => rows('SELECT id, nome, cervejaria, estilo, descricao, abv, ibu, imagem_url, cor, ativo FROM be_products WHERE 1=1' . produtos_visiveis() . ' ORDER BY ativo DESC, nome'),
+        'happy_hour' => happy_hour()];
+}
+
+/** Salva de uma vez a torneira, a bebida dela (nome, foto, tipo, teor…), os tamanhos/preços e o barril. */
+function r_admin_bebida_salvar(array $u): array {
+    $tapId = (int)arg('tap_id');
+    $pr = (array)arg('produto', []);
+    $ofs = (array)arg('ofertas', []);
+    $tap = $tapId ? row('SELECT t.*, d.location_id FROM be_taps t JOIN be_devices d ON d.id = t.device_id WHERE t.id = ?', [$tapId]) : null;
+    if ($tapId && !$tap) fail('tap', 'Torneira não encontrada', 404);
+    if ($tap) exige_ponto($tap['location_id']);
+    else {
+        $dev = row('SELECT * FROM be_devices WHERE id = ?', [(int)arg('device_id')]);
+        if (!$dev) fail('dados', 'Escolha em qual chopeira (controlador) fica a torneira');
+        exige_ponto($dev['location_id']);
+        $canal = (int)arg('canal');
+        $max = $dev['tipo'] === 'torneira' ? 1 : 4;
+        if ($canal < 1 || $canal > $max) fail('dados', $max === 1 ? 'Este controlador tem uma torneira só (canal 1)' : 'Escolha o canal de 1 a 4');
+        if (val('SELECT id FROM be_taps WHERE device_id = ? AND canal = ?', [$dev['id'], $canal])) fail('dados', "O canal $canal desse controlador já tem torneira");
+    }
+    // Validação da bebida
+    $nome = trim(mb_substr((string)($pr['nome'] ?? ''), 0, 80));
+    if ($nome === '') fail('dados', 'Dê um nome para a bebida');
+    $num = fn($v, $min, $max) => $v === null || $v === '' ? null : max($min, min($max, (float)str_replace(',', '.', (string)$v)));
+    $cor = preg_match('/^#[0-9a-fA-F]{6}$/', (string)($pr['cor'] ?? '')) ? strtoupper($pr['cor']) : '#F5B301';
+    $dados = ['nome' => $nome, 'cervejaria' => trim(mb_substr((string)($pr['cervejaria'] ?? ''), 0, 80)) ?: null, 'estilo' => trim(mb_substr((string)($pr['estilo'] ?? ''), 0, 80)) ?: null,
+        'descricao' => trim(mb_substr((string)($pr['descricao'] ?? ''), 0, 255)) ?: null, 'abv' => $num($pr['abv'] ?? null, 0, 70), 'ibu' => ($v = $num($pr['ibu'] ?? null, 0, 150)) === null ? null : (int)$v,
+        'cor' => $cor, 'ativo' => !isset($pr['ativo']) || !empty($pr['ativo']) ? 1 : 0];
+    // Validação dos tamanhos
+    $lista = []; $vistos = [];
+    foreach ($ofs as $o) {
+        $ml = (int)($o['volume_ml'] ?? 0); $preco = round((float)str_replace(',', '.', (string)($o['preco'] ?? 0)), 2);
+        if ($ml < 50 || $ml > 2000) fail('dados', 'Cada tamanho precisa ter de 50 a 2000 ml');
+        if ($preco <= 0 || $preco > 999) fail('dados', "Informe o preço do copo de $ml ml");
+        if (isset($vistos[$ml])) fail('dados', "O tamanho de $ml ml está repetido");
+        $vistos[$ml] = 1; $lista[] = ['id' => (int)($o['id'] ?? 0), 'volume_ml' => $ml, 'preco' => $preco];
+    }
+    if (!$lista) fail('dados', 'Cadastre pelo menos um tamanho com preço');
+    usort($lista, fn($a, $b) => $a['volume_ml'] <=> $b['volume_ml']);
+    $barril = arg('barril_ml') !== null ? max(1000, min(100000, (int)arg('barril_ml'))) : null;
+    $foto = (string)arg('foto', '');
+
+    db()->beginTransaction();
+    try {
+        // Bebida: edita a mesma se for só deste dono/ponto; se for compartilhada, cria uma cópia só para ele (não mexe nos outros quiosques)
+        $pid = (int)($pr['id'] ?? 0);
+        $orig = $pid ? row('SELECT * FROM be_products WHERE id = ?' . produtos_visiveis(), [$pid]) : null;
+        if ($pid && !$orig) fail('acesso', 'Bebida não encontrada', 404);
+        if ($orig && produto_exclusivo($pid)) {
+            q('UPDATE be_products SET ' . implode(', ', array_map(fn($c) => "$c = ?", array_keys($dados))) . ' WHERE id = ?', [...array_values($dados), $pid]);
+        } else {
+            $dados['dono_id'] = locs_do() !== null ? (int)$u['id'] : null;
+            $dados['imagem_url'] = $orig['imagem_url'] ?? null;
+            q('INSERT INTO be_products (' . implode(', ', array_keys($dados)) . ') VALUES (' . implode(', ', array_fill(0, count($dados), '?')) . ')', array_values($dados));
+            $pid = (int)db()->lastInsertId();
+        }
+        // Torneira
+        if ($tap) {
+            $set = ['product_id' => $pid, 'ativo' => arg('ativo') === null ? (int)$tap['ativo'] : (int)!empty(arg('ativo'))];
+            if (trim((string)arg('nome_torneira', '')) !== '') $set['nome'] = trim(mb_substr((string)arg('nome_torneira'), 0, 60));
+            if ($barril) { $set['barril_ml'] = $barril; if (arg('trocou_barril')) { $set['restante_ml'] = $barril; $set['alerta_enviado'] = 0; } }
+            q('UPDATE be_taps SET ' . implode(', ', array_map(fn($c) => "$c = ?", array_keys($set))) . ' WHERE id = ?', [...array_values($set), $tapId]);
+        } else {
+            $b = $barril ?: 30000;
+            q('INSERT INTO be_taps (device_id, canal, nome, product_id, barril_ml, restante_ml, ativo) VALUES (?,?,?,?,?,?,?)',
+                [(int)arg('device_id'), (int)arg('canal'), trim(mb_substr((string)arg('nome_torneira', ''), 0, 60)) ?: 'Torneira ' . (int)arg('canal'), $pid, $b, $b, arg('ativo') === null ? 1 : (int)!empty(arg('ativo'))]);
+            $tapId = (int)db()->lastInsertId();
+        }
+        // Tamanhos: atualiza, cria, e o que saiu é apagado (ou só desativado, se já teve venda)
+        $exist = array_column(rows('SELECT id FROM be_offers WHERE tap_id = ?', [$tapId]), 'id');
+        $exist = array_map('intval', $exist); $mantidos = [];
+        foreach ($lista as $i => $o) {
+            if ($o['id'] && in_array($o['id'], $exist, true)) { q('UPDATE be_offers SET volume_ml = ?, preco = ?, ordem = ?, ativo = 1 WHERE id = ?', [$o['volume_ml'], $o['preco'], $i + 1, $o['id']]); $mantidos[] = $o['id']; }
+            else q('INSERT INTO be_offers (tap_id, volume_ml, preco, ordem) VALUES (?,?,?,?)', [$tapId, $o['volume_ml'], $o['preco'], $i + 1]);
+        }
+        foreach (array_diff($exist, $mantidos) as $oid) {
+            if ((int)val('SELECT COUNT(*) FROM be_order_items WHERE offer_id = ?', [$oid])) q('UPDATE be_offers SET ativo = 0 WHERE id = ?', [$oid]);
+            else q('DELETE FROM be_offers WHERE id = ?', [$oid]);
+        }
+        db()->commit();
+    } catch (Throwable $e) { if (db()->inTransaction()) db()->rollBack(); throw $e; }
+
+    $p = row('SELECT * FROM be_products WHERE id = ?', [$pid]);
+    if ($foto !== '') foto_salvar($p, $foto);
+    elseif (arg('remover_foto') && $p['imagem_url']) { foto_apagar((string)$p['imagem_url'], $pid); q('UPDATE be_products SET imagem_url = NULL WHERE id = ?', [$pid]); }
+    $loc = ponto_da_torneira($tapId);
+    log_event('info', 'bebida', "🍺 {$nome} salva na " . val('SELECT nome FROM be_taps WHERE id = ?', [$tapId]) . " por {$u['nome']}" . (arg('trocou_barril') ? ' (barril trocado: ' . ml_fmt((int)$barril) . ')' : ''), ['location_id' => $loc]);
+    return ['ok' => true, 'tap_id' => $tapId, 'produto_id' => $pid];
+}
+/** Usar na torneira uma bebida que já existe na biblioteca (sem editar nada). */
+function r_admin_bebida_trocar(array $u): array {
+    $tapId = (int)arg('tap_id'); $pid = (int)arg('produto_id');
+    exige_ponto(ponto_da_torneira($tapId));
+    if (!(int)val('SELECT COUNT(*) FROM be_products WHERE id = ?' . produtos_visiveis(), [$pid])) fail('acesso', 'Bebida não encontrada', 404);
+    q('UPDATE be_taps SET product_id = ? WHERE id = ?', [$pid, $tapId]);
+    log_event('info', 'bebida', 'Torneira #' . $tapId . ' agora serve ' . val('SELECT nome FROM be_products WHERE id = ?', [$pid]) . " ({$u['nome']})", ['location_id' => ponto_da_torneira($tapId)]);
+    return ['ok' => true];
+}
+/** Apaga a torneira (só se nunca vendeu) — senão desativa. */
+function r_admin_torneira_remover(array $u): array {
+    $tapId = (int)arg('tap_id');
+    exige_ponto(ponto_da_torneira($tapId));
+    if ((int)val('SELECT COUNT(*) FROM be_order_items WHERE tap_id = ?', [$tapId]) || (int)val('SELECT COUNT(*) FROM be_pours WHERE tap_id = ?', [$tapId])) {
+        q('UPDATE be_taps SET ativo = 0 WHERE id = ?', [$tapId]);
+        return ['ok' => true, 'desativada' => true, 'mensagem' => 'Esta torneira já vendeu, então ela foi só desativada (o histórico continua no painel).'];
+    }
+    q('DELETE FROM be_offers WHERE tap_id = ?', [$tapId]);
+    q('UPDATE be_terminals SET tap_id = NULL WHERE tap_id = ?', [$tapId]);
+    q('DELETE FROM be_taps WHERE id = ?', [$tapId]);
+    return ['ok' => true, 'desativada' => false, 'mensagem' => 'Torneira removida'];
+}
+
+/* ---------- Painel: usuários (administrador da plataforma cria os donos de quiosque) ---------- */
+function r_admin_usuarios(array $u): array {
+    $lst = rows('SELECT id, nome, email, role, ativo, last_login, created_at FROM be_users ORDER BY role, nome');
+    foreach ($lst as &$x) $x['pontos'] = array_map('intval', array_column(rows('SELECT location_id FROM be_user_locations WHERE user_id = ?', [$x['id']]), 'location_id'));
+    unset($x);
+    return ['ok' => true, 'usuarios' => $lst, 'pontos' => rows('SELECT id, nome FROM be_locations ORDER BY nome')];
+}
+function r_admin_usuario_salvar(array $u): array {
+    $id = (int)arg('id');
+    $nome = trim(mb_substr((string)arg('nome', ''), 0, 120)); $email = strtolower(trim((string)arg('email', '')));
+    $role = in_array(arg('role'), ['admin', 'dono', 'operador'], true) ? (string)arg('role') : 'dono';
+    $ativo = arg('ativo') === null ? 1 : (int)!empty(arg('ativo')); $senha = (string)arg('senha', '');
+    if ($nome === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) fail('dados', 'Informe nome e um e-mail válido');
+    if ((int)val('SELECT COUNT(*) FROM be_users WHERE email = ? AND id <> ?', [$email, $id])) fail('dados', 'Já existe um usuário com esse e-mail');
+    if ($id === (int)$u['id'] && ($role !== 'admin' || !$ativo)) fail('dados', 'Você não pode tirar o seu próprio acesso de administrador');
+    if (!$id && strlen($senha) < 8) fail('dados', 'Senha inicial com pelo menos 8 caracteres');
+    if ($senha !== '' && strlen($senha) < 8) fail('dados', 'Senha com pelo menos 8 caracteres');
+    $pontos = array_values(array_unique(array_filter(array_map('intval', (array)arg('pontos', [])))));
+    if ($role === 'dono' && !$pontos) fail('dados', 'Escolha pelo menos um ponto (quiosque) para o dono');
+    db()->beginTransaction();
+    if ($id) {
+        q('UPDATE be_users SET nome = ?, email = ?, role = ?, ativo = ? WHERE id = ?', [$nome, $email, $role, $ativo, $id]);
+        if ($senha !== '') q('UPDATE be_users SET senha_hash = ? WHERE id = ?', [password_hash($senha, PASSWORD_DEFAULT), $id]);
+    } else {
+        q('INSERT INTO be_users (nome, email, senha_hash, role, ativo) VALUES (?,?,?,?,?)', [$nome, $email, password_hash($senha, PASSWORD_DEFAULT), $role, $ativo]);
+        $id = (int)db()->lastInsertId();
+    }
+    q('DELETE FROM be_user_locations WHERE user_id = ?', [$id]);
+    if ($role === 'dono') foreach ($pontos as $l) if (val('SELECT id FROM be_locations WHERE id = ?', [$l])) q('INSERT INTO be_user_locations (user_id, location_id) VALUES (?,?)', [$id, $l]);
+    db()->commit();
+    log_event('info', 'usuario', "Usuário $email ($role) salvo por {$u['nome']}");
+    return ['ok' => true, 'id' => $id];
 }
 
 /* ---------- Painel: Modo Pass ---------- */
 
 function r_admin_pours(): array {
-    $w = ['1=1']; $p = [];
+    $w = ['1=1' . so_meus('p.location_id')]; $p = [];
     if (arg('de')) { $w[] = 'p.inicio_em >= ?'; $p[] = arg('de') . ' 00:00:00'; }
     if (arg('ate')) { $w[] = 'p.inicio_em <= ?'; $p[] = arg('ate') . ' 23:59:59'; }
     if (arg('customer_id')) { $w[] = 'p.customer_id = ?'; $p[] = (int)arg('customer_id'); }
@@ -1490,6 +1752,8 @@ function r_admin_pours(): array {
 function r_admin_customer(): array {
     $c = row('SELECT * FROM be_customers WHERE id = ?', [(int)arg('id')]);
     if (!$c) fail('cliente', 'Não encontrado', 404);
+    if (locs_do() !== null && !(int)val('SELECT COUNT(*) FROM be_orders WHERE customer_id = ?' . so_meus('location_id'), [$c['id']])
+        && !(int)val('SELECT COUNT(*) FROM be_pours WHERE customer_id = ?' . so_meus('location_id'), [$c['id']])) fail('acesso', 'Cliente de outro ponto', 403);
     $c['cpf'] = cpf_mask($c['cpf']); $c['idade'] = idade($c['nascimento']); unset($c['nascimento']);
     return ['ok' => true, 'cliente' => $c,
         'cartoes' => rows('SELECT id, uid, apelido, ativo, ultimo_uso, created_at FROM be_cards WHERE customer_id = ? ORDER BY id', [$c['id']]),
@@ -1683,7 +1947,8 @@ try {
         case str_starts_with($r, 'admin/'):
             $u = require_admin();
             $fn = 'r_' . str_replace('/', '_', $r);
-            if ($r === 'admin/me') out(['ok' => true, 'user' => $u, 'versao' => BE_VERSION]);
+            if ($r === 'admin/me') out(['ok' => true, 'user' => $u + ['pontos' => locs_do($u)], 'versao' => BE_VERSION]);
+            if ($u['role'] === 'dono' && in_array($r, ROTAS_SO_ADMIN, true)) fail('acesso', 'Só o administrador da plataforma pode fazer isso', 403);
             if (!function_exists($fn)) fail('rota', 'Rota inexistente', 404);
             out($fn($u));
         default: fail('rota', 'Rota inexistente', 404);

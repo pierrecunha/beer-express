@@ -2,308 +2,712 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#F6F1E7" media="(prefers-color-scheme: light)"><meta name="theme-color" content="#100D09" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="robots" content="noindex">
 <title>Beer Express • Painel</title>
+<link rel="preload" href="fontes/figtree.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fontes/bricolage.woff2" as="font" type="font/woff2" crossorigin>
+<script>/* tema antes de pintar (automático, claro ou escuro) */
+(function(){try{var t=localStorage.getItem('be_tema');if(t==='claro'||t==='escuro')document.documentElement.dataset.theme=t==='escuro'?'dark':'light'}catch(e){}})();</script>
 <style>
-:root{--bg:#0F0D0A;--bg2:#16130E;--card:#1D1913;--line:#332B1F;--txt:#F7EFE2;--mut:#A9987E;--amber:#F5B301;--ok:#36C47A;--warn:#F5A524;--err:#F05252;--r:14px}
-*{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--txt);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+/* ═══ Beer Express — painel pelo celular (mesma estrutura do app WashEasy: topo, abas embaixo, folhas que sobem) ═══ */
+@font-face{font-family:'Figtree';src:url(fontes/figtree.woff2) format('woff2');font-weight:300 900;font-display:swap}
+@font-face{font-family:'Bricolage Grotesque';src:url(fontes/bricolage.woff2) format('woff2');font-weight:200 800;font-stretch:75% 100%;font-display:swap}
+/* Claro "espuma" e escuro "barril". Destaque âmbar = cor do chopp. Verde/vermelho/amarelo só para ok, problema e atenção. */
+:root{
+  --bg:#F6F1E7;--card:#FFFFFF;--card2:#FAF6EE;--card3:#EFE7D8;--card4:#DCCFB7;
+  --line:rgba(58,40,10,.09);--line2:rgba(58,40,10,.16);
+  --tx:#4A3A22;--h:#2A1D08;--mut:#7A6646;--dim:#97845F;
+  --g:#B26A00;--gg:rgba(178,106,0,.1);--g3:rgba(178,106,0,.35);--beer:#F5B301;
+  --ok:#0B8A56;--okbg:rgba(11,138,86,.1);--bad:#C2372D;--badbg:rgba(194,55,45,.09);--warn:#9A6200;--warnbg:rgba(214,150,20,.14);
+  --onacc:#FFFFFF;--glass:rgba(246,241,231,.88);--scrim:rgba(42,29,8,.42);
+  --r:16px;--r2:13px;--sh:0 12px 32px rgba(42,29,8,.18);
+  --fh:'Bricolage Grotesque',system-ui,sans-serif;--fb:'Figtree',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;color-scheme:light}
+:root[data-theme=dark]{
+  --bg:#100D09;--card:#1A1610;--card2:#221D15;--card3:#2C251B;--card4:#41372A;
+  --line:rgba(255,240,210,.07);--line2:rgba(255,240,210,.13);
+  --tx:#E3D6C0;--h:#FBF3E4;--mut:#B3A184;--dim:#8C7B60;
+  --g:#F5B301;--gg:rgba(245,179,1,.12);--g3:rgba(245,179,1,.4);
+  --ok:#3FCB88;--okbg:rgba(63,203,136,.12);--bad:#F28379;--badbg:rgba(242,131,121,.11);--warn:#F2B544;--warnbg:rgba(242,181,68,.13);
+  --onacc:#1B1404;--glass:rgba(16,13,9,.86);--scrim:rgba(0,0,0,.62);--sh:0 12px 32px rgba(0,0,0,.5);color-scheme:dark}
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]){
+  --bg:#100D09;--card:#1A1610;--card2:#221D15;--card3:#2C251B;--card4:#41372A;
+  --line:rgba(255,240,210,.07);--line2:rgba(255,240,210,.13);
+  --tx:#E3D6C0;--h:#FBF3E4;--mut:#B3A184;--dim:#8C7B60;
+  --g:#F5B301;--gg:rgba(245,179,1,.12);--g3:rgba(245,179,1,.4);
+  --ok:#3FCB88;--okbg:rgba(63,203,136,.12);--bad:#F28379;--badbg:rgba(242,131,121,.11);--warn:#F2B544;--warnbg:rgba(242,181,68,.13);
+  --onacc:#1B1404;--glass:rgba(16,13,9,.86);--scrim:rgba(0,0,0,.62);--sh:0 12px 32px rgba(0,0,0,.5);color-scheme:dark}}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+[hidden]{display:none!important}
+html,body{background:var(--bg);color:var(--tx);font-family:var(--fb);font-size:16px;line-height:1.45;-webkit-font-smoothing:antialiased}
+body{padding-bottom:calc(84px + env(safe-area-inset-bottom))}
+body.no-tabs{padding-bottom:24px}
 button,input,select,textarea{font:inherit;color:inherit}
-a{color:var(--amber)}
-.app{display:grid;grid-template-columns:220px 1fr;min-height:100vh}
-nav{background:var(--bg2);border-right:1px solid var(--line);padding:18px 12px;position:sticky;top:0;height:100vh}
-nav .lg{font-weight:900;font-size:19px;padding:0 8px 18px}nav .lg b{color:var(--amber)}
-nav button{display:flex;gap:10px;width:100%;padding:10px 12px;border:0;background:none;border-radius:10px;text-align:left;cursor:pointer;color:var(--mut);font-weight:600}
-nav button.on,nav button:hover{background:var(--card);color:var(--txt)}
-nav .bt{position:absolute;bottom:14px;left:12px;right:12px;font-size:12px;color:var(--mut)}
-main{padding:22px 26px;min-width:0}
-h1{font-size:22px;margin-bottom:16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-h1 .sp{flex:1}
-h2{font-size:15px;margin-bottom:10px}
-.grid{display:grid;gap:14px}
-.g4{grid-template-columns:repeat(4,1fr)}.g3{grid-template-columns:repeat(3,1fr)}.g2{grid-template-columns:repeat(2,1fr)}
-.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px;min-width:0}
-.kpi small{color:var(--mut);font-size:12px;text-transform:uppercase;letter-spacing:.05em}.kpi b{display:block;font-size:26px;margin-top:4px}.kpi span{font-size:12px;color:var(--mut)}
-.up{color:var(--ok)!important}.dn{color:var(--err)!important}
-table{width:100%;border-collapse:collapse}
-th{text-align:left;font-size:11.5px;color:var(--mut);text-transform:uppercase;letter-spacing:.04em;padding:8px;border-bottom:1px solid var(--line);white-space:nowrap}
-td{padding:9px 8px;border-bottom:1px solid #2a2419;vertical-align:middle}
-tr.click{cursor:pointer}tr.click:hover td{background:#231e16}
-.tw{overflow:auto}
-.pill{display:inline-block;padding:2px 9px;border-radius:99px;font-size:11.5px;font-weight:700;background:#2b2519;color:var(--mut);white-space:nowrap}
-.p-ok{background:#163525;color:#6ee7a8}.p-warn{background:#3a2c0e;color:#ffd166}.p-err{background:#3a1717;color:#ff9b9b}.p-info{background:#172a3a;color:#8ecbff}
-.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px}
-.btn{border:1px solid var(--line);background:var(--card);padding:8px 14px;border-radius:10px;cursor:pointer;font-weight:600;white-space:nowrap}
-.btn.pri{background:var(--amber);border-color:var(--amber);color:#1b1404}.btn.dan{border-color:#5a2424;color:#ff9b9b}.btn.sm{padding:4px 10px;font-size:12.5px}
-.btn:disabled{opacity:.4}
-input,select,textarea{background:var(--bg2);border:1px solid var(--line);border-radius:9px;padding:8px 10px;width:100%;outline:none}
-input:focus,select:focus,textarea:focus{border-color:var(--amber)}
-label{display:block;font-size:12px;color:var(--mut);margin:10px 0 4px}
-.row{display:flex;gap:10px;align-items:end;flex-wrap:wrap}.row>*{flex:1;min-width:120px}
-.bar{height:8px;background:#2a2419;border-radius:9px;overflow:hidden}.bar i{display:block;height:100%}
-.mut{color:var(--mut)}.r{text-align:right}.nw{white-space:nowrap}
-.chart{display:flex;align-items:flex-end;gap:3px;height:150px;padding-top:10px}
-.chart div{flex:1;background:linear-gradient(180deg,var(--amber),#a87700);border-radius:4px 4px 0 0;min-height:2px;position:relative}
-.chart div:hover::after{content:attr(data-t);position:absolute;bottom:100%;left:50%;transform:translateX(-50%);background:#000;padding:3px 7px;border-radius:6px;font-size:11px;white-space:nowrap;z-index:2}
-.modal{position:fixed;inset:0;background:#000a;display:none;align-items:center;justify-content:center;z-index:50;padding:16px}
-.modal.on{display:flex}.modal .in{background:var(--bg2);border:1px solid var(--line);border-radius:18px;padding:20px;width:100%;max-width:640px;max-height:90vh;overflow:auto}
-.modal h3{margin-bottom:6px}
-.toast{position:fixed;right:18px;bottom:18px;background:#222;border:1px solid var(--line);padding:12px 16px;border-radius:12px;z-index:60;display:none;max-width:380px}
-.login{max-width:360px;margin:12vh auto;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:26px}
-.sec{margin-top:22px}.ev{font-size:13px;padding:8px 0;border-bottom:1px solid #2a2419}.ev small{color:var(--mut);display:block}
-code{background:#000;padding:2px 6px;border-radius:6px;font-size:12px;word-break:break-all}
-.tabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}.tabs button{border:1px solid var(--line);background:none;padding:6px 12px;border-radius:99px;cursor:pointer;color:var(--mut)}.tabs button.on{background:var(--amber);color:#1b1404;border-color:var(--amber);font-weight:700}
-@media(max-width:900px){.app{grid-template-columns:1fr}nav{position:sticky;height:auto;display:flex;overflow:auto;padding:8px;z-index:5}nav .lg,nav .bt{display:none}nav button{width:auto;white-space:nowrap}
-.g4{grid-template-columns:repeat(2,1fr)}.g3,.g2{grid-template-columns:1fr}main{padding:16px}}
+button{cursor:pointer;border:0;background:none}
+a{color:var(--g)}
+:focus-visible{outline:2.5px solid var(--g);outline-offset:2px;border-radius:10px}
+.wrap{max-width:760px;margin:0 auto;padding:0 16px}
+svg.i{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.mut{color:var(--mut)}.dim{color:var(--dim)}.okc{color:var(--ok)}.badc{color:var(--bad)}.warnc{color:var(--warn)}
+.money{font-variant-numeric:tabular-nums}
+.row{display:flex;align-items:center;gap:12px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.r{text-align:right}.nw{white-space:nowrap}
+/* topo */
+.top{position:sticky;top:0;z-index:30;background:var(--glass);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid var(--line);padding:calc(10px + env(safe-area-inset-top)) 0 10px}
+.top .wrap{display:flex;align-items:center;gap:8px}
+.brand{display:flex;align-items:center;gap:6px;font-family:var(--fh);font-weight:800;font-size:18px;color:var(--h);letter-spacing:-.4px;flex-shrink:0}
+.brand b{color:var(--g);font-weight:800}
+.pill{display:flex;align-items:center;gap:8px;background:var(--card2);border:1px solid var(--line2);color:var(--h);border-radius:12px;padding:8px 12px;font-weight:700;font-size:15px;min-height:42px;flex:1 1 auto;min-width:0}
+.pill svg{width:18px;height:18px;color:var(--g)}
+.pill span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;text-align:left}
+.sq{width:42px;height:42px;border-radius:12px;background:var(--card2);border:1px solid var(--line2);color:var(--tx);display:grid;place-items:center;flex-shrink:0;font-weight:800;font-family:var(--fh)}
+@media(max-width:400px){.brand .bt{display:none}}
+/* títulos */
+.ph1{display:flex;align-items:center;gap:10px;margin:18px 0 12px}
+.ph1 h1{font-family:var(--fh);font-size:24px;font-weight:700;color:var(--h);letter-spacing:-.5px;flex:1;line-height:1.15}
+.ph1 p{font-size:14px;color:var(--mut);font-family:var(--fb);font-weight:500;letter-spacing:0}
+.sech{font-family:var(--fh);font-size:16px;font-weight:700;color:var(--h);margin:24px 2px 10px;letter-spacing:-.2px;display:flex;align-items:center;gap:8px}
+.sech .mut{font-family:var(--fb);font-size:13px;font-weight:600;margin-left:auto}
+/* blocos */
+.box{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px;min-width:0}
+.box+.box{margin-top:12px}
+.box h2{font-family:var(--fh);color:var(--h);font-size:17px;font-weight:700;letter-spacing:-.2px;margin-bottom:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:3px 10px;background:var(--card3);color:var(--tx);font-size:12.5px;font-weight:700;white-space:nowrap}
+.chip.ok{background:var(--okbg);color:var(--ok)}.chip.bad{background:var(--badbg);color:var(--bad)}.chip.warn{background:var(--warnbg);color:var(--warn)}.chip.acc{background:var(--gg);color:var(--g)}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 3px var(--okbg);flex-shrink:0;display:inline-block}
+.dot.off{background:var(--bad);box-shadow:0 0 0 3px var(--badbg)}
+/* KPIs */
+.kpis{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px;min-height:96px}
+.kpi .l{font-size:13px;color:var(--mut);font-weight:600}
+.kpi .v{font-family:var(--fh);font-size:clamp(21px,6vw,28px);font-weight:700;color:var(--h);margin-top:6px;line-height:1.05;white-space:nowrap;letter-spacing:-.6px;font-variant-numeric:tabular-nums}
+.kpi .s{font-size:13px;color:var(--mut);margin-top:5px}
+.bars{display:flex;align-items:flex-end;gap:3px;height:110px;margin-top:8px}
+.bars div{flex:1;background:var(--g);opacity:.85;border-radius:4px 4px 1px 1px;min-height:2px;position:relative}
+.bars.h div{background:var(--card4);opacity:1}
+.meter{height:8px;border-radius:5px;background:var(--card3);overflow:hidden}.meter i{display:block;height:100%;border-radius:5px;background:var(--ok)}
+.meter i.low{background:var(--bad)}.meter i.mid{background:var(--warn)}
+/* itens de lista */
+.it{display:flex;gap:12px;align-items:center;width:100%;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:var(--r2);padding:13px 14px;margin-bottom:8px;color:var(--tx);text-decoration:none}
+button.it:hover,a.it:hover{border-color:var(--g3)}
+.it .t{font-weight:700;color:var(--h)}
+.it .s{font-size:13.5px;color:var(--mut)}
+.it .grow{flex:1;min-width:0}
+.it .grow>*{overflow:hidden;text-overflow:ellipsis}
+.it .ic{width:40px;height:40px;border-radius:12px;background:var(--gg);color:var(--g);display:grid;place-items:center;flex-shrink:0;font-size:19px}
+.it .pr{font-family:var(--fh);font-weight:700;font-size:17px;color:var(--h);white-space:nowrap;font-variant-numeric:tabular-nums}
+.it>svg{color:var(--dim)}
+.lrow{display:flex;justify-content:space-between;gap:12px;padding:11px 0;border-bottom:1px solid var(--line);font-size:15px;align-items:center}
+.lrow:last-child{border-bottom:0}
+.lrow b{color:var(--h)}
+.empty{text-align:center;color:var(--mut);padding:34px 16px}
+.empty .e{font-size:40px;margin-bottom:8px}
+/* botões */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:12px;padding:12px 18px;font-weight:700;font-size:16px;min-height:48px;text-decoration:none;white-space:nowrap;transition:opacity .15s,border-color .15s}
+.btn svg{width:18px;height:18px}
+.btn.w{background:var(--g);color:var(--onacc)}
+.btn.o{background:var(--card2);border:1px solid var(--line2);color:var(--h)}
+.btn.o:hover{border-color:var(--g3)}
+.btn.d{background:var(--badbg);color:var(--bad)}
+.btn.sm{min-height:38px;padding:7px 12px;font-size:14px;border-radius:10px}
+.btn.full{width:100%}
+.btn:disabled{opacity:.5;cursor:wait}
+.acts{display:flex;gap:8px;flex-wrap:wrap}
+/* segmentado */
+.seg{display:flex;background:var(--card3);border-radius:12px;padding:4px;gap:4px;margin-bottom:12px;overflow-x:auto;scrollbar-width:none}
+.seg::-webkit-scrollbar{display:none}
+.seg button{flex:1;padding:9px 12px;min-height:40px;border-radius:9px;font-weight:700;font-size:14.5px;color:var(--mut);white-space:nowrap}
+.seg button[aria-pressed=true]{background:var(--card);color:var(--h);box-shadow:0 1px 3px var(--line2)}
+.search{width:100%;background:var(--card);border:1px solid var(--line2);border-radius:12px;padding:12px 14px;color:var(--h);outline:none;font-size:16px}
+.search:focus{border-color:var(--g)}
+/* abas embaixo (celular) */
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:40;background:var(--card);border-top:1px solid var(--line);padding:6px 8px calc(6px + env(safe-area-inset-bottom))}
+.tabs .wrap{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;padding:0}
+.tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;height:58px;border-radius:12px;color:var(--mut);font-size:12px;font-weight:700;position:relative}
+.tab[aria-current=page]{color:var(--g)}
+.tab[aria-current=page]::before{content:'';position:absolute;top:-6px;left:30%;right:30%;height:3px;border-radius:0 0 3px 3px;background:var(--g)}
+.tab.star svg{width:25px;height:25px}
+/* barra lateral (computador) */
+.side{display:none}
+@media(min-width:1024px){
+  body,body.no-tabs{padding:0 0 32px 248px}
+  .tabs{display:none!important}
+  .side{display:flex;flex-direction:column;gap:2px;position:fixed;left:0;top:0;bottom:0;width:248px;z-index:35;background:var(--card);border-right:1px solid var(--line);padding:18px 12px}
+  .side .brand{font-size:21px;padding:4px 10px 18px}
+  .side button{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:11px;color:var(--mut);font-weight:700;text-align:left}
+  .side button:hover{background:var(--card2);color:var(--h)}
+  .side button[aria-current=page]{background:var(--gg);color:var(--g)}
+  .side .foot{margin-top:auto;font-size:13px;color:var(--mut);padding:10px 12px}
+  .top .brand{display:none}
+  .wrap{max-width:1080px}
+  .kpis{grid-template-columns:repeat(4,1fr)}
+  .cols2{display:grid;grid-template-columns:1.4fr 1fr;gap:12px;align-items:start}
+  .cols2>.box+.box{margin-top:0}
+}
+/* folha que sobe (celular) / janela (computador) */
+.sheet-bg{position:fixed;inset:0;background:var(--scrim);backdrop-filter:blur(3px);z-index:60;display:none}
+.sheet-bg.on{display:block}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:61;background:var(--card);border:1px solid var(--line2);border-bottom:0;border-radius:20px 20px 0 0;max-height:92vh;overflow-y:auto;overscroll-behavior:contain;padding:6px 18px calc(22px + env(safe-area-inset-bottom));transform:translateY(105%);transition:transform .24s cubic-bezier(.2,.8,.2,1)}
+.sheet.on{transform:none}
+.sheet:not(.on){visibility:hidden;transition:transform .24s,visibility 0s .24s}
+.sheet.full{top:0;max-height:none;border-radius:0;padding-top:calc(6px + env(safe-area-inset-top))}
+.sheet .grab{width:40px;height:4px;border-radius:2px;background:var(--card4);margin:6px auto 12px}
+.sheet.full .grab{display:none}
+.sheet h2.st{font-family:var(--fh);font-size:21px;letter-spacing:-.3px;font-weight:700;color:var(--h);margin:6px 0 14px;display:flex;align-items:center;gap:10px}
+.sheet h2.st small{display:block;font-family:var(--fb);font-size:13px;color:var(--mut);font-weight:600;letter-spacing:0}
+.x{margin-left:auto;width:42px;height:42px;border-radius:10px;display:grid;place-items:center;background:var(--card2);border:1px solid var(--line2);color:var(--tx);flex-shrink:0}
+@media(min-width:760px){
+  .sheet,.sheet.full{left:50%;right:auto;bottom:auto;top:50%;width:min(620px,calc(100vw - 48px));max-height:88vh;border-radius:20px;border-bottom:1px solid var(--line2);transform:translate(-50%,-46%);opacity:0;pointer-events:none;transition:transform .2s,opacity .2s;padding-top:6px}
+  .sheet.on{transform:translate(-50%,-50%);opacity:1;pointer-events:auto}
+  .sheet .grab{display:none}
+}
+.sbar{position:sticky;bottom:calc(-22px - env(safe-area-inset-bottom));margin:16px -18px calc(-22px - env(safe-area-inset-bottom));padding:12px 18px calc(12px + env(safe-area-inset-bottom));background:var(--card);border-top:1px solid var(--line);display:flex;gap:10px;z-index:2}
+.sbar .btn{flex:1}
+/* formulários */
+.field{display:block;margin-bottom:14px;min-width:0}
+.field>span{display:block;font-size:14px;color:var(--h);margin-bottom:6px;font-weight:700}
+.field>span small{color:var(--mut);font-weight:500}
+.field input,.field select,.field textarea{width:100%;min-width:0;-webkit-appearance:none;appearance:none;background:var(--card2);border:1px solid var(--line2);border-radius:11px;padding:12px 13px;color:var(--h);outline:none;min-height:48px;font-size:16px}
+.field textarea{min-height:76px;resize:vertical}
+.field input[type=color]{padding:4px;height:48px}
+.field select{background-image:linear-gradient(45deg,transparent 50%,var(--mut) 50%),linear-gradient(135deg,var(--mut) 50%,transparent 50%);background-position:calc(100% - 18px) 21px,calc(100% - 13px) 21px;background-size:5px 5px;background-repeat:no-repeat;padding-right:34px}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--g);box-shadow:0 0 0 3px var(--gg)}
+.field .help{font-size:13px;color:var(--mut);margin-top:5px}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}
+@media(max-width:420px){.fgrid.r1{grid-template-columns:1fr}}
+.opts{display:flex;flex-wrap:wrap;gap:8px}
+.opts button{background:var(--card2);border:1px solid var(--line2);border-radius:999px;padding:9px 14px;font-weight:700;font-size:14.5px;color:var(--tx);min-height:42px}
+.opts button[aria-pressed=true]{background:var(--gg);border-color:var(--g);color:var(--g)}
+.sw{width:42px;height:42px;border-radius:50%;border:3px solid var(--card);box-shadow:0 0 0 1px var(--line2)}
+.sw[aria-pressed=true]{box-shadow:0 0 0 3px var(--g)}
+.step{display:flex;align-items:center;background:var(--card2);border:1px solid var(--line2);border-radius:12px;overflow:hidden}
+.step button{width:52px;height:50px;font-size:24px;font-weight:700;color:var(--g)}
+.step input{flex:1;border:0!important;background:transparent!important;text-align:center;font-family:var(--fh);font-size:22px!important;font-weight:700;min-width:0;box-shadow:none!important;padding:0!important}
+.step em{font-style:normal;color:var(--mut);font-weight:700;padding-right:12px}
+.tg{display:flex;align-items:center;gap:12px;background:var(--card2);border:1px solid var(--line2);border-radius:12px;padding:12px 14px;margin-bottom:14px;cursor:pointer}
+.tg .grow{flex:1}.tg b{color:var(--h);display:block}.tg small{color:var(--mut)}
+.tg input{display:none}
+.tg i{width:48px;height:28px;border-radius:14px;background:var(--card4);position:relative;flex-shrink:0;transition:background .15s}
+.tg i::after{content:'';position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:left .15s;box-shadow:0 1px 3px #0003}
+.tg input:checked+i{background:var(--ok)}.tg input:checked+i::after{left:23px}
+.note{background:var(--warnbg);color:var(--warn);border-radius:12px;padding:10px 12px;font-size:14px;font-weight:600;margin-bottom:14px}
+.note.info{background:var(--gg);color:var(--g)}
+/* ═══ Bebidas ═══ */
+.taps{display:grid;grid-template-columns:1fr;gap:12px}
+@media(min-width:640px){.taps{grid-template-columns:1fr 1fr}}
+.tapc{display:grid;grid-template-columns:92px 1fr;gap:14px;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:12px;color:var(--tx);position:relative;width:100%}
+.tapc:hover{border-color:var(--g3)}
+.tapc .ft{width:92px;height:112px;border-radius:13px;background:linear-gradient(160deg,var(--card3),var(--card2));display:grid;place-items:center;overflow:hidden;position:relative}
+.tapc .ft img{width:100%;height:100%;object-fit:cover}
+.tapc .num{position:absolute;left:6px;top:6px;background:#000a;color:#fff;font-family:var(--fh);font-weight:800;font-size:12px;border-radius:7px;padding:1px 7px}
+.tapc h3{font-family:var(--fh);font-size:18px;color:var(--h);line-height:1.15;letter-spacing:-.3px;font-weight:700}
+.tapc .s{font-size:13px;color:var(--mut);margin-top:2px}
+.tapc .szs{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+.tapc .szs span{background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:2px 8px;font-size:12.5px;font-weight:700;color:var(--h);white-space:nowrap}
+.tapc .kg{display:flex;align-items:center;gap:8px;margin-top:9px;font-size:12.5px;color:var(--mut);font-weight:600}
+.tapc .kg .meter{flex:1;height:6px}
+.tapc .ed{position:absolute;right:10px;top:10px;width:34px;height:34px;border-radius:10px;background:var(--gg);color:var(--g);display:grid;place-items:center}
+.tapc .ed svg{width:17px;height:17px}
+.tapc.off{opacity:.6}
+.cup{width:48px;height:62px;border-radius:7px 7px 13px 13px;background:linear-gradient(180deg,#ffffffcc 0 17%,var(--c,#F5B301) 17% 100%);box-shadow:inset 0 -10px 18px #0003,0 0 0 2px #fff6}
+.fab{position:fixed;right:18px;bottom:calc(92px + env(safe-area-inset-bottom));z-index:39;background:var(--g);color:var(--onacc);border-radius:16px;padding:0 18px;height:54px;display:flex;align-items:center;gap:8px;font-weight:800;box-shadow:var(--sh)}
+@media(min-width:1024px){.fab{bottom:28px;right:28px}}
+/* editor de bebida */
+.prev{background:#120E08;border-radius:18px;padding:14px;color:#F7EFE2;display:grid;grid-template-columns:1fr 110px;gap:12px;margin-bottom:16px;position:relative;overflow:hidden;font-family:system-ui,sans-serif}
+.prev .tn{font-size:28px;font-weight:900;color:#F5B301;line-height:1}
+.prev h4{font-size:17px;font-weight:900;line-height:1.1;margin-top:6px;word-break:break-word}
+.prev .cv{font-size:11px;color:#A9987E;letter-spacing:.06em;margin-top:2px}
+.prev .inf{font-size:11px;color:#A9987E;margin-top:10px;line-height:1.5}.prev .inf b{display:block;color:#F7EFE2;font-size:13px}
+.prev .im{height:150px;border-radius:12px;background:#000;display:grid;place-items:center;overflow:hidden}
+.prev .im img{width:100%;height:100%;object-fit:cover}
+.prev .val{grid-column:1/-1;display:flex;justify-content:space-between;align-items:flex-end;border-top:1px solid #ffffff1a;padding-top:10px}
+.prev .val b{font-size:22px;color:#F5B301;white-space:nowrap}.prev .val>span{flex-shrink:0;padding-left:10px}.prev .val small{font-size:11px;color:#A9987E}
+.prev .lbl{grid-column:1/-1;margin:-4px 0 -6px;font-size:10px;font-weight:800;letter-spacing:.08em;color:#A9987E}
+.fotob{display:grid;grid-template-columns:96px 1fr;gap:12px;align-items:center;margin-bottom:16px}
+.fotob .pv{width:96px;height:96px;border-radius:14px;background:var(--card3);display:grid;place-items:center;overflow:hidden}
+.fotob .pv img{width:100%;height:100%;object-fit:cover}
+.fotob .acts .btn{flex:1}
+.szr{display:grid;grid-template-columns:1fr 1fr 44px;gap:8px;align-items:start;margin-bottom:8px}
+.szr .in{display:flex;align-items:center;background:var(--card2);border:1px solid var(--line2);border-radius:11px;padding:0 12px;min-height:50px}
+.szr .in input{border:0;background:transparent;outline:none;width:100%;min-width:0;font-size:17px;font-weight:700;color:var(--h);padding:12px 0}
+.szr .in em{font-style:normal;color:var(--mut);font-weight:700;font-size:14px}
+.szr .del{height:50px;border-radius:11px;background:var(--badbg);color:var(--bad);display:grid;place-items:center}
+.szr .hint{grid-column:1/-1;font-size:12.5px;color:var(--mut);margin:-2px 2px 4px}
+.lib{display:grid;grid-template-columns:56px 1fr;gap:12px;align-items:center}
+.lib .ft{width:56px;height:56px;border-radius:12px;background:var(--card3);display:grid;place-items:center;overflow:hidden}
+.lib .ft img{width:100%;height:100%;object-fit:cover}.lib .cup{width:30px;height:38px}
+details.adv{border:1px solid var(--line2);border-radius:12px;padding:0 14px;margin-bottom:14px}
+details.adv summary{padding:13px 0;font-weight:700;color:var(--h);cursor:pointer}
+/* toast */
+.toast{position:fixed;left:16px;right:16px;bottom:calc(96px + env(safe-area-inset-bottom));z-index:90;background:var(--h);color:var(--bg);border-radius:12px;padding:13px 16px;font-weight:700;font-size:15px;box-shadow:var(--sh);display:none;text-align:center;max-width:520px;margin:0 auto}
+.toast.on{display:block;animation:tin .25s ease}.toast.bad{background:var(--bad);color:#fff}
+@keyframes tin{from{opacity:0;transform:translateY(8px)}}
+@media(min-width:1024px){.toast{left:auto;right:28px;bottom:28px;width:420px}}
+/* login */
+.login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+.login .box{width:100%;max-width:380px;padding:34px 26px;border-radius:20px}
+.login h1{font-family:var(--fh);font-size:32px;font-weight:800;color:var(--h);text-align:center;letter-spacing:-1px}
+.login h1 b{color:var(--g)}
+.login p.s{text-align:center;color:var(--mut);margin:4px 0 22px}
+.hub{background:var(--card);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;margin-bottom:12px}
+.hub button,.hub a{display:flex;align-items:center;gap:14px;width:100%;text-align:left;padding:14px;min-height:62px;border-bottom:1px solid var(--line);color:var(--tx);text-decoration:none}
+.hub>*:last-child{border-bottom:0}
+.hub .ic{width:38px;height:38px;border-radius:11px;background:var(--gg);color:var(--g);display:grid;place-items:center;font-size:18px;flex-shrink:0}
+.hub b{display:block;color:var(--h)}.hub small{color:var(--mut);font-size:13px}
+.hub .grow{flex:1;min-width:0}
+code{background:var(--card3);padding:2px 6px;border-radius:6px;font-size:12.5px;word-break:break-all;color:var(--h)}
+table{width:100%;border-collapse:collapse;font-size:14.5px}
+td,th{padding:9px 6px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
+th{font-size:12px;color:var(--mut);font-weight:700}
+.tw{overflow-x:auto}
 </style>
 </head>
-<body>
+<body class="no-tabs">
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+ <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/></symbol>
+ <symbol id="i-beer" viewBox="0 0 24 24"><path d="M5 8h11v11a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2z"/><path d="M16 11h2a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2h-2"/><path d="M5 8a3 3 0 0 1 3-4 3 3 0 0 1 5 0 3 3 0 0 1 3 4"/><path d="M9 12v5M12 12v5"/></symbol>
+ <symbol id="i-bag" viewBox="0 0 24 24"><path d="M5 8h14l-1 12H6z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></symbol>
+ <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M21 20c0-2.6-1.6-4.8-4-5.6"/></symbol>
+ <symbol id="i-more" viewBox="0 0 24 24"><rect x="4" y="4" width="6" height="6" rx="1.5"/><rect x="14" y="4" width="6" height="6" rx="1.5"/><rect x="4" y="14" width="6" height="6" rx="1.5"/><rect x="14" y="14" width="6" height="6" rx="1.5"/></symbol>
+ <symbol id="i-store" viewBox="0 0 24 24"><path d="M4 9l1.5-5h13L20 9"/><path d="M4 9h16v2a3 3 0 0 1-5.3 2 3 3 0 0 1-5.4 0A3 3 0 0 1 4 11z"/><path d="M5 13v7h14v-7"/></symbol>
+ <symbol id="i-caret" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5"/></symbol>
+ <symbol id="i-chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol>
+ <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+ <symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></symbol>
+ <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+ <symbol id="i-cam" viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></symbol>
+ <symbol id="i-img" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></symbol>
+ <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></symbol>
+ <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12l5 5L20 7"/></symbol>
+</svg>
 <div id="root"></div>
-<div class="modal" id="modal" onclick="if(event.target===this)closeM()"><div class="in" id="mIn"></div></div>
-<div class="toast" id="toast"></div>
+<div class="sheet-bg" id="sheetBg" onclick="closeM()"></div>
+<section class="sheet" id="sheet" role="dialog" aria-modal="true"></section>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script>
 const API='api.php';
-let JWT=localStorage.getItem('be_jwt')||'', CAT=null, SET=null, PAGE='dash', TIMER=null;
-const $=s=>document.querySelector(s), esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let JWT=localStorage.getItem('be_jwt')||'', ME=null, CAT=null, SET=null, BEB=null, PAGE='bebidas', TIMER=null, PONTOS=[];
+let PONTO=localStorage.getItem('be_ponto')||'';
+const $=s=>document.querySelector(s), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const ic=n=>`<svg class="i"><use href="#i-${n}"/></svg>`;
 const brl=v=>'R$ '+Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+const num=v=>String(v??'').replace('.',',');
 const mlf=ml=>(ml=+ml||0)>=1000?(ml/1000).toLocaleString('pt-BR',{maximumFractionDigits:1})+' L':ml+' ml';
-const dt=s=>s?new Date(s.replace(' ','T')).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'-';
+const dt=s=>s?new Date(s.replace(' ','T')).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'—';
 const ago=s=>{if(!s)return 'nunca';const m=Math.round((Date.now()-new Date(s.replace(' ','T')))/60000);return m<1?'agora':m<60?m+' min':m<1440?Math.round(m/60)+' h':Math.round(m/1440)+' d'};
-function toast(m){const t=$('#toast');t.textContent=m;t.style.display='block';clearTimeout(t._t);t._t=setTimeout(()=>t.style.display='none',3500)}
-function openM(h){$('#mIn').innerHTML=h;$('#modal').classList.add('on')} function closeM(){$('#modal').classList.remove('on')}
+const hoje=(d=0)=>{const x=new Date(Date.now()-d*864e5);return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0')};
+const ADMIN=()=>ME&&ME.role!=='dono';
+function toast(m,bad){const t=$('#toast');t.textContent=m;t.className='toast on'+(bad?' bad':'');clearTimeout(t._t);t._t=setTimeout(()=>t.className='toast',3600)}
+function openM(h,full){const s=$('#sheet');s.className='sheet'+(full?' full':'');s.innerHTML='<div class="grab"></div>'+h;s.scrollTop=0;$('#sheetBg').classList.add('on');requestAnimationFrame(()=>s.classList.add('on'));document.body.style.overflow='hidden'}
+function closeM(){$('#sheet').classList.remove('on');$('#sheetBg').classList.remove('on');document.body.style.overflow=''}
+const sh=(t,sub)=>`<h2 class="st"><span>${t}${sub?`<small>${sub}</small>`:''}</span><button class="x" onclick="closeM()" aria-label="Fechar">${ic('x')}</button></h2>`;
 async function api(r,body){const res=await fetch(API+'?r='+r,{method:body?'POST':'GET',headers:{'Content-Type':'application/json','Authorization':'Bearer '+JWT},body:body?JSON.stringify(body):undefined});
-  const j=await res.json().catch(()=>({ok:false,mensagem:'Erro de comunicação'}));
-  if(res.status===401&&j.erro==='auth'){JWT='';localStorage.removeItem('be_jwt');return login()}
-  if(!j.ok)throw j; return j}
-const ST={aguardando_pagamento:['Aguardando','p-info'],pago:['Pago','p-info'],servindo:['Servindo','p-info'],concluido:['Concluído','p-ok'],parcial:['Parcial','p-warn'],falhou:['Falhou','p-err'],cancelado:['Cancelado',''],estornado:['Estornado','p-warn'],
-  pendente:['Na fila',''],armado:['Aguardando cliente','p-info'],liberado:['Liberado','p-info'],timeout:['Tempo esgotado','p-warn'],erro:['Erro','p-err']};
-const pill=s=>{const[t,c]=ST[s]||[s,''];return `<span class="pill ${c}">${t}</span>`};
+  const j=await res.json().catch(()=>({ok:false,mensagem:'Erro de comunicação com o servidor'}));
+  if(res.status===401&&j.erro==='auth'){JWT='';localStorage.removeItem('be_jwt');login();throw j}
+  if(!j.ok)throw j;return j}
+const ST={aguardando_pagamento:['Aguardando',''],pago:['Pago','acc'],servindo:['Servindo','acc'],concluido:['Concluído','ok'],parcial:['Parcial','warn'],falhou:['Falhou','bad'],cancelado:['Cancelado',''],estornado:['Estornado','warn'],
+  pendente:['Na fila',''],armado:['Aguardando cliente','acc'],liberado:['Liberado','acc'],timeout:['Tempo esgotado','warn'],erro:['Erro','bad']};
+const pill=s=>{const[t,c]=ST[s]||[s,''];return `<span class="chip ${c}">${t}</span>`};
 const met=m=>({credito:'💳 Crédito',debito:'💳 Débito',pix:'⚡ Pix'})[m]||'—';
-const onl=o=>`<span class="dot" style="background:${o?'var(--ok)':'var(--err)'}"></span>`;
 
-/* ============ login ============ */
-async function login(){
+/* ════════ login ════════ */
+async function login(){document.body.className='no-tabs';
   const s=await fetch(API+'?r=admin/needs_setup').then(r=>r.json()).catch(()=>({}));
-  $('#root').innerHTML=`<div class="login"><div style="font-size:42px">🍺</div><h2 style="font-size:22px;margin:6px 0 2px">Beer Express</h2><p class="mut">${s.needs_setup?'Crie o usuário administrador':'Painel de gestão'}</p>
-   ${s.needs_setup?'<label>Seu nome</label><input id="ln" value="Pierre">':''}<label>E-mail</label><input id="le" type="email"><label>Senha</label><input id="lp" type="password" onkeydown="if(event.key==='Enter')doLogin(${!!s.needs_setup})">
-   <button class="btn pri" style="width:100%;margin-top:16px" onclick="doLogin(${!!s.needs_setup})">${s.needs_setup?'Criar e entrar':'Entrar'}</button><p id="lerr" style="color:var(--err);margin-top:10px"></p></div>`}
+  $('#root').innerHTML=`<div class="login"><div class="box"><div style="font-size:46px;text-align:center">🍺</div><h1>Beer <b>Express</b></h1><p class="s">${s.needs_setup?'Crie o usuário administrador':'Painel do seu quiosque de chopp'}</p>
+   ${s.needs_setup?'<label class="field"><span>Seu nome</span><input id="ln" autocomplete="name"></label>':''}
+   <label class="field"><span>E-mail</span><input id="le" type="email" autocomplete="username" inputmode="email"></label>
+   <label class="field"><span>Senha</span><input id="lp" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin(${!!s.needs_setup})"></label>
+   <button class="btn w full" onclick="doLogin(${!!s.needs_setup})">${s.needs_setup?'Criar e entrar':'Entrar'}</button><p id="lerr" class="badc" style="margin-top:12px;text-align:center"></p></div></div>`}
 async function doLogin(setup){try{const j=await fetch(API+'?r=admin/'+(setup?'setup':'login'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nome:$('#ln')?.value,email:$('#le').value,senha:$('#lp').value})}).then(r=>r.json());
-  if(!j.ok)throw j;JWT=j.token;localStorage.setItem('be_jwt',JWT);shell()}catch(e){$('#lerr').textContent=e.mensagem||'Falha'}}
+  if(!j.ok)throw j;JWT=j.token;localStorage.setItem('be_jwt',JWT);boot()}catch(e){$('#lerr').textContent=e.mensagem||'Falha ao entrar'}}
 
-/* ============ layout ============ */
-const MENU=[['dash','📊','Visão geral'],['vendas','🧾','Vendas'],['clientes','👤','Clientes'],['equip','🛢️','Chopeiras e barris'],['eventos','🔔','Eventos'],['config','⚙️','Configurações']];
-function shell(){$('#root').innerHTML=`<div class="app"><nav><div class="lg">🍺 Beer <b>Express</b></div>${MENU.map(([k,i,t])=>`<button data-p="${k}" onclick="nav('${k}')">${i} ${t}</button>`).join('')}
-  <a class="btn" href="simulador.html" target="_blank" style="display:block;text-align:center;margin:14px 4px 0">🧪 Simulador</a>
-  <div class="bt"><a href="#" onclick="senha();return false">Alterar senha</a> · <a href="#" onclick="localStorage.removeItem('be_jwt');location.reload()">Sair</a></div></nav><main id="main"></main></div>`;nav(PAGE)}
-function nav(p){PAGE=p;clearInterval(TIMER);document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.p===p));
-  ({dash,vendas,clientes,equip,eventos,config})[p]().catch(e=>$('#main').innerHTML=`<p style="color:var(--err)">${esc(e.mensagem||e)}</p>`)}
+/* ════════ estrutura ════════ */
+const TABS=[['dash','home','Início'],['bebidas','beer','Bebidas'],['vendas','bag','Vendas'],['clientes','users','Clientes'],['mais','more','Mais']];
+async function boot(){
+  try{const m=await api('admin/me');ME=m.user}catch(e){return}
+  try{CAT=await api('admin/catalog');PONTOS=CAT.locations}catch(e){PONTOS=[]}
+  if(PONTO&&!PONTOS.some(p=>p.id==PONTO))PONTO='';
+  document.body.className='';
+  $('#root').innerHTML=`<aside class="side"><div class="brand">🍺 Beer <b>Express</b></div>${TABS.map(([k,i,t])=>`<button data-p="${k}" onclick="nav('${k}')">${ic(i)}${t}</button>`).join('')}
+     <div class="foot">${esc(ME.nome)}<br><small>${ME.role==='dono'?'Dono de quiosque':ME.role==='operador'?'Operador':'Administrador'}</small></div></aside>
+   <header class="top"><div class="wrap"><div class="brand">🍺<span class="bt">Beer <b>Express</b></span></div>
+     <button class="pill" onclick="escolherPonto()" ${PONTOS.length<2?'disabled':''}>${ic('store')}<span id="pontoTxt"></span>${PONTOS.length>1?`<svg class="i" style="width:16px;height:16px;color:var(--mut)"><use href="#i-caret"/></svg>`:''}</button>
+     <button class="sq" onclick="nav('mais')" title="${esc(ME.nome)}">${esc((ME.nome||'?').trim()[0].toUpperCase())}</button></div></header>
+   <main class="wrap" id="main"></main>
+   <nav class="tabs" aria-label="Seções">${`<div class="wrap">${TABS.map(([k,i,t])=>`<button class="tab ${k==='bebidas'?'star':''}" data-p="${k}" onclick="nav('${k}')">${ic(i)}${t}</button>`).join('')}</div>`}</nav>`;
+  pontoTxt();
+  const h=location.hash.slice(1);nav(PG[h]?h:'bebidas');
+}
+window.addEventListener('hashchange',()=>{const h=location.hash.slice(1);if(PG[h]&&h!==PAGE&&ME)nav(h)});
+function pontoTxt(){const p=PONTOS.find(x=>x.id==PONTO);$('#pontoTxt').textContent=p?p.nome:(PONTOS.length===1?PONTOS[0].nome:PONTOS.length?'Todos os pontos':'Nenhum ponto ainda')}
+function escolherPonto(){openM(sh('Qual quiosque?')+`<div class="hub">${[{id:'',nome:'Todos os pontos'},...PONTOS].map(p=>`<button onclick="PONTO='${p.id}';localStorage.setItem('be_ponto',PONTO);pontoTxt();closeM();nav(PAGE)"><span class="ic">${p.id?'🍺':'🏪'}</span><span class="grow"><b>${esc(p.nome)}</b></span>${String(PONTO)===String(p.id)?ic('check'):''}</button>`).join('')}</div>`)}
+const PG={};
+function nav(p){if(!PG[p])p='bebidas';PAGE=p;clearInterval(TIMER);if(location.hash.slice(1)!==p)history.replaceState(null,'','#'+p);
+  document.querySelectorAll('[data-p]').forEach(b=>{if(b.dataset.p===p)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current')});
+  window.scrollTo(0,0);$('#main').innerHTML='<div class="empty"><div class="e">⏳</div>Carregando…</div>';
+  PG[p]().catch(e=>{if(e&&e.erro==='auth')return;$('#main').innerHTML=`<div class="empty"><div class="e">⚠️</div>${esc(e.mensagem||e)}<br><button class="btn o" style="margin-top:14px" onclick="nav(PAGE)">Tentar de novo</button></div>`})}
 
-/* ============ dashboard ============ */
-async function dash(){
-  const d=await api('admin/dashboard'), var_=d.ontem.s>0?Math.round(100*(d.hoje.s-d.ontem.s)/d.ontem.s):null;
-  const maxD=Math.max(1,...d.dias.map(x=>+x.s)); const dias=[];for(let i=29;i>=0;i--){const k=new Date(Date.now()-i*864e5-new Date().getTimezoneOffset()*6e4).toISOString().slice(0,10);dias.push(d.dias.find(x=>x.d===k)||{d:k,n:0,s:0,ml:0})}
+/* ════════ BEBIDAS — editar foto, nome, tipo, teor, tamanhos e preços de cada torneira ════════ */
+const ESTILOS=['Pilsen','Lager','Puro Malte','IPA','APA','Session IPA','Weiss','Witbier','Red Ale','Stout','Porter','Sour','Vinho','Sem álcool'];
+const CORES=[['#F2D46B','Clara'],['#F2B705','Dourada'],['#D9861C','Âmbar'],['#B5541C','Cobre'],['#8E2B1E','Vermelha'],['#4A2511','Escura'],['#1C0F08','Preta'],['#9B1B48','Vinho']];
+PG.bebidas=async function(){
+  BEB=await api('admin/bebidas');
+  const ts=BEB.torneiras.filter(t=>!PONTO||t.location_id==PONTO), porPonto={};
+  ts.forEach(t=>(porPonto[t.loc]=porPonto[t.loc]||[]).push(t));
+  const podeCriar=BEB.controladores.some(d=>(!PONTO||d.location_id==PONTO)&&d.canais_usados.length<(d.tipo==='torneira'?1:4));
+  $('#main').innerHTML=`<div class="ph1"><h1>Suas bebidas<p>Toque numa torneira para trocar foto, nome, tipo, teor alcoólico, tamanhos e preços.</p></h1></div>
+   ${BEB.happy_hour&&BEB.happy_hour.ativo?`<div class="note info">🎉 ${esc(BEB.happy_hour.nome)} agora: preços −${Math.round(BEB.happy_hour.pct)}% na maquininha até ${esc(BEB.happy_hour.ate)}.</div>`:''}
+   ${ts.length?Object.entries(porPonto).map(([loc,l])=>`${Object.keys(porPonto).length>1||!PONTO?`<div class="sech">🏪 ${esc(loc)}<span class="mut">${l.length} torneira${l.length>1?'s':''}</span></div>`:''}<div class="taps">${l.map(tapCard).join('')}</div>`).join('')
+     :`<div class="box empty"><div class="e">🍺</div><b style="color:var(--h)">Nenhuma torneira ${PONTO?'neste ponto':'ainda'}</b><p style="margin-top:6px">${BEB.controladores.length?'Toque em "Nova torneira" para cadastrar a primeira bebida.':ADMIN()?'Cadastre primeiro o ponto e a chopeira (controlador) em Mais → Equipamentos.':'Peça ao administrador para ligar a sua chopeira ao seu quiosque.'}</p></div>`}
+   <div style="height:70px"></div>
+   ${podeCriar?`<button class="fab" onclick="editar(0)">${ic('plus')} Nova torneira</button>`:''}`;
+};
+function fotoHtml(p,w){return p&&p.imagem_url?`<img src="${esc(p.imagem_url)}" alt="" loading="lazy">`:`<div class="cup" style="--c:${esc(p?.cor||'#F5B301')}${w?`;width:${w}px;height:${Math.round(w*1.28)}px`:''}"></div>`}
+function tapCard(t){const p=t.produto, pct=t.barril_ml?Math.round(100*t.restante_ml/t.barril_ml):0, ofs=t.ofertas.filter(o=>+o.ativo);
+  return `<button class="tapc ${+t.ativo&&p&&+p.ativo?'':'off'}" onclick="editar(${t.id})">
+   <div class="ft">${fotoHtml(p)}<span class="num">${String(t.canal).padStart(2,'0')}</span></div>
+   <div style="min-width:0;padding-right:36px"><h3>${esc(p?p.nome:'Sem bebida')}</h3>
+    <div class="s">${esc(t.nome)} • ${p?esc([p.estilo,p.abv!==null&&p.abv!==undefined?num(+p.abv)+'%':''].filter(Boolean).join(' • ')||'complete os dados'):'toque para escolher'}</div>
+    <div class="szs">${ofs.map(o=>`<span>${mlf(o.volume_ml)} • ${brl(o.preco)}</span>`).join('')||'<span style="color:var(--bad)">sem preço</span>'}</div>
+    <div class="kg"><span class="dot ${t.online?'':'off'}"></span><div class="meter"><i class="${pct<=t.alerta_pct?'low':pct<35?'mid':''}" style="width:${pct}%"></i></div>${mlf(t.restante_ml)}</div>
+    ${!+t.ativo?'<div class="s" style="margin-top:6px;color:var(--warn);font-weight:700">Escondida da maquininha</div>':t.vendidos_hoje?`<div class="s" style="margin-top:6px">🔥 ${t.vendidos_hoje} copo${t.vendidos_hoje>1?'s':''} hoje</div>`:''}
+   </div><span class="ed">${ic('edit')}</span></button>`}
+
+let E=null; // bebida em edição
+function editar(tapId){
+  const t=tapId?BEB.torneiras.find(x=>x.id===tapId):null;
+  const devs=BEB.controladores.filter(d=>(!PONTO||d.location_id==PONTO)&&d.canais_usados.length<(d.tipo==='torneira'?1:4));
+  const p=t&&t.produto?t.produto:{id:0,nome:'',cervejaria:'',estilo:'',descricao:'',abv:'',ibu:'',cor:'#F2B705',imagem_url:'',ativo:1};
+  E={tap:t, prod:{...p, abv:p.abv??'', ibu:p.ibu??''}, ofertas:t?t.ofertas.filter(o=>+o.ativo).map(o=>({...o})):[{id:0,volume_ml:300,preco:''},{id:0,volume_ml:500,preco:''}],
+     foto:null, remover:false, ativo:t?+t.ativo:1, barril:t?t.barril_ml:30000, trocou:false, device_id:devs[0]?.id||0, canal:0};
+  if(!t&&!devs.length)return toast('Todas as chopeiras deste ponto já têm torneiras cadastradas',true);
+  if(!t)E.canal=canalLivre(E.device_id);
+  renderEditor();
+}
+function canalLivre(did){const d=BEB.controladores.find(x=>x.id==did);if(!d)return 1;for(let c=1;c<=(d.tipo==='torneira'?1:4);c++)if(!d.canais_usados.includes(c))return c;return 1}
+function renderEditor(){
+  const t=E.tap, p=E.prod, devs=BEB.controladores.filter(d=>(!PONTO||d.location_id==PONTO)&&(t||d.canais_usados.length<(d.tipo==='torneira'?1:4)));
+  const outro=p.estilo&&!ESTILOS.includes(p.estilo);
+  const aviso=t&&t.produto&&p.id===t.produto.id?(ME.role==='dono'&&!t.produto.exclusivo?`<div class="note">Esta bebida também está em outro ponto. Ao salvar, criamos uma cópia só sua — os outros quiosques não mudam.</div>`
+     :t.produto.torneiras>1?`<div class="note info">Esta bebida está em ${t.produto.torneiras} torneiras. A mudança vale para todas elas.</div>`:''):'';
+  openM(sh(t?esc(t.nome):'Nova torneira',t?esc(t.loc)+' • '+esc(t.device_nome):'Escolha a chopeira e cadastre a bebida')+`
+   <div class="prev" id="pv"></div>
+   ${aviso}
+   ${!t?`<div class="fgrid r1"><label class="field"><span>Chopeira (controlador)</span><select onchange="E.device_id=+this.value;E.canal=canalLivre(E.device_id);renderEditor()">${devs.map(d=>`<option value="${d.id}" ${d.id==E.device_id?'selected':''}>${esc(d.loc)} — ${esc(d.nome)}</option>`).join('')}</select></label>
+     <label class="field"><span>Torneira nº</span><select onchange="E.canal=+this.value;pv()">${[1,2,3,4].slice(0,(BEB.controladores.find(d=>d.id==E.device_id)?.tipo==='torneira'?1:4)).map(c=>`<option ${BEB.controladores.find(d=>d.id==E.device_id)?.canais_usados.includes(c)?'disabled':''} ${c===E.canal?'selected':''}>${c}</option>`).join('')}</select></label></div>`:''}
+   <div class="sech" style="margin-top:4px">📸 Foto</div>
+   <div class="fotob"><div class="pv" id="fotoPv"></div>
+     <div><div class="acts"><label class="btn o sm">${ic('cam')} Câmera<input type="file" accept="image/*" capture="environment" hidden onchange="foto(this)"></label>
+       <label class="btn o sm">${ic('img')} Galeria<input type="file" accept="image/*" hidden onchange="foto(this)"></label></div>
+       <button class="btn sm" style="color:var(--bad);margin-top:6px;padding-left:0" id="fotoRm" onclick="E.foto=null;E.remover=true;E.prod.imagem_url='';pv()">Remover foto</button>
+       <div class="help mut" style="font-size:12.5px">Sem foto, mostramos um copo na cor do chopp.</div></div></div>
+   <div class="sech">🍺 Bebida <button class="btn o sm" style="margin-left:auto" onclick="biblioteca()">Trocar por outra</button></div>
+   <label class="field"><span>Nome do chopp</span><input id="fNome" maxlength="80" value="${esc(p.nome)}" placeholder="Ex.: IPA Cabra Macho" oninput="E.prod.nome=this.value;pv()"></label>
+   <label class="field"><span>Cervejaria <small>(opcional)</small></span><input maxlength="80" value="${esc(p.cervejaria||'')}" placeholder="Ex.: Haisten Beer" oninput="E.prod.cervejaria=this.value;pv()"></label>
+   <div class="field"><span>Tipo</span><div class="opts" id="estilos">${ESTILOS.map(s=>`<button type="button" aria-pressed="${p.estilo===s}" onclick="E.prod.estilo='${s}';renderEstilos()">${s}</button>`).join('')}<button type="button" aria-pressed="${outro}" onclick="E.prod.estilo=E.prod.estilo&&!ESTILOS.includes(E.prod.estilo)?E.prod.estilo:' ';renderEstilos();$('#fEst').focus()">Outro…</button></div>
+     <input id="fEst" style="margin-top:8px" ${outro?'':'hidden'} maxlength="80" value="${esc(outro?p.estilo:'')}" placeholder="Escreva o tipo (ex.: Hazy IPA)" oninput="E.prod.estilo=this.value;pv()"></div>
+   <div class="fgrid"><div class="field"><span>Teor alcoólico</span><div class="step"><button type="button" onclick="passo('abv',-0.1)">−</button><input id="fAbv" inputmode="decimal" value="${num(p.abv)}" placeholder="4,8" oninput="E.prod.abv=this.value.replace(',','.');pv()"><em>%</em><button type="button" onclick="passo('abv',0.1)">+</button></div></div>
+     <div class="field"><span>Amargor <small>(IBU)</small></span><div class="step"><button type="button" onclick="passo('ibu',-1)">−</button><input id="fIbu" inputmode="numeric" value="${p.ibu??''}" placeholder="—" oninput="E.prod.ibu=this.value;pv()"><button type="button" onclick="passo('ibu',1)">+</button></div></div></div>
+   <div class="field"><span>Cor do chopp</span><div class="opts" id="cores">${CORES.map(([c,n])=>`<button type="button" class="sw" title="${n}" aria-label="${n}" aria-pressed="${(p.cor||'').toUpperCase()===c}" style="background:${c}" onclick="E.prod.cor='${c}';renderCores()"></button>`).join('')}
+     <label class="sw" title="Outra cor" style="background:conic-gradient(red,yellow,lime,cyan,blue,magenta,red);position:relative;cursor:pointer"><input type="color" value="${esc(p.cor||'#F2B705')}" style="opacity:0;position:absolute;inset:0;width:100%;height:100%" oninput="E.prod.cor=this.value.toUpperCase();renderCores()"></label></div></div>
+   <label class="field"><span>Descrição curta <small>(aparece na maquininha e na TV)</small></span><textarea maxlength="255" placeholder="Ex.: Lupulada, cítrica e amarga na medida." oninput="E.prod.descricao=this.value;$('#dCnt').textContent=this.value.length">${esc(p.descricao||'')}</textarea><div class="help"><span id="dCnt">${(p.descricao||'').length}</span>/255</div></label>
+   <div class="sech">💰 Tamanhos e preços</div>
+   <div id="szs"></div>
+   <div class="opts" style="margin-bottom:16px">${[200,300,400,500,1000].map(v=>`<button type="button" onclick="addSz(${v})">+ ${mlf(v)}</button>`).join('')}<button type="button" onclick="addSz(0)">+ Outro</button></div>
+   <div class="sech">🛢️ Barril</div>
+   ${t?`<div class="box" style="padding:12px;margin-bottom:10px"><div class="lrow" style="padding:0 0 8px;border:0"><span>Restante agora</span><b>${mlf(t.restante_ml)} de ${mlf(t.barril_ml)}</b></div><div class="meter"><i class="${t.restante_ml/t.barril_ml*100<=t.alerta_pct?'low':''}" style="width:${t.barril_ml?Math.round(100*t.restante_ml/t.barril_ml):0}%"></i></div></div>`:''}
+   <div class="field"><span>Tamanho do barril</span><div class="opts" id="barris">${[10000,20000,30000,50000].map(v=>`<button type="button" aria-pressed="${E.barril===v}" onclick="E.barril=${v};renderBarril()">${mlf(v)}</button>`).join('')}
+     <button type="button" aria-pressed="${![10000,20000,30000,50000].includes(E.barril)}" onclick="const v=prompt('Tamanho do barril em litros:',E.barril/1000);if(v){E.barril=Math.round(parseFloat(v.replace(',','.'))*1000)||E.barril;renderBarril()}">Outro</button></div></div>
+   ${t?`<label class="tg"><span class="grow"><b>Coloquei um barril cheio agora</b><small>Zera o contador: o painel volta a contar a partir do barril cheio.</small></span><input type="checkbox" ${E.trocou?'checked':''} onchange="E.trocou=this.checked"><i></i></label>`:''}
+   <label class="tg"><span class="grow"><b>Mostrar na maquininha</b><small>Desligue para esconder esta torneira (ex.: barril acabou).</small></span><input type="checkbox" ${E.ativo?'checked':''} onchange="E.ativo=this.checked?1:0"><i></i></label>
+   ${t?`<details class="adv"><summary>Mais opções</summary><label class="field"><span>Nome da torneira</span><input id="fTn" maxlength="60" value="${esc(t.nome)}"></label>
+     <div class="acts" style="margin-bottom:14px"><button class="btn o sm" onclick="testar(${t.id})">🔓 Liberar teste (R$ 0)</button><button class="btn d sm" onclick="removerTorneira(${t.id})">${ic('trash')} Remover torneira</button></div></details>`:''}
+   <div class="sbar"><button class="btn o" onclick="closeM()">Cancelar</button><button class="btn w" id="bSalvar" onclick="salvarBebida()">${ic('check')} Salvar</button></div>`,true);
+  renderSz();pv();
+}
+function renderEstilos(){const p=E.prod,outro=p.estilo&&!ESTILOS.includes(p.estilo);document.querySelectorAll('#estilos button').forEach((b,i)=>b.setAttribute('aria-pressed',i<ESTILOS.length?p.estilo===ESTILOS[i]:outro));
+  const f=$('#fEst');f.hidden=!outro;if(!outro)f.value='';else if(p.estilo.trim()==='')p.estilo='';pv()}
+function renderCores(){document.querySelectorAll('#cores .sw').forEach(b=>b.tagName==='BUTTON'&&b.setAttribute('aria-pressed',b.title&&CORES.find(c=>c[1]===b.title)[0]===(E.prod.cor||'').toUpperCase()));pv()}
+function renderBarril(){document.querySelectorAll('#barris button').forEach((b,i)=>b.setAttribute('aria-pressed',i<4?[10000,20000,30000,50000][i]===E.barril:![10000,20000,30000,50000].includes(E.barril)));
+  const o=document.querySelectorAll('#barris button')[4];o.textContent=![10000,20000,30000,50000].includes(E.barril)?mlf(E.barril):'Outro'}
+function passo(k,d){const id=k==='abv'?'#fAbv':'#fIbu';let v=parseFloat(String(E.prod[k]||'').replace(',','.'));if(isNaN(v))v=k==='abv'?4.5:20;v=Math.max(0,Math.round((v+d)*10)/10);if(k==='ibu')v=Math.round(v);
+  E.prod[k]=v;$(id).value=num(v);pv()}
+function renderSz(){const base=E.ofertas.filter(o=>+o.volume_ml&&+String(o.preco).replace(',','.')).sort((a,b)=>a.volume_ml-b.volume_ml)[0];
+  $('#szs').innerHTML=E.ofertas.map((o,i)=>{const pr=+String(o.preco).replace(',','.'),ml=+o.volume_ml;let h='';
+    if(pr&&ml){h=`${brl(pr*1000/ml)} por litro`;if(base&&ml>base.volume_ml){const e=Math.round((1-(pr/ml)/(+String(base.preco).replace(',','.')/base.volume_ml))*100);if(e>=5)h+=` • economia de ${e}% (aparece na maquininha)`}}
+    return `<div class="szr"><div class="in"><input inputmode="numeric" value="${o.volume_ml||''}" placeholder="300" oninput="E.ofertas[${i}].volume_ml=+this.value.replace(/\\D/g,'');pv();renderSzHint()" aria-label="Volume em ml"><em>ml</em></div>
+     <div class="in"><em>R$&nbsp;</em><input inputmode="decimal" value="${o.preco===''?'':num((+String(o.preco).replace(',','.')).toFixed(2))}" placeholder="0,00" oninput="E.ofertas[${i}].preco=this.value.replace(',','.');pv();renderSzHint()" aria-label="Preço"></div>
+     <button type="button" class="del" onclick="E.ofertas.splice(${i},1);renderSz();pv()" aria-label="Remover tamanho">${ic('trash')}</button><div class="hint" data-h="${i}">${h}</div></div>`}).join('')||'<p class="mut" style="margin-bottom:10px">Nenhum tamanho. Adicione pelo menos um abaixo.</p>'}
+function renderSzHint(){clearTimeout(renderSzHint._t);renderSzHint._t=setTimeout(()=>{const a=document.activeElement,i=[...document.querySelectorAll('#szs input')].indexOf(a),pos=a&&a.selectionStart;renderSz();
+  if(i>=0){const n=document.querySelectorAll('#szs input')[i];n.focus();try{n.setSelectionRange(pos,pos)}catch(e){}}},700)}
+function addSz(v){if(v&&E.ofertas.some(o=>+o.volume_ml===v))return toast('Esse tamanho já está na lista',true);E.ofertas.push({id:0,volume_ml:v||'',preco:''});E.ofertas.sort((a,b)=>(+a.volume_ml||9999)-(+b.volume_ml||9999));renderSz();pv();
+  const i=E.ofertas.findIndex(o=>+o.volume_ml===v||(!v&&!o.volume_ml));setTimeout(()=>document.querySelectorAll('#szs .szr')[i]?.querySelectorAll('input')[v?1:0].focus(),50)}
+/* Prévia da tela da maquininha (igual o cliente vai ver) */
+function pv(){const p=E.prod,img=E.foto||p.imagem_url;
+  const ofs=E.ofertas.map(o=>({ml:+o.volume_ml,pr:+String(o.preco).replace(',','.')})).filter(o=>o.ml&&o.pr), p100=ofs.length?Math.min(...ofs.map(o=>o.pr*100/o.ml)):null;
+  const n=E.tap?E.tap.canal:E.canal||1;
+  $('#pv').innerHTML=`<div class="lbl">👀 PRÉVIA NA MAQUININHA</div><div><div class="tn">${String(n).padStart(2,'0')}</div><h4>${esc((p.nome||'NOME DO CHOPP').toUpperCase())}</h4><div class="cv">${esc((p.cervejaria||'').toUpperCase())}</div>
+    <div class="inf">Tipo<b>${esc((p.estilo||'').trim()||'—')}</b>Teor alcoólico<b>${p.abv!==''&&p.abv!==null&&!isNaN(parseFloat(p.abv))?num(parseFloat(p.abv))+'% ABV':'—'}</b>${p.ibu!==''&&p.ibu!==null?`Amargor<b>${esc(p.ibu)} IBU</b>`:''}</div></div>
+    <div class="im">${img?`<img src="${esc(img)}" alt="">`:`<div class="cup" style="--c:${esc(p.cor||'#F5B301')};width:62px;height:80px"></div>`}</div>
+    <div class="val"><small>${ofs.map(o=>mlf(o.ml)+' '+brl(o.pr)).join(' • ')||'sem tamanhos'}</small><span style="text-align:right"><small>VALOR 100 ml</small><br><b>${p100?brl(p100):'—'}</b></span></div>`;
+  $('#fotoPv').innerHTML=img?`<img src="${esc(img)}" alt="">`:`<div class="cup" style="--c:${esc(p.cor||'#F5B301')}"></div>`;$('#fotoRm').hidden=!img}
+function foto(inp){const f=inp.files[0];if(!f)return;const img=new Image(),url=URL.createObjectURL(f);
+  img.onload=()=>{const m=900,k=Math.min(1,m/Math.max(img.width,img.height)),c=document.createElement('canvas');c.width=Math.round(img.width*k);c.height=Math.round(img.height*k);
+    c.getContext('2d').drawImage(img,0,0,c.width,c.height);E.foto=c.toDataURL('image/jpeg',0.84);E.remover=false;URL.revokeObjectURL(url);pv();toast('Foto pronta — toque em Salvar')};
+  img.onerror=()=>toast('Não consegui abrir essa imagem',true);img.src=url;inp.value=''}
+function biblioteca(){const lib=BEB.biblioteca;const s=$('#sheet'),voltar=s.innerHTML,top=s.scrollTop;
+  s.innerHTML=`<div class="grab"></div>${sh('Trocar a bebida','Escolha uma já cadastrada ou crie uma nova')}
+   <button class="it" onclick="usarBeb(0)"><span class="ic">${ic('plus')}</span><span class="grow"><span class="t">Criar bebida nova</span><div class="s">Formulário em branco</div></span></button>
+   ${lib.map(p=>`<button class="it lib" onclick="usarBeb(${p.id})"><span class="ft">${fotoHtml(p,30)}</span><span class="grow"><span class="t">${esc(p.nome)}</span><div class="s">${esc([p.estilo,p.abv!==null?num(+p.abv)+'%':'',p.cervejaria].filter(Boolean).join(' • '))}${+p.ativo?'':' • inativa'}</div></span></button>`).join('')}
+   <button class="btn o full" style="margin-top:8px" id="libVolta">Voltar</button>`;
+  s.scrollTop=0;$('#libVolta').onclick=()=>{s.innerHTML=voltar;rebind();s.scrollTop=top}}
+function rebind(){renderEditor()}
+function usarBeb(id){const p=id?BEB.biblioteca.find(x=>x.id===id):{id:0,nome:'',cervejaria:'',estilo:'',descricao:'',abv:'',ibu:'',cor:'#F2B705',imagem_url:'',ativo:1};
+  E.prod={...p,abv:p.abv??'',ibu:p.ibu??''};E.foto=null;E.remover=false;renderEditor();if(!id)setTimeout(()=>$('#fNome').focus(),100)}
+async function salvarBebida(){const p=E.prod;
+  if(!String(p.nome||'').trim()){toast('Dê um nome para o chopp',true);return $('#fNome').focus()}
+  const ofs=E.ofertas.filter(o=>o.volume_ml||o.preco);
+  for(const o of ofs){if(!(+o.volume_ml>=50))return toast('Confira o volume (ml) dos tamanhos',true);if(!(+String(o.preco).replace(',','.')>0))return toast(`Coloque o preço do copo de ${mlf(o.volume_ml)}`,true)}
+  if(!ofs.length)return toast('Cadastre pelo menos um tamanho com preço',true);
+  const b=$('#bSalvar');b.disabled=true;b.textContent='Salvando…';
+  try{const body={tap_id:E.tap?E.tap.id:0,device_id:E.device_id,canal:E.canal,ativo:E.ativo,barril_ml:E.barril,trocou_barril:E.trocou?1:0,
+      produto:{id:p.id||0,nome:p.nome,cervejaria:p.cervejaria,estilo:(p.estilo||'').trim(),descricao:p.descricao,abv:p.abv,ibu:p.ibu,cor:p.cor,ativo:1},
+      ofertas:ofs.map(o=>({id:o.id||0,volume_ml:+o.volume_ml,preco:String(o.preco).replace(',','.')})),foto:E.foto||'',remover_foto:E.remover?1:0};
+    if($('#fTn'))body.nome_torneira=$('#fTn').value;
+    await api('admin/bebida_salvar',body);closeM();toast('✅ Salvo! A maquininha atualiza em até 30 segundos.');PG.bebidas()}
+  catch(e){toast(e.mensagem||'Não foi possível salvar',true);b.disabled=false;b.innerHTML=ic('check')+' Salvar'}}
+async function removerTorneira(id){if(!confirm('Remover esta torneira? (se já vendeu, ela só é escondida)'))return;try{const r=await api('admin/torneira_remover',{tap_id:id});closeM();toast(r.mensagem);PG.bebidas()}catch(e){toast(e.mensagem,true)}}
+async function testar(id){const v=prompt('Liberar quantos ml? (teste/cortesia — R$ 0,00)','200');if(!v)return;const m=prompt('Motivo:','teste')||'teste';
+  try{const r=await api('admin/manual_release',{tap_id:id,volume_ml:+v,motivo:m});toast('Liberação enviada ('+r.ref+')')}catch(e){toast(e.mensagem,true)}}
+
+/* ════════ INÍCIO ════════ */
+PG.dash=async function(){
+  const d=await api('admin/dashboard'+(PONTO?'&location_id='+PONTO:'')), var_=+d.ontem.s>0?Math.round(100*(d.hoje.s-d.ontem.s)/d.ontem.s):null;
+  const maxD=Math.max(1,...d.dias.map(x=>+x.s)), dias=[];for(let i=29;i>=0;i--){const k=hoje(i);dias.push(d.dias.find(x=>x.d===k)||{d:k,n:0,s:0})}
   const maxH=Math.max(1,...d.horas.map(x=>+x.n));
-  $('#main').innerHTML=`<h1>Visão geral <span class="sp"></span><span class="mut" style="font-size:12px">atualiza a cada 20 s</span></h1>
-  <div class="grid g4">
-   <div class="card kpi"><small>Recebido hoje (copos + recargas)</small><b>${brl(d.hoje.s)}</b><span>${d.hoje.n} vendas • ${mlf(d.hoje.ml)} ${var_!==null?`• <span class="${var_>=0?'up':'dn'}">${var_>=0?'▲':'▼'} ${Math.abs(var_)}% vs ontem</span>`:''}</span></div>
-   <div class="card kpi"><small>Ticket médio hoje</small><b>${brl(d.hoje.n?d.hoje.s/d.hoje.n:0)}</b><span>Ontem: ${brl(d.ontem.s)}</span></div>
-   <div class="card kpi"><small>Mês</small><b>${brl(d.mes.s)}</b><span>${d.mes.n} vendas • ${mlf(d.mes.ml)}</span></div>
-   <div class="card kpi"><small>Clientes verificados</small><b>${d.clientes.total||0}</b><span>${+d.clientes.hoje||0} novos hoje • 🔞 ${d.menores_hoje} menores barrados</span></div>
+  const off=d.devices.filter(x=>!x.online), baixos=d.barris.filter(b=>b.barril_ml&&100*b.restante_ml/b.barril_ml<=b.alerta_pct);
+  const att=[...off.map(x=>`<div class="lrow"><span><span class="dot off"></span> &nbsp;<b>${esc(x.nome)}</b> offline</span><span class="mut nw">${ago(x.last_seen)}</span></div>`),
+    ...baixos.map(b=>`<div class="lrow"><span>🛢️ <b>${esc(b.produto||b.nome)}</b> acabando</span><span class="badc nw">${mlf(b.restante_ml)}</span></div>`),
+    ...d.problemas.map(o=>`<div class="lrow" style="cursor:pointer" onclick="pedido(${o.id})"><span>${pill(o.status)} ${o.ref}</span><span class="nw">${brl(o.total)}</span></div>`),
+    ...d.alertas.filter(a=>a.nivel==='critico').slice(0,3).map(a=>`<div class="lrow"><span style="font-size:14px">${esc(a.msg)}</span><span class="mut nw">${ago(a.created_at)}</span></div>`)];
+  $('#main').innerHTML=`<div class="ph1"><h1>Olá, ${esc((ME.nome||'').split(' ')[0])} 👋<p>${new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'})}</p></h1></div>
+  <div class="kpis">
+   <div class="kpi"><div class="l">Vendido hoje</div><div class="v">${brl(d.hoje.s)}</div><div class="s">${d.hoje.n} venda${d.hoje.n==1?'':'s'}${var_!==null?` • <b class="${var_>=0?'okc':'badc'}">${var_>=0?'▲':'▼'} ${Math.abs(var_)}%</b>`:''}</div></div>
+   <div class="kpi"><div class="l">Chopp servido hoje</div><div class="v">${mlf(d.hoje.ml)}</div><div class="s">Ticket médio ${brl(d.hoje.n?d.hoje.s/d.hoje.n:0)}</div></div>
+   <div class="kpi"><div class="l">No mês</div><div class="v">${brl(d.mes.s)}</div><div class="s">${d.mes.n} vendas • ${mlf(d.mes.ml)}</div></div>
+   <div class="kpi"><div class="l">Clientes</div><div class="v">${d.clientes.total||0}</div><div class="s">${+d.clientes.hoje||0} novos hoje • 🔞 ${d.menores_hoje} barrados</div></div>
   </div>
-  ${d.pass&&d.pass_ativo?`<div class="grid g4 sec">
-   <div class="card kpi"><small>🎫 Beer Pass hoje (consumo)</small><b>${brl(d.pass.s)}</b><span>${d.pass.n} servidas • ${mlf(d.pass.ml)}</span></div>
-   <div class="card kpi"><small>Recargas hoje</small><b>${brl(d.pass.recargas.s)}</b><span>${d.pass.recargas.n} recargas • bônus ${brl(d.pass.recargas.b)}</span></div>
-   <div class="card kpi"><small>Saldo nas carteiras</small><b>${brl(d.pass.saldo_carteiras)}</b><span>crédito já recebido, ainda não consumido</span></div>
-   <div class="card kpi"><small>Servindo agora</small><b>${d.pass.abertas.length}</b><span>${d.pass.abertas.map(a=>`${esc(a.cliente)} ${a.servido_ml} ml (${esc(a.torneira)})`).join(' • ')||'nenhuma torneira aberta'}</span></div>
-  </div>`:''}
-  ${funilHtml(d)}
-  <div class="grid g3 sec">
-   <div class="card" style="grid-column:span 2"><h2>Faturamento — últimos 30 dias</h2><div class="chart">${dias.map(x=>`<div style="height:${Math.max(1,100*x.s/maxD)}%" data-t="${x.d.slice(8)}/${x.d.slice(5,7)}: ${brl(x.s)} (${x.n})"></div>`).join('')}</div></div>
-   <div class="card"><h2>Horários de pico (30 dias)</h2><div class="chart" style="height:150px">${Array.from({length:24},(_,h)=>{const n=+(d.horas.find(x=>+x.h===h)?.n||0);return `<div style="height:${Math.max(1,100*n/maxH)}%;background:#6b5420" data-t="${h}h: ${n}"></div>`}).join('')}</div><p class="mut" style="font-size:11px;display:flex;justify-content:space-between"><span>0h</span><span>12h</span><span>23h</span></p></div>
+  ${att.length?`<div class="box" style="margin-top:12px;border-color:var(--warnbg)"><h2>⚠️ Precisa de atenção</h2>${att.join('')}</div>`:`<div class="box" style="margin-top:12px"><div class="row"><span style="font-size:24px">✅</span><div><b style="color:var(--h)">Tudo certo</b><div class="mut" style="font-size:14px">Chopeiras online e barris com chopp.</div></div></div></div>`}
+  ${d.pass_ativo?`<div class="kpis" style="margin-top:12px"><div class="kpi"><div class="l">🎫 Beer Pass hoje</div><div class="v">${brl(d.pass.s)}</div><div class="s">${d.pass.n} servidas • ${mlf(d.pass.ml)}</div></div>
+    <div class="kpi"><div class="l">Recargas hoje</div><div class="v">${brl(d.pass.recargas.s)}</div><div class="s">${d.pass.recargas.n} recargas</div></div>
+    ${d.pass.saldo_carteiras!==null?`<div class="kpi"><div class="l">Saldo nas carteiras</div><div class="v">${brl(d.pass.saldo_carteiras)}</div><div class="s">ainda não consumido</div></div>`:''}
+    <div class="kpi"><div class="l">Servindo agora</div><div class="v">${d.pass.abertas.length}</div><div class="s">${d.pass.abertas.map(a=>esc(a.cliente)).join(', ')||'ninguém'}</div></div></div>`:''}
+  <div class="sech">📈 Últimos 30 dias</div>
+  <div class="box"><div class="bars">${dias.map(x=>`<div style="height:${Math.max(1.5,100*x.s/maxD)}%" title="${x.d.slice(8)}/${x.d.slice(5,7)}: ${brl(x.s)} (${x.n})"></div>`).join('')}</div>
+   <div class="row mut" style="justify-content:space-between;font-size:12px;margin-top:6px"><span>${dias[0].d.slice(8)}/${dias[0].d.slice(5,7)}</span><span>hoje</span></div></div>
+  <div class="cols2" style="margin-top:12px">
+   <div class="box"><h2>🛢️ Barris</h2>${d.barris.map(b=>{const p=b.barril_ml?Math.round(100*b.restante_ml/b.barril_ml):0;return `<div style="margin-bottom:12px"><div class="row" style="justify-content:space-between;font-size:14.5px"><span><b style="color:var(--h)">${esc(b.produto||'—')}</b> <span class="mut">${esc(b.nome)}${PONTO?'':' • '+esc(b.loc)}</span></span><span class="nw ${p<=b.alerta_pct?'badc':''}">${mlf(b.restante_ml)}</span></div><div class="meter" style="margin-top:6px"><i class="${p<=b.alerta_pct?'low':p<35?'mid':''}" style="width:${p}%"></i></div></div>`}).join('')||'<p class="mut">Nenhuma torneira.</p>'}</div>
+   <div class="box"><h2>🏆 Mais vendidos no mês</h2>${d.produtos.map(p=>`<div class="lrow"><span><b>${esc(p.produto)}</b><br><small class="mut">${p.copos} copos • ${mlf(p.ml)}</small></span><b class="money">${brl(p.s)}</b></div>`).join('')||'<p class="mut">Sem vendas no mês ainda.</p>'}</div>
   </div>
-  <div class="grid g3 sec">
-   <div class="card"><h2>Chopeiras</h2>${d.devices.map(x=>`<div class="ev">${onl(x.online)}<b>${esc(x.loc)}</b> / ${esc(x.nome)}<small>${x.temperatura!==null?`🌡️ <b style="color:${+x.temperatura>+x.temp_max||+x.temperatura<+x.temp_min?'var(--err)':'var(--txt)'}">${(+x.temperatura).toFixed(1)}°C</b> • `:''}${x.rssi?`📶 ${x.rssi} dBm • `:''}visto ${ago(x.last_seen)}${x.porta_aberta==1?' • 🚪 porta aberta':''}</small></div>`).join('')||'<p class="mut">Nenhuma cadastrada</p>'}
-     <h2 style="margin-top:14px">Maquininhas</h2>${d.terminais.map(x=>`<div class="ev">${onl(x.online)}<b>${esc(x.loc)}</b> / ${esc(x.nome)} <span class="pill">${x.provider}</span><small>visto ${ago(x.last_seen)}${x.bloqueado_ate?' • 🔒 bloqueada até '+dt(x.bloqueado_ate):''}</small></div>`).join('')||'<p class="mut">Nenhuma</p>'}</div>
-   <div class="card"><h2>Barris</h2>${d.barris.map(b=>{const p=b.barril_ml?Math.round(100*b.restante_ml/b.barril_ml):0;return `<div style="margin-bottom:12px"><div style="display:flex;justify-content:space-between"><span><b>${esc(b.produto||'-')}</b> <span class="mut">${esc(b.loc)} • ${esc(b.nome)}</span></span><span>${mlf(b.restante_ml)}</span></div><div class="bar"><i style="width:${p}%;background:${p<=b.alerta_pct?'var(--err)':p<=40?'var(--warn)':'var(--ok)'}"></i></div></div>`}).join('')||'<p class="mut">Nenhuma torneira</p>'}
-     <h2 style="margin-top:14px">Mais vendidos no mês</h2><table>${d.produtos.map(p=>`<tr><td>${esc(p.produto)}</td><td class="r">${p.copos} copos</td><td class="r">${mlf(p.ml)}</td><td class="r">${brl(p.s)}</td></tr>`).join('')}</table></div>
-   <div class="card"><h2>Alertas recentes</h2>${d.alertas.map(a=>`<div class="ev"><span class="pill ${a.nivel==='critico'?'p-err':'p-warn'}">${a.nivel}</span> ${esc(a.msg)}<small>${dt(a.created_at)}</small></div>`).join('')||'<p class="mut">Tudo certo por aqui ✅</p>'}
-     ${d.problemas.length?`<h2 style="margin-top:14px">Pedidos com problema (7 dias)</h2>${d.problemas.map(o=>`<div class="ev" style="cursor:pointer" onclick="pedido(${o.id})">${pill(o.status)} ${o.ref} — ${brl(o.total)}<small>${dt(o.created_at)}</small></div>`).join('')}`:''}</div>
+  <div class="cols2" style="margin-top:12px">
+   ${funilHtml(d)}
+   <div class="box"><h2>🕒 Horários de pico</h2><div class="bars h">${Array.from({length:24},(_,h)=>{const n=+(d.horas.find(x=>+x.h===h)?.n||0);return `<div style="height:${Math.max(1.5,100*n/maxH)}%" title="${h}h: ${n}"></div>`}).join('')}</div>
+    <div class="row mut" style="justify-content:space-between;font-size:12px;margin-top:6px"><span>0h</span><span>12h</span><span>23h</span></div>
+    <h2 style="margin-top:16px">📡 Equipamentos</h2>${d.devices.map(x=>`<div class="lrow"><span><span class="dot ${x.online?'':'off'}"></span>&nbsp; ${esc(x.nome)}</span><span class="mut nw">${x.temperatura!==null?`🌡️ <b class="${+x.temperatura>+x.temp_max||+x.temperatura<+x.temp_min?'badc':''}">${num((+x.temperatura).toFixed(1))}°C</b> • `:''}${ago(x.last_seen)}</span></div>`).join('')}
+    ${d.terminais.map(x=>`<div class="lrow"><span><span class="dot ${x.online?'':'off'}"></span>&nbsp; 💳 ${esc(x.nome)}</span><span class="mut nw">${x.bloqueado_ate?'🔒 ':''}${ago(x.last_seen)}</span></div>`).join('')}</div>
   </div>`;
-  TIMER=setInterval(()=>PAGE==='dash'&&!$('#modal').classList.contains('on')&&dash(),20000)}
-
-/* Funil de vendas (7 dias) + satisfação (30 dias) */
+  TIMER=setInterval(()=>PAGE==='dash'&&!$('#sheet').classList.contains('on')&&PG.dash().catch(()=>{}),30000)};
 function funilHtml(d){const f=d.funil||{},et=[['inicio','Tocaram na tela'],['termos','Aceitaram os termos'],['tamanho','Escolheram o tamanho'],['quantidade','Foram ao resumo'],['pagamento','Escolheram o pagamento'],['pago','Pagaram'],['servido','Serviram']];
   const base=f.inicio||0,n=d.nps||{},media=+n.media||0;
-  const hh=d.happy_hour&&d.happy_hour.ativo?`<span class="pill" style="background:#ff3d6e;color:#fff">🎉 ${esc(d.happy_hour.nome)} ativo agora (−${Math.round(d.happy_hour.pct)}%)</span>`:'';
   const pior=et.slice(1).map(([k,l],i)=>({l,perda:(f[et[i][0]]||0)-(f[k]||0)})).sort((a,b)=>b.perda-a.perda)[0];
-  return `<div class="grid g3 sec"><div class="card" style="grid-column:span 2"><h2>Funil de vendas — últimos 7 dias ${hh}</h2>
-   ${base?et.map(([k,l])=>{const v=f[k]||0,p=Math.round(100*v/base);return `<div style="display:grid;grid-template-columns:180px 1fr 90px;gap:10px;align-items:center;margin:6px 0"><span>${l}</span><div class="bar" style="height:14px"><i style="width:${p}%;background:var(--amber)"></i></div><span class="r">${v} <span class="mut">(${p}%)</span></span></div>`}).join('')
-     +(pior&&pior.perda>0?`<p class="mut" style="margin-top:8px">💡 Maior perda: <b style="color:var(--txt)">${pior.l.toLowerCase()}</b> (${pior.perda} clientes desistiram nessa etapa).</p>`:'')
-     :'<p class="mut">Ainda sem dados. O funil começa a contar quando os clientes usarem a maquininha.</p>'}</div>
-   <div class="card"><h2>Satisfação — 30 dias</h2>${+n.n?`<div class="kpi"><b>${media.toFixed(1).replace('.',',')} <span style="font-size:15px" class="mut">/ 5</span></b><span>${n.n} avaliações • ${Math.round(100*(+n.bons)/(+n.n))}% satisfeitos • ${n.ruins} ruins</span></div>
-     ${(d.nps_motivos||[]).length?`<h2 style="margin-top:14px">Motivos de reclamação</h2>${d.nps_motivos.map(m=>`<div class="ev">${esc(m.motivo)} <b style="float:right">${m.n}</b></div>`).join('')}`:''}`:'<p class="mut">Nenhuma avaliação ainda.</p>'}</div></div>`}
+  return `<div class="box"><h2>🎯 Funil — 7 dias ${d.happy_hour&&d.happy_hour.ativo?`<span class="chip acc">🎉 ${esc(d.happy_hour.nome)} −${Math.round(d.happy_hour.pct)}%</span>`:''}</h2>
+   ${base?et.map(([k,l])=>{const v=f[k]||0,p=Math.round(100*v/base);return `<div style="margin:8px 0"><div class="row" style="justify-content:space-between;font-size:14px"><span>${l}</span><span class="mut">${v} • ${p}%</span></div><div class="meter" style="margin-top:4px"><i style="width:${p}%;background:var(--g)"></i></div></div>`}).join('')
+     +(pior&&pior.perda>0?`<p class="mut" style="margin-top:10px;font-size:14px">💡 Onde mais desistem: <b style="color:var(--h)">${pior.l.toLowerCase()}</b> (${pior.perda}).</p>`:'')
+     :'<p class="mut">Começa a contar quando os clientes usarem a maquininha.</p>'}
+   <h2 style="margin-top:16px">⭐ Satisfação — 30 dias</h2>${+n.n?`<div class="row"><b style="font-family:var(--fh);font-size:30px;color:var(--h)">${num(media.toFixed(1))}</b><span class="mut">/ 5 • ${n.n} avaliações • ${Math.round(100*(+n.bons)/(+n.n))}% satisfeitos</span></div>
+     ${(d.nps_motivos||[]).map(m=>`<div class="lrow"><span>${esc(m.motivo)}</span><b>${m.n}</b></div>`).join('')}`:'<p class="mut">Nenhuma avaliação ainda.</p>'}</div>`}
 
-/* ============ vendas ============ */
-let VF={de:new Date(Date.now()-6*864e5).toISOString().slice(0,10),ate:new Date().toISOString().slice(0,10),status:'',q:'',page:1};
-let VT='pedidos';
-async function vendas(){
-  if(VT==='pass') return servidas();
-  const p=new URLSearchParams(VF).toString(), d=await api('admin/orders&'+p);
-  $('#main').innerHTML=`<h1>Vendas</h1>${vtabs()}<div class="card"><div class="row">
-    <div><label>De</label><input type="date" value="${VF.de}" onchange="VF.de=this.value;VF.page=1;vendas()"></div>
-    <div><label>Até</label><input type="date" value="${VF.ate}" onchange="VF.ate=this.value;VF.page=1;vendas()"></div>
-    <div><label>Status</label><select onchange="VF.status=this.value;VF.page=1;vendas()"><option value="">Todos</option>${Object.keys(ST).slice(0,8).map(s=>`<option value="${s}" ${VF.status===s?'selected':''}>${ST[s][0]}</option>`).join('')}</select></div>
-    <div style="flex:2"><label>Buscar (pedido, CPF ou nome)</label><input value="${esc(VF.q)}" onkeydown="if(event.key==='Enter'){VF.q=this.value;VF.page=1;vendas()}"></div>
-    <div style="flex:0"><button class="btn" onclick="exportCsv()">CSV</button></div></div>
-   <p class="mut" style="margin:12px 0">${d.total} pedidos • faturado ${brl(d.soma)}</p>
-   <div class="tw"><table><tr><th>Data</th><th>Pedido</th><th>Ponto</th><th>Cliente</th><th>Pagamento</th><th class="r">Volume</th><th class="r">Total</th><th>Status</th></tr>
-   ${d.pedidos.map(o=>`<tr class="click" onclick="pedido(${o.id})"><td class="nw">${dt(o.created_at)}</td><td class="nw">${o.ref}${o.tipo==='recarga'?' <span class="pill p-ok">recarga</span>':''}</td><td>${esc(o.loc)}</td><td>${esc(o.cliente||'—')}<br><small class="mut">${o.cpf||''}</small></td>
-     <td class="nw">${met(o.metodo)} ${o.final_cartao?'•••'+o.final_cartao:''} ${o.metodo&&o.metodo!=='pix'&&!+o.verificado_servidor?'<span title="não confirmado na API">⚠️</span>':''}</td><td class="r">${mlf(o.total_ml)}</td><td class="r">${brl(o.total)}</td><td>${pill(o.status)}</td></tr>`).join('')}</table></div>
-   ${d.paginas>1?`<div class="row" style="margin-top:12px;justify-content:flex-end"><button class="btn sm" style="flex:0" ${VF.page<=1?'disabled':''} onclick="VF.page--;vendas()">‹</button><span style="flex:0" class="nw">${VF.page}/${d.paginas}</span><button class="btn sm" style="flex:0" ${VF.page>=d.paginas?'disabled':''} onclick="VF.page++;vendas()">›</button></div>`:''}</div>`;
-  window._ped=d.pedidos}
-function vtabs(){return `<div class="tabs"><button class="${VT==='pedidos'?'on':''}" onclick="VT='pedidos';vendas()">Pedidos e recargas</button><button class="${VT==='pass'?'on':''}" onclick="VT='pass';vendas()">🎫 Servidas por ml (Beer Pass)</button></div>`}
-async function servidas(){const d=await api('admin/pours&de='+VF.de+'&ate='+VF.ate);
-  $('#main').innerHTML=`<h1>Vendas</h1>${vtabs()}<div class="card"><div class="row">
-    <div><label>De</label><input type="date" value="${VF.de}" onchange="VF.de=this.value;vendas()"></div><div><label>Até</label><input type="date" value="${VF.ate}" onchange="VF.ate=this.value;vendas()"></div></div>
-   <p class="mut" style="margin:12px 0">${d.total} servidas • ${mlf(d.ml)} • consumo ${brl(d.soma)}</p>
-   <div class="tw"><table><tr><th>Início</th><th>Ponto / torneira</th><th>Cliente</th><th>Chopp</th><th class="r">Servido</th><th class="r">R$/L</th><th class="r">Valor</th><th>Status</th></tr>
-   ${d.servidas.map(x=>`<tr><td class="nw">${dt(x.inicio_em)}</td><td>${esc(x.loc)} • ${esc(x.torneira)}</td><td>${esc(x.cliente)}<br><small class="mut">${x.cpf}</small></td><td>${esc(x.produto||'')}</td>
-     <td class="r">${mlf(x.servido_ml)}<br><small class="mut">limite ${mlf(x.limite_ml)}</small></td><td class="r">${brl(x.preco_litro)}</td><td class="r">${brl(x.valor)}</td>
-     <td><span class="pill ${x.status==='fechada'?'p-ok':x.status==='aberta'?'p-info':'p-warn'}">${x.status}</span>${x.motivo_fim?'<br><small class="mut">'+esc(x.motivo_fim)+'</small>':''}</td></tr>`).join('')}</table></div></div>`}
+/* ════════ VENDAS ════════ */
+let VF={per:'7',de:hoje(6),ate:hoje(),status:'',q:'',page:1}, VT='pedidos';
+PG.vendas=async function(){
+  const segP=`<div class="seg">${[['1','Hoje'],['7','7 dias'],['30','30 dias'],['x','Escolher']].map(([k,t])=>`<button aria-pressed="${VF.per===k}" onclick="periodo('${k}')">${t}</button>`).join('')}</div>
+    ${VF.per==='x'?`<div class="fgrid"><label class="field"><span>De</span><input type="date" value="${VF.de}" onchange="VF.de=this.value;VF.page=1;PG.vendas()"></label><label class="field"><span>Até</span><input type="date" value="${VF.ate}" onchange="VF.ate=this.value;VF.page=1;PG.vendas()"></label></div>`:''}`;
+  if(VT==='pass'){const d=await api('admin/pours&de='+VF.de+'&ate='+VF.ate);
+    $('#main').innerHTML=`<div class="ph1"><h1>Vendas</h1></div>${vtabs()}${segP}
+     <div class="kpis" style="margin-bottom:12px"><div class="kpi"><div class="l">Consumo</div><div class="v">${brl(d.soma)}</div><div class="s">${d.total} servidas</div></div><div class="kpi"><div class="l">Volume</div><div class="v">${mlf(d.ml)}</div></div></div>
+     ${d.servidas.map(x=>`<div class="it"><span class="ic">🎫</span><span class="grow"><span class="t">${esc(x.cliente)}</span><div class="s">${esc(x.produto||'')} • ${mlf(x.servido_ml)} • ${dt(x.inicio_em)}</div></span><span class="pr">${brl(x.valor)}</span></div>`).join('')||'<div class="empty">Nenhuma servida no período.</div>'}`;return}
+  const p=new URLSearchParams({de:VF.de,ate:VF.ate,status:VF.status,q:VF.q,page:VF.page,location_id:PONTO}).toString(), d=await api('admin/orders&'+p);
+  window._ped=d.pedidos;
+  $('#main').innerHTML=`<div class="ph1"><h1>Vendas</h1><button class="btn o sm" onclick="exportCsv()">⬇️ CSV</button></div>${vtabs()}${segP}
+   <div class="kpis" style="margin-bottom:12px"><div class="kpi"><div class="l">Faturado</div><div class="v">${brl(d.soma)}</div><div class="s">${d.total} pedidos</div></div>
+    <div class="kpi"><div class="l">Filtrar</div><select class="search" style="margin-top:6px;padding:9px 10px" onchange="VF.status=this.value;VF.page=1;PG.vendas()"><option value="">Todos</option>${Object.keys(ST).slice(0,8).map(s=>`<option value="${s}" ${VF.status===s?'selected':''}>${ST[s][0]}</option>`).join('')}</select></div></div>
+   <input class="search" style="margin-bottom:12px" placeholder="🔎 Pedido, CPF ou nome" value="${esc(VF.q)}" onkeydown="if(event.key==='Enter'){VF.q=this.value;VF.page=1;PG.vendas()}">
+   ${d.pedidos.map(o=>`<button class="it" onclick="pedido(${o.id})"><span class="ic">${o.tipo==='recarga'?'🎫':o.metodo==='pix'?'⚡':'💳'}</span><span class="grow"><span class="t">${esc(o.cliente||'Cliente')}</span>
+     <div class="s">${dt(o.created_at)} • ${mlf(o.total_ml)}${PONTO?'':' • '+esc(o.loc)}</div><div style="margin-top:4px">${pill(o.status)}</div></span><span class="pr">${brl(o.total)}</span></button>`).join('')||'<div class="box empty"><div class="e">🧾</div>Nenhuma venda no período.</div>'}
+   ${d.paginas>1?`<div class="row" style="justify-content:center;margin:14px 0"><button class="btn o sm" ${VF.page<=1?'disabled':''} onclick="VF.page--;PG.vendas()">‹ Anterior</button><span class="mut">${VF.page} de ${d.paginas}</span><button class="btn o sm" ${VF.page>=d.paginas?'disabled':''} onclick="VF.page++;PG.vendas()">Próxima ›</button></div>`:''}`};
+function periodo(k){VF.per=k;VF.page=1;if(k!=='x'){VF.de=hoje(+k-1);VF.ate=hoje()}PG.vendas()}
+function vtabs(){return SETPASS?`<div class="seg"><button aria-pressed="${VT==='pedidos'}" onclick="VT='pedidos';PG.vendas()">Copos e recargas</button><button aria-pressed="${VT==='pass'}" onclick="VT='pass';PG.vendas()">🎫 Beer Pass</button></div>`:''}
+let SETPASS=false;
 function exportCsv(){const l=[['data','pedido','ponto','cliente','cpf','metodo','ml','total','status'],...(window._ped||[]).map(o=>[o.created_at,o.ref,o.loc,o.cliente,o.cpf,o.metodo,o.total_ml,String(o.total).replace('.',','),o.status])];
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['﻿'+l.map(r=>r.map(c=>'"'+String(c??'').replace(/"/g,'""')+'"').join(';')).join('\n')],{type:'text/csv'}));a.download='vendas.csv';a.click()}
 async function pedido(id){const d=await api('admin/order&id='+id), o=d.pedido;
-  openM(`<h3>Pedido ${o.ref} ${pill(o.status)}</h3><p class="mut">${dt(o.created_at)} • ${esc(o.loc)} • ${esc(o.terminal)}</p>
-  <div class="grid g2" style="margin:14px 0"><div><label>Cliente</label>${esc(o.cliente||'—')} <span class="mut">${o.cpf||''}</span>${o.compras?`<br><small class="mut">${o.compras} compras</small>`:''}</div>
-   <div><label>Pagamento</label>${met(o.metodo)} ${esc(o.bandeira||'')} ${o.final_cartao?'•••'+o.final_cartao:''}<br><small class="mut">${o.provider||''} ${o.pagamento_id?'• ID '+esc(o.pagamento_id):''} ${o.nsu?'• NSU '+esc(o.nsu):''} ${o.metodo&&o.metodo!=='pix'?(+o.verificado_servidor?'• ✅ confirmado na API':'• ⚠️ não confirmado na API'):''}</small></div></div>
-  <table>${d.itens.map(i=>`<tr><td>${i.qtd}× ${esc(i.produto)} ${i.volume_ml} ml</td><td class="r">${brl(i.qtd*i.preco_unit)}</td></tr>`).join('')}<tr><td><b>Total</b></td><td class="r"><b>${brl(o.total)}</b></td></tr></table>
-  <h2 style="margin-top:16px">Copos</h2><table>${d.copos.map(c=>`<tr><td>#${c.seq} ${esc(c.torneira)}</td><td>${c.servido_ml}/${c.volume_ml} ml</td><td>${pill(c.status)} ${c.erro?'<small class="mut">'+esc(c.erro)+'</small>':''}</td><td class="r">${['erro','timeout'].includes(c.status)?`<button class="btn sm" onclick="reliberar(${c.id},${o.id})">Reliberar</button>`:''}</td></tr>`).join('')||'<tr><td class="mut">—</td></tr>'}</table>
+  openM(sh('Pedido '+o.ref,dt(o.created_at)+' • '+esc(o.loc))+`<div style="margin-bottom:12px">${pill(o.status)}</div>
+  <div class="box" style="padding:4px 14px">
+   <div class="lrow"><span class="mut">Cliente</span><span class="r"><b>${esc(o.cliente||'—')}</b><br><small class="mut">${o.cpf||''}${o.compras?' • '+o.compras+' compras':''}</small></span></div>
+   <div class="lrow"><span class="mut">Pagamento</span><span class="r">${met(o.metodo)} ${esc(o.bandeira||'')} ${o.final_cartao?'•••'+esc(o.final_cartao):''}<br><small class="mut">${esc(o.provider||'')}${o.nsu?' • NSU '+esc(o.nsu):''}</small></span></div>
+   <div class="lrow"><span class="mut">Maquininha</span><span>${esc(o.terminal)}</span></div>
+   ${d.itens.map(i=>`<div class="lrow"><span>${i.qtd}× ${esc(i.produto)} ${mlf(i.volume_ml)}</span><span>${brl(i.qtd*i.preco_unit)}</span></div>`).join('')}
+   ${+o.desconto?`<div class="lrow"><span>Cupom ${esc(o.cupom||'')}</span><span class="okc">−${brl(o.desconto)}</span></div>`:''}
+   <div class="lrow"><b>Total</b><b>${brl(o.total)}</b></div></div>
+  ${d.copos.length?`<div class="sech">🍺 Copos</div>${d.copos.map(c=>`<div class="it"><span class="grow"><span class="t">#${c.seq} ${esc(c.torneira)}</span><div class="s">${c.servido_ml} de ${c.volume_ml} ml ${c.erro?'• '+esc(c.erro):''}</div><div style="margin-top:4px">${pill(c.status)}</div></span>${['erro','timeout'].includes(c.status)?`<button class="btn o sm" onclick="reliberar(${c.id},${o.id})">Reliberar</button>`:''}</div>`).join('')}`:''}
   ${o.obs?`<p class="mut" style="margin-top:10px">📝 ${esc(o.obs)}</p>`:''}
-  ${d.eventos.length?`<h2 style="margin-top:16px">Histórico</h2>${d.eventos.map(e=>`<div class="ev">${esc(e.msg)}<small>${dt(e.created_at)}</small></div>`).join('')}`:''}
-  <div class="row" style="margin-top:18px;justify-content:flex-end">${['pago','servindo','concluido','parcial','falhou'].includes(o.status)&&+o.total>0?`<button class="btn dan" style="flex:0" onclick="estornar(${o.id},${o.total})">Estornar</button>`:''}<button class="btn" style="flex:0" onclick="closeM()">Fechar</button></div>`)}
-async function reliberar(id,oid){if(!confirm('Liberar novamente o volume que faltou deste copo?'))return;try{const r=await api('admin/dispense_retry',{id});toast(`Reliberado: ${r.volume_ml} ml — o cliente precisa estar na chopeira`);pedido(oid)}catch(e){toast(e.mensagem)}}
-async function estornar(id,total){const v=prompt('Valor do estorno (R$):',String(total).replace('.',','));if(v===null)return;try{const r=await api('admin/order_refund',{id,valor:v.replace(',','.')});toast(r.mensagem);closeM();nav(PAGE)}catch(e){toast(e.mensagem)}}
+  ${d.eventos.length?`<div class="sech">Histórico</div>${d.eventos.map(e=>`<div class="lrow"><span style="font-size:14px">${esc(e.msg)}</span><small class="mut nw">${dt(e.created_at)}</small></div>`).join('')}`:''}
+  <div class="sbar">${['pago','servindo','concluido','parcial','falhou'].includes(o.status)&&+o.total>0?`<button class="btn d" onclick="estornar(${o.id},${o.total})">Estornar</button>`:''}<button class="btn o" onclick="closeM()">Fechar</button></div>`)}
+async function reliberar(id,oid){if(!confirm('Liberar novamente o volume que faltou deste copo?'))return;try{const r=await api('admin/dispense_retry',{id});toast(`Reliberado: ${r.volume_ml} ml — o cliente precisa estar na chopeira`);pedido(oid)}catch(e){toast(e.mensagem,true)}}
+async function estornar(id,total){const v=prompt('Valor do estorno (R$):',num(total));if(v===null)return;try{const r=await api('admin/order_refund',{id,valor:v.replace(',','.')});toast(r.mensagem);closeM();nav(PAGE)}catch(e){toast(e.mensagem,true)}}
 
-/* ============ clientes ============ */
+/* ════════ CLIENTES ════════ */
 let CQ='';
-async function clientes(){const d=await api('admin/customers&q='+encodeURIComponent(CQ));
-  $('#main').innerHTML=`<h1>Clientes <span class="sp"></span><span class="mut" style="font-size:13px">${d.total} verificados</span></h1><div class="card">
-  <input placeholder="Buscar por CPF ou nome e Enter" value="${esc(CQ)}" onkeydown="if(event.key==='Enter'){CQ=this.value;clientes()}">
-  <div class="tw" style="margin-top:12px"><table><tr><th>Cliente</th><th>CPF</th><th>Idade</th><th>Verificação</th><th class="r">Compras</th><th class="r">Consumo</th><th class="r">Gasto</th><th class="r">Saldo Pass</th><th>Última</th><th></th></tr>
-  ${d.clientes.map(c=>`<tr><td>${esc(c.nome)} ${+c.bloqueado?'<span class="pill p-err">bloqueado</span>':''}</td><td class="nw">${c.cpf}</td><td>${c.idade}</td><td><span class="pill ${c.verificado_por==='local'?'':'p-ok'}">${c.verificado_por}</span></td>
-   <td class="r">${c.compras}</td><td class="r">${mlf(c.total_ml)}</td><td class="r">${brl(c.total_gasto)}</td><td class="r"><a href="#" onclick="cliente(${c.id});return false">${brl(c.saldo)}</a>${+c.cartoes?`<br><small class="mut">${c.cartoes} cartão(ões)</small>`:''}</td><td class="nw">${dt(c.ultima_compra)}</td>
-   <td class="nw"><button class="btn sm" onclick="cliente(${c.id})">Carteira</button> <button class="btn sm ${+c.bloqueado?'':'dan'}" onclick="bloq(${c.id},${+c.bloqueado?0:1})">${+c.bloqueado?'Desbloquear':'Bloquear'}</button></td></tr>`).join('')}</table></div></div>`}
-async function cliente(id){const d=await api('admin/customer&id='+id), c=d.cliente;
+PG.clientes=async function(){const d=await api('admin/customers&q='+encodeURIComponent(CQ));
+  $('#main').innerHTML=`<div class="ph1"><h1>Clientes<p>${d.total} cliente${d.total==1?'':'s'} com idade verificada</p></h1></div>
+  <input class="search" style="margin-bottom:12px" placeholder="🔎 Buscar por CPF ou nome" value="${esc(CQ)}" onkeydown="if(event.key==='Enter'){CQ=this.value;PG.clientes()}">
+  ${d.clientes.map(c=>`<button class="it" onclick="cliente(${c.id})"><span class="ic">${+c.bloqueado?'⛔':'👤'}</span><span class="grow"><span class="t">${esc(c.nome)}</span>
+    <div class="s">${c.cpf} • ${c.idade} anos • ${c.compras} compra${c.compras==1?'':'s'} • ${mlf(c.total_ml)}</div><div class="s">Última: ${dt(c.ultima_compra)}</div></span><span class="pr">${brl(c.total_gasto)}</span></button>`).join('')||'<div class="box empty"><div class="e">👤</div>Nenhum cliente ainda.</div>'}`};
+async function cliente(id){const d=await api('admin/customer&id='+id), c=d.cliente, adm=ADMIN();
   const nomes={recarga:'Recarga',bonus:'Bônus',consumo:'Consumo',estorno:'Estorno',ajuste:'Ajuste'};
-  openM(`<h3>${esc(c.nome)}</h3><p class="mut">${c.cpf} • ${c.idade} anos • ${c.compras} compras • ${mlf(c.total_ml)}</p>
-   <div class="grid g2" style="margin:14px 0"><div class="card kpi"><small>Saldo Beer Pass</small><b>${brl(c.saldo)}</b></div>
-    <div class="card"><label style="margin-top:0">Ajuste manual (+ crédito / − débito)</label><div class="row"><input id="aj" placeholder="ex.: 10 ou -5,50"><input id="ajo" placeholder="motivo"></div><button class="btn sm" style="margin-top:8px" onclick="ajustar(${c.id})">Aplicar</button></div></div>
-   <h2>Cartões / pulseiras</h2><table>${d.cartoes.map(k=>`<tr><td>${esc(k.apelido||'Cartão')} <code>${esc(k.uid)}</code></td><td>${+k.ativo?'<span class="pill p-ok">ativo</span>':'<span class="pill p-err">bloqueado</span>'}</td><td class="mut">uso ${dt(k.ultimo_uso)}</td>
-     <td class="r nw"><button class="btn sm" onclick="cartao(${k.id},{ativo:${+k.ativo?0:1}},${c.id})">${+k.ativo?'Bloquear':'Desbloquear'}</button> <button class="btn sm dan" onclick="cartao(${k.id},{desvincular:1},${c.id})">Desvincular</button></td></tr>`).join('')||'<tr><td class="mut">Nenhum</td></tr>'}</table>
-   <h2 style="margin-top:16px">Extrato</h2><table>${d.extrato.map(e=>`<tr><td class="nw">${dt(e.created_at)}</td><td>${nomes[e.tipo]||e.tipo}<br><small class="mut">${esc(e.obs||'')}</small></td><td class="r ${+e.valor<0?'dn':'up'}">${brl(e.valor)}</td><td class="r mut">${brl(e.saldo_apos)}</td></tr>`).join('')||'<tr><td class="mut">Sem movimentos</td></tr>'}</table>
-   <div class="row" style="margin-top:16px;justify-content:flex-end"><button class="btn" style="flex:0" onclick="closeM()">Fechar</button></div>`)}
-async function ajustar(id){try{const r=await api('admin/wallet_adjust',{customer_id:id,valor:$('#aj').value,obs:$('#ajo').value});toast('Novo saldo: '+brl(r.saldo));cliente(id)}catch(e){toast(e.mensagem)}}
-async function cartao(id,dados,cid){if(dados.desvincular&&!confirm('Desvincular este cartão do cliente?'))return;await api('admin/card_update',{id,...dados});cliente(cid)}
-async function bloq(id,b){const m=b?prompt('Motivo do bloqueio:'):'';if(b&&m===null)return;await api('admin/customer_block',{id,bloqueado:b,motivo:m});clientes()}
+  openM(sh(esc(c.nome),`${c.cpf} • ${c.idade} anos`)+`<div class="kpis"><div class="kpi"><div class="l">Compras</div><div class="v">${c.compras}</div><div class="s">${mlf(c.total_ml)}</div></div><div class="kpi"><div class="l">Gasto</div><div class="v">${brl(c.total_gasto)}</div></div></div>
+   ${SETPASS?`<div class="sech">🎫 Carteira Beer Pass: ${brl(c.saldo)}</div>
+     ${adm?`<div class="fgrid"><label class="field"><span>Ajuste (+ / −)</span><input id="aj" inputmode="decimal" placeholder="10 ou -5,50"></label><label class="field"><span>Motivo</span><input id="ajo"></label></div><button class="btn o sm" onclick="ajustar(${c.id})">Aplicar ajuste</button>`:''}
+     ${d.cartoes.map(k=>`<div class="lrow"><span>${esc(k.apelido||'Cartão')} <code>${esc(k.uid)}</code> ${+k.ativo?'':'<span class="chip bad">bloqueado</span>'}</span>${adm?`<span class="acts"><button class="btn o sm" onclick="cartao(${k.id},{ativo:${+k.ativo?0:1}},${c.id})">${+k.ativo?'Bloquear':'Liberar'}</button></span>`:''}</div>`).join('')}
+     ${d.extrato.slice(0,30).map(e=>`<div class="lrow"><span>${nomes[e.tipo]||e.tipo}<br><small class="mut">${dt(e.created_at)} ${esc(e.obs||'')}</small></span><b class="${+e.valor<0?'badc':'okc'}">${brl(e.valor)}</b></div>`).join('')}`:''}
+   ${+c.bloqueado?`<div class="note">⛔ Bloqueado: ${esc(c.motivo_bloqueio||'')}</div>`:''}
+   <div class="sbar">${adm?`<button class="btn ${+c.bloqueado?'o':'d'}" onclick="bloq(${c.id},${+c.bloqueado?0:1})">${+c.bloqueado?'Desbloquear':'Bloquear'}</button>`:''}<button class="btn o" onclick="closeM()">Fechar</button></div>`)}
+async function ajustar(id){try{const r=await api('admin/wallet_adjust',{customer_id:id,valor:$('#aj').value,obs:$('#ajo').value});toast('Novo saldo: '+brl(r.saldo));cliente(id)}catch(e){toast(e.mensagem,true)}}
+async function cartao(id,dados,cid){await api('admin/card_update',{id,...dados});cliente(cid)}
+async function bloq(id,b){const m=b?prompt('Motivo do bloqueio:'):'';if(b&&m===null)return;try{await api('admin/customer_block',{id,bloqueado:b,motivo:m});closeM();PG.clientes()}catch(e){toast(e.mensagem,true)}}
 
-/* ============ equipamentos ============ */
-let ETAB='torneiras';
-async function equip(){CAT=await api('admin/catalog');const c=CAT, locN=id=>c.locations.find(l=>l.id==id)?.nome||'-', devN=id=>c.devices.find(d=>d.id==id)?.nome||'-';
-  const tabs=[['torneiras','Torneiras e barris'],['produtos','Bebidas'],['devices','Controladores ESP32'],['terminais','Maquininhas'],['cupons','🏷️ Cupons'],['locations','Pontos']];
-  let body='';
-  if(ETAB==='torneiras') body=c.torneiras.map(t=>{const of=c.ofertas.filter(o=>o.tap_id==t.id), d=c.devices.find(x=>x.id==t.device_id), p=t.barril_ml?Math.round(100*t.restante_ml/t.barril_ml):0;
-    return `<div class="card" style="margin-bottom:12px"><div class="row" style="align-items:center"><div style="flex:2"><b style="font-size:16px">${esc(t.nome)}</b> — ${esc(t.produto||'sem bebida')} ${+t.ativo?'':'<span class="pill">inativa</span>'}<br><small class="mut">${onl(d?.online)}${esc(locN(d?.location_id))} • ${esc(devN(t.device_id))} • canal ${t.canal}${t.preco_litro?` • 🎫 Pass ${brl(t.preco_litro)}/L (máx ${mlf(t.max_ml_servida)} por servida)`:''} • modo ${t.modo==='flow'?'válvula + fluxômetro ('+t.pulsos_por_litro+' pulsos/L)':'pulso ('+t.ml_por_pulso+' ml/pulso)'}</small></div>
-     <div><div class="bar"><i style="width:${p}%;background:${p<=t.alerta_pct?'var(--err)':'var(--ok)'}"></i></div><small class="mut">${mlf(t.restante_ml)} de ${mlf(t.barril_ml)} (${p}%)</small></div>
-     <div style="flex:none;display:flex;gap:6px;flex-wrap:wrap;max-width:100%"><button class="btn sm" onclick="trocaBarril(${t.id})">🛢️ Trocar barril</button><button class="btn sm" onclick="testar(${t.id})">🔓 Liberar teste</button><button class="btn sm" onclick="calibrar(${t.id})">🎯 Calibrar</button><button class="btn sm" onclick="edit('torneiras',${t.id})">✏️</button></div></div>
-     <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">${of.map(o=>`<span class="pill ${+o.ativo?'p-info':''}" style="cursor:pointer;font-size:13px;padding:5px 12px" onclick="edit('ofertas',${o.id})">${o.volume_ml} ml • ${brl(o.preco)}</span>`).join('')}<button class="btn sm" onclick="edit('ofertas',0,{tap_id:${t.id},volume_ml:300,preco:'',ordem:${of.length+1},ativo:1})">+ tamanho</button></div></div>`}).join('')+`<button class="btn pri" onclick="edit('torneiras',0)">+ Nova torneira</button>`;
-  else { const cols={produtos:[['imagem_url','Foto'],['nome','Bebida'],['estilo','Estilo'],['abv','ABV %'],['ativo','Ativo']],devices:[['nome','Controlador'],['location_id','Ponto'],['start_mode','Início'],['temperatura','Temp.'],['device_key','Chave do dispositivo'],['online','On']],
-      terminais:[['nome','Maquininha'],['location_id','Ponto'],['tap_id','Torneira'],['provider','Adquirente'],['codigo','Código de pareamento'],['serial','Serial'],['online','On']],locations:[['nome','Ponto'],['endereco','Endereço'],['id','BeerList (TV)'],['ativo','Ativo']],
-      cupons:[['codigo','Código'],['descricao','Descrição'],['valor','Desconto'],['minimo','Mínimo'],['validade','Validade'],['usos','Usos'],['ativo','Ativo']]}[ETAB];
-    const fmt=(k,v,r)=>k==='tap_id'?(v?esc(c.torneiras.find(x=>x.id==v)?.nome||'#'+v):'Todas'):k==='valor'&&ETAB==='cupons'?(r.tipo==='percentual'?(+v)+'%':brl(v)):k==='minimo'?brl(v):k==='usos'&&ETAB==='cupons'?`${v}${r.usos_max?' / '+r.usos_max:''}`:k==='imagem_url'?(v?`<img src="${esc(v)}" style="width:44px;height:44px;object-fit:cover;border-radius:8px">`:'—'):k==='id'&&ETAB==='locations'?`<a href="tv.html?loc=${v}" target="_blank">abrir tela da TV ↗</a>`:k==='location_id'?esc(locN(v)):k==='online'?onl(v):k==='ativo'?(+v?'✅':'—'):k==='device_key'||k==='codigo'?`<code>${esc(v)}</code>`:k==='temperatura'&&v!==null?(+v).toFixed(1)+'°C':esc(v??'—');
-    body=`<div class="card tw"><table><tr>${cols.map(c=>`<th>${c[1]}</th>`).join('')}<th></th></tr>${c[ETAB].map(r=>`<tr>${cols.map(([k])=>`<td>${fmt(k,r[k],r)}</td>`).join('')}<td class="r"><button class="btn sm" onclick="edit('${ETAB}',${r.id})">✏️</button></td></tr>`).join('')}</table>
-      <button class="btn pri" style="margin-top:12px" onclick="edit('${ETAB}',0)">+ Adicionar</button>${ETAB==='terminais'?'<p class="mut" style="margin-top:10px">No app da maquininha, digite o <b>código de pareamento</b> na primeira abertura.</p>':ETAB==='devices'?'<p class="mut" style="margin-top:10px">Copie a <b>chave do dispositivo</b> para o portal de configuração do ESP32.</p>':''}</div>`}
-  $('#main').innerHTML=`<h1>Chopeiras e barris</h1><div class="tabs">${tabs.map(([k,t])=>`<button class="${ETAB===k?'on':''}" onclick="ETAB='${k}';equip()">${t}</button>`).join('')}</div>${body}`}
+/* ════════ MAIS ════════ */
+PG.mais=async function(){const adm=ADMIN(), tema=localStorage.getItem('be_tema')||'auto', loc=PONTO||(PONTOS[0]&&PONTOS[0].id);
+  $('#main').innerHTML=`<div class="ph1"><h1>${esc(ME.nome)}<p>${esc(ME.email)} • ${ME.role==='dono'?'Dono de quiosque':ME.role==='operador'?'Operador':'Administrador da plataforma'}</p></h1></div>
+  <div class="hub">
+   <button onclick="nav('equip')"><span class="ic">🛠️</span><span class="grow"><b>Equipamentos</b><small>${adm?'Chopeiras, maquininhas, pontos e cupons':'Maquininhas e ajustes técnicos das torneiras'}</small></span>${ic('chev')}</button>
+   <button onclick="nav('eventos')"><span class="ic">🔔</span><span class="grow"><b>Avisos e histórico</b><small>Tudo o que aconteceu nas chopeiras</small></span>${ic('chev')}</button>
+   ${loc?`<a href="tv.html?loc=${loc}" target="_blank"><span class="ic">📺</span><span class="grow"><b>BeerList (TV do ponto)</b><small>Abra numa TV ou tablet perto da chopeira</small></span>${ic('chev')}</a>`:''}
+   ${adm?`<a href="simulador.html" target="_blank"><span class="ic">🧪</span><span class="grow"><b>Simulador</b><small>Teste a maquininha e a chopeira sem hardware</small></span>${ic('chev')}</a>`:''}
+  </div>
+  ${adm?`<div class="hub"><button onclick="nav('config')"><span class="ic">⚙️</span><span class="grow"><b>Configurações</b><small>Marca, idade, happy hour, Pix, Telegram</small></span>${ic('chev')}</button>
+   ${ME.role==='admin'?`<button onclick="nav('usuarios')"><span class="ic">🔑</span><span class="grow"><b>Donos e acessos</b><small>Crie o acesso de cada dono de quiosque</small></span>${ic('chev')}</button>`:''}</div>`:''}
+  <div class="hub"><div style="padding:14px;border-bottom:1px solid var(--line)"><b style="color:var(--h)">Aparência</b><div class="seg" style="margin:10px 0 0">${[['auto','Automático'],['claro','Claro'],['escuro','Escuro']].map(([k,t])=>`<button aria-pressed="${tema===k}" onclick="setTema('${k}')">${t}</button>`).join('')}</div></div>
+   <button onclick="senha()"><span class="ic">🔒</span><span class="grow"><b>Alterar senha</b></span>${ic('chev')}</button>
+   <button onclick="localStorage.removeItem('be_jwt');location.hash='';location.reload()"><span class="ic" style="background:var(--badbg);color:var(--bad)">↩</span><span class="grow"><b>Sair</b></span></button></div>
+  <p class="mut" style="text-align:center;font-size:13px;margin:18px 0">Beer Express • painel</p>`};
+function setTema(t){localStorage.setItem('be_tema',t);if(t==='auto')delete document.documentElement.dataset.theme;else document.documentElement.dataset.theme=t==='escuro'?'dark':'light';PG.mais()}
+function senha(){openM(sh('Alterar senha')+`<label class="field"><span>Senha atual</span><input id="sa" type="password" autocomplete="current-password"></label><label class="field"><span>Nova senha (8+ caracteres)</span><input id="sn" type="password" autocomplete="new-password"></label>
+  <div class="sbar"><button class="btn o" onclick="closeM()">Cancelar</button><button class="btn w" onclick="api('admin/password',{atual:$('#sa').value,nova:$('#sn').value}).then(()=>{closeM();toast('Senha alterada')}).catch(e=>toast(e.mensagem,true))">Salvar</button></div>`)}
 
-const FORMS={
-  locations:[['nome','Nome do ponto'],['endereco','Endereço'],['ativo','Ativo','bool']],
-  devices:[['nome','Nome (ex.: Freezer 1)'],['tipo','Tipo de controlador','sel',[['torneira','Torneira inteligente (tela + leitor de cartão, 1 torneira)'],['central','Central (sem tela, até 4 torneiras)']]],['location_id','Ponto','loc'],['start_mode','Como o cliente se serve','sel',[['auto','Alavanca da torneira — libera após o pagamento (igual BeerPass)'],['pos','Botão SERVIR na tela da maquininha'],['button','Botão físico iluminado na torneira']]],['arm_timeout_s','Tempo para retirar o copo (s)','num'],['temp_min','Temperatura mínima °C','num'],['temp_max','Temperatura máxima °C','num'],['ativo','Ativo','bool']],
-  terminais:[['nome','Nome (ex.: Maquininha Torneira 1)'],['location_id','Ponto','loc'],['tap_id','Presa à torneira (igual BeerPass)','tap'],['provider','Adquirente','sel',[['pagbank','PagBank Moderninha Smart 2'],['mercadopago','Mercado Pago Point Smart 2'],['simulado','Simulado (testes)']]],['aceita_credito','Aceita crédito','bool'],['aceita_debito','Aceita débito','bool'],['aceita_pix','Aceita Pix (via API Mercado Pago)','bool'],['ativo','Ativa','bool']],
-  produtos:[['nome','Nome (ex.: IPA Cabra Macho)'],['cervejaria','Cervejaria (ex.: Haisten Beer)'],['estilo','Tipo (Pilsen, IPA – Indian Pale Ale…)'],['descricao','Descrição curta'],['abv','Teor alcoólico % (ABV)','num'],['ibu','Amargor (IBU)','num'],['imagem_url','Foto','foto'],['cor','Cor do copo','color'],['ativo','Ativo','bool']],
-  torneiras:[['nome','Nome (ex.: Torneira 1)'],['device_id','Controlador','dev'],['canal','Canal no ESP32 (1-4)','num'],['product_id','Bebida','prod'],['modo','Modo de liberação','sel',[['flow','Válvula solenoide + fluxômetro (recomendado)'],['pulse','Pulsos para controladora externa']]],['pulsos_por_litro','Pulsos por litro (fluxômetro)','num'],['ml_por_pulso','ml por pulso (modo pulso)','num'],['preco_litro','Beer Pass: preço por litro (R$) — vazio = só copo','num'],['max_ml_servida','Beer Pass: máximo por servida (ml)','num'],['barril_ml','Tamanho do barril (ml)','num'],['alerta_pct','Alerta de barril baixo (%)','num'],['ativo','Ativa','bool']],
-  cupons:[['codigo','Código (ex.: BEER10)'],['descricao','Descrição'],['tipo','Tipo','sel',[['percentual','% de desconto'],['valor','R$ de desconto']]],['valor','Valor do desconto','num'],['minimo','Compra mínima (R$)','num'],['validade','Válido até','date'],['usos_max','Máximo de usos (vazio = ilimitado)','num'],['ativo','Ativo','bool']],
-  ofertas:[['volume_ml','Volume (ml)','num'],['preco','Preço (R$)','num'],['ordem','Ordem','num'],['ativo','Ativo','bool']]};
-function edit(ent,id,def){FOTO=null;const r=id?CAT[ent].find(x=>x.id==id):(def||{ativo:1}), f=FORMS[ent];
-  const inp=([k,l,t,opt])=>{const v=r[k]??'';let h;
-    if(t==='bool')h=`<select data-k="${k}"><option value="1" ${+v?'selected':''}>Sim</option><option value="0" ${+v?'':'selected'}>Não</option></select>`;
-    else if(t==='sel')h=`<select data-k="${k}">${opt.map(([a,b])=>`<option value="${a}" ${v==a?'selected':''}>${b}</option>`).join('')}</select>`;
-    else if(t==='foto')h=`<div style="display:flex;gap:10px;align-items:center"><img id="fotoPrev" src="${esc(v)}" style="width:64px;height:64px;object-fit:cover;border-radius:10px;background:#000;${v?'':'display:none'}">
-      <input type="file" accept="image/*" id="fotoFile" onchange="fotoEscolhida(this)"><input type="hidden" data-k="${k}" value="${esc(v)}"></div><small class="mut">JPG/PNG — reduzida automaticamente. Aparece na maquininha e na TV.</small>`;
-    else if(t==='tap')h=`<select data-k="${k}"><option value="">Todas as torneiras do ponto (cardápio)</option>${CAT.torneiras.map(o=>`<option value="${o.id}" ${v==o.id?'selected':''}>${esc(o.nome)} — ${esc(o.produto||'')}</option>`).join('')}</select>`;
-    else if(t==='date')h=`<input data-k="${k}" type="date" value="${esc(v)}">`;
-    else if(t==='loc'||t==='dev'||t==='prod'){const L={loc:CAT.locations,dev:CAT.devices,prod:CAT.produtos}[t];h=`<select data-k="${k}">${L.map(o=>`<option value="${o.id}" ${v==o.id?'selected':''}>${esc(o.nome)}</option>`).join('')}</select>`}
-    else h=`<input data-k="${k}" type="${t==='num'?'number':t==='color'?'color':'text'}" step="any" value="${esc(v)}">`;
-    return `<div><label>${l}</label>${h}</div>`};
-  openM(`<h3>${id?'Editar':'Adicionar'}</h3><div class="grid g2">${f.map(inp).join('')}</div><div class="row" style="margin-top:18px;justify-content:flex-end">
-   ${id?`<button class="btn dan" style="flex:0" onclick="salvar('${ent}',${id},true)">Excluir</button>`:''}<button class="btn" style="flex:0" onclick="closeM()">Cancelar</button><button class="btn pri" style="flex:0" onclick="salvar('${ent}',${id})">Salvar</button></div>`);
-  window._def=def}
-let FOTO=null;
-function fotoEscolhida(inp){const f=inp.files[0];if(!f)return;const img=new Image(),url=URL.createObjectURL(f);
-  img.onload=()=>{const m=800,k=Math.min(1,m/Math.max(img.width,img.height)),c=document.createElement('canvas');c.width=Math.round(img.width*k);c.height=Math.round(img.height*k);
-    c.getContext('2d').drawImage(img,0,0,c.width,c.height);FOTO=c.toDataURL('image/jpeg',0.85);$('#fotoPrev').src=FOTO;$('#fotoPrev').style.display='block';URL.revokeObjectURL(url)};
-  img.onerror=()=>toast('Não consegui abrir essa imagem');img.src=url}
-async function salvar(ent,id,del){if(del&&!confirm('Excluir definitivamente?'))return;const data={id,...(window._def&&!id?{tap_id:window._def.tap_id}:{})};
-  if(del)data._delete=1;else document.querySelectorAll('#mIn [data-k]').forEach(e=>data[e.dataset.k]=e.value);
-  try{const r=await api('admin/save',{entity:ent,data});
-    if(ent==='produtos'&&FOTO&&!del){await api('admin/product_image',{id:r.id||id,imagem:FOTO})}
-    FOTO=null;closeM();toast('Salvo');equip()}catch(e){toast(e.mensagem)}}
-async function trocaBarril(id){const t=CAT.torneiras.find(x=>x.id==id);const v=prompt('Novo barril cheio — volume em litros:',t.barril_ml/1000);if(!v)return;await api('admin/keg_change',{tap_id:id,barril_ml:Math.round(parseFloat(v.replace(',','.'))*1000)});toast('Barril registrado');equip()}
-async function testar(id){const v=prompt('Liberar quantos ml? (teste/calibração/cortesia — R$ 0,00)','200');if(!v)return;const m=prompt('Motivo:','teste')||'teste';try{const r=await api('admin/manual_release',{tap_id:id,volume_ml:+v,motivo:m});toast('Liberação enviada ('+r.ref+'). No modo "botão", aperte o botão da torneira.')}catch(e){toast(e.mensagem)}}
-function calibrar(id){openM(`<h3>Calibrar torneira</h3><p class="mut">1) Use "Liberar teste" com, por exemplo, 500 ml num copo medidor/proveta.<br>2) Meça o volume real e informe abaixo. O sistema corrige os pulsos automaticamente.</p>
-  <div class="grid g2"><div><label>Volume liberado (ml)</label><input id="ce" type="number" value="500"></div><div><label>Volume real medido (ml)</label><input id="cr" type="number"></div></div>
-  <div class="row" style="margin-top:16px;justify-content:flex-end"><button class="btn" style="flex:0" onclick="closeM()">Cancelar</button><button class="btn pri" style="flex:0" onclick="doCal(${id})">Aplicar</button></div>`)}
-async function doCal(id){try{const r=await api('admin/calibrate',{tap_id:id,ml_esperado:+$('#ce').value,ml_real:+$('#cr').value});closeM();toast(`${r.campo}: ${r.antes} → ${r.depois}`);equip()}catch(e){toast(e.mensagem)}}
-
-/* ============ eventos ============ */
+/* ════════ AVISOS ════════ */
 let EN='';
-async function eventos(){const d=await api('admin/events&nivel='+EN);
-  $('#main').innerHTML=`<h1>Eventos</h1><div class="tabs">${[['','Todos'],['critico','Críticos'],['aviso','Avisos'],['info','Info']].map(([k,t])=>`<button class="${EN===k?'on':''}" onclick="EN='${k}';eventos()">${t}</button>`).join('')}</div>
-  <div class="card">${d.eventos.map(e=>`<div class="ev"><span class="pill ${e.nivel==='critico'?'p-err':e.nivel==='aviso'?'p-warn':''}">${e.tipo}</span> ${esc(e.msg)} ${e.order_id?`<a href="#" onclick="pedido(${e.order_id});return false">ver pedido</a>`:''}<small>${dt(e.created_at)}</small></div>`).join('')||'<p class="mut">Sem eventos</p>'}</div>`}
+PG.eventos=async function(){const d=await api('admin/events&nivel='+EN);
+  $('#main').innerHTML=`<div class="ph1"><button class="x" style="margin:0" onclick="nav('mais')">‹</button><h1>Avisos e histórico</h1></div>
+  <div class="seg">${[['','Todos'],['critico','Críticos'],['aviso','Avisos'],['info','Info']].map(([k,t])=>`<button aria-pressed="${EN===k}" onclick="EN='${k}';PG.eventos()">${t}</button>`).join('')}</div>
+  <div class="box" style="padding:4px 14px">${d.eventos.map(e=>`<div class="lrow" style="align-items:flex-start"><span style="font-size:14.5px">${e.nivel!=='info'?`<span class="chip ${e.nivel==='critico'?'bad':'warn'}">${e.nivel}</span> `:''}${esc(e.msg)} ${e.order_id?`<a href="#" onclick="pedido(${e.order_id});return false">ver</a>`:''}</span><small class="mut nw">${dt(e.created_at)}</small></div>`).join('')||'<div class="empty">Nada por aqui.</div>'}</div>`};
 
-/* ============ configurações ============ */
-async function config(){const d=await api('admin/settings');SET=d.settings;const s=SET;
-  const F=(k,l,t,opt)=>`<div><label>${l}</label>${t==='sel'?`<select data-s="${k}">${opt.map(([a,b])=>`<option value="${a}" ${s[k]==a?'selected':''}>${b}</option>`).join('')}</select>`:t==='area'?`<textarea data-s="${k}" rows="2">${esc(s[k])}</textarea>`:`<input data-s="${k}" type="${t||'text'}" value="${esc(s[k]??'')}">`}</div>`;
+/* ════════ EQUIPAMENTOS (técnico) ════════ */
+let ETAB='torneiras';
+const FORMS={
+  locations:[['nome','Nome do ponto (quiosque)'],['endereco','Endereço'],['ativo','Ativo','bool']],
+  devices:[['nome','Nome (ex.: Freezer 1)'],['tipo','Tipo de controlador','sel',[['torneira','Torneira inteligente (tela + leitor de cartão, 1 torneira)'],['central','Central (sem tela, até 4 torneiras)']]],['location_id','Ponto','loc'],['start_mode','Como o cliente se serve','sel',[['auto','Alavanca da torneira — libera após o pagamento (igual BeerPass)'],['pos','Botão SERVIR na tela da maquininha'],['button','Botão físico iluminado na torneira']]],['arm_timeout_s','Tempo para retirar o copo (s)','num'],['temp_min','Temperatura mínima °C','num'],['temp_max','Temperatura máxima °C','num'],['ativo','Ativo','bool']],
+  terminais:[['nome','Nome (ex.: Maquininha Torneira 1)'],['location_id','Ponto','loc'],['tap_id','Presa à torneira (igual BeerPass)','tap'],['provider','Adquirente','sel',[['pagbank','PagBank Moderninha Smart 2'],['mercadopago','Mercado Pago Point Smart 2'],['simulado','Simulado (testes)']]],['aceita_credito','Aceita crédito','bool'],['aceita_debito','Aceita débito','bool'],['aceita_pix','Aceita Pix','bool'],['ativo','Ativa','bool']],
+  torneiras:[['nome','Nome (ex.: Torneira 1)'],['device_id','Controlador','dev'],['canal','Canal no ESP32 (1-4)','num'],['modo','Modo de liberação','sel',[['flow','Válvula solenoide + fluxômetro (recomendado)'],['pulse','Pulsos para controladora externa']]],['pulsos_por_litro','Pulsos por litro (fluxômetro)','num'],['ml_por_pulso','ml por pulso (modo pulso)','num'],['preco_litro','Beer Pass: preço por litro (R$) — vazio = só copo','num'],['max_ml_servida','Beer Pass: máximo por servida (ml)','num'],['alerta_pct','Alerta de barril baixo (%)','num'],['ativo','Ativa','bool']],
+  cupons:[['codigo','Código (ex.: BEER10)'],['descricao','Descrição'],['tipo','Tipo','sel',[['percentual','% de desconto'],['valor','R$ de desconto']]],['valor','Valor do desconto','num'],['minimo','Compra mínima (R$)','num'],['validade','Válido até','date'],['usos_max','Máximo de usos (vazio = ilimitado)','num'],['ativo','Ativo','bool']]};
+PG.equip=async function(){CAT=await api('admin/catalog');PONTOS=CAT.locations;const c=CAT,adm=ADMIN(),f=x=>!PONTO||x.location_id==PONTO;
+  const devN=id=>c.devices.find(d=>d.id==id), locN=id=>c.locations.find(l=>l.id==id)?.nome||'—';
+  const tabs=[['torneiras','Torneiras'],['terminais','Maquininhas'],...(adm?[['devices','Chopeiras (ESP32)'],['locations','Pontos'],['cupons','Cupons']]:[])];
+  if(!tabs.some(t=>t[0]===ETAB))ETAB='torneiras';
+  let body='';
+  if(ETAB==='torneiras')body=c.torneiras.filter(t=>!PONTO||devN(t.device_id)?.location_id==PONTO).map(t=>{const d=devN(t.device_id);return `<div class="it"><span class="ic"><span class="dot ${d?.online?'':'off'}"></span></span><span class="grow"><span class="t">${esc(t.nome)} — ${esc(t.produto||'sem bebida')}</span>
+     <div class="s">${esc(d?.nome||'')} • canal ${t.canal} • ${t.modo==='flow'?num(t.pulsos_por_litro)+' pulsos/L':num(t.ml_por_pulso)+' ml/pulso'}${+t.ativo?'':' • inativa'}</div>
+     <div class="acts" style="margin-top:8px"><button class="btn o sm" onclick="testar(${t.id})">🔓 Liberar teste</button><button class="btn o sm" onclick="calibrar(${t.id})">🎯 Calibrar</button><button class="btn o sm" onclick="edit('torneiras',${t.id})">${ic('edit')} Técnico</button></div></span></div>`}).join('')
+    +`<p class="mut" style="font-size:14px;margin:8px 2px">Foto, nome, tipo, preços e barril ficam na aba <a href="#bebidas">Bebidas</a>.</p>`;
+  else{const L=(c[ETAB]||[]).filter(x=>ETAB==='cupons'||ETAB==='locations'?(ETAB!=='locations'||!PONTO||x.id==PONTO):f(x));
+    body=L.map(r=>{let t='',s='';
+      if(ETAB==='terminais'){t=`<span class="dot ${r.online?'':'off'}"></span>&nbsp; ${esc(r.nome)}`;s=`${esc(locN(r.location_id))} • ${r.tap_id?'presa à '+esc(c.torneiras.find(x=>x.id==r.tap_id)?.nome||'torneira'):'cardápio com todas'} • ${r.provider}<br>Código de pareamento: <code>${esc(r.codigo||'')}</code>${r.serial?' • serial '+esc(r.serial):''}`}
+      else if(ETAB==='devices'){t=`<span class="dot ${r.online?'':'off'}"></span>&nbsp; ${esc(r.nome)}`;s=`${esc(locN(r.location_id))} • ${r.tipo==='torneira'?'torneira inteligente':'central'}${r.temperatura!==null?' • 🌡️ '+num(r.temperatura)+'°C':''} • visto ${ago(r.last_seen)}${r.device_key?`<br>Chave: <code>${esc(r.device_key)}</code>`:''}`}
+      else if(ETAB==='locations'){t=esc(r.nome);s=`${esc(r.endereco||'')} • TV: <a href="tv.html?loc=${r.id}" target="_blank">tv.html?loc=${r.id}</a>`}
+      else {t=`🏷️ ${esc(r.codigo)}`;s=`${r.tipo==='percentual'?(+r.valor)+'%':brl(r.valor)} de desconto${+r.minimo?' • mínimo '+brl(r.minimo):''} • ${r.usos}${r.usos_max?'/'+r.usos_max:''} usos${r.validade?' • até '+r.validade.split('-').reverse().join('/'):''}`}
+      return `<button class="it" onclick="edit('${ETAB}',${r.id})"><span class="grow"><span class="t">${t}</span><div class="s">${s}</div>${+r.ativo?'':'<span class="chip">inativo</span>'}</span>${ic('chev')}</button>`}).join('')||'<div class="box empty">Nada cadastrado ainda.</div>';
+    if(adm||ETAB!=='terminais')body+=`<button class="btn w full" style="margin-top:6px" onclick="edit('${ETAB}',0)">${ic('plus')} Adicionar</button>`;
+    if(ETAB==='terminais')body+=`<p class="mut" style="font-size:14px;margin:10px 2px">No app da maquininha, digite o <b>código de pareamento</b> na primeira abertura. "Cardápio com todas" mostra todas as bebidas do ponto; "presa à torneira" mostra só aquela (igual BeerPass).</p>`;
+    if(ETAB==='devices')body+=`<p class="mut" style="font-size:14px;margin:10px 2px">Copie a <b>chave</b> para o portal de configuração do ESP32.</p>`}
+  $('#main').innerHTML=`<div class="ph1"><button class="x" style="margin:0" onclick="nav('mais')">‹</button><h1>Equipamentos</h1></div>
+   <div class="seg">${tabs.map(([k,t])=>`<button aria-pressed="${ETAB===k}" onclick="ETAB='${k}';PG.equip()">${t}</button>`).join('')}</div>${body}`};
+function edit(ent,id){const r=id?CAT[ent].find(x=>x.id==id):{ativo:1,location_id:PONTO||CAT.locations[0]?.id}, fl=FORMS[ent].filter(([k])=>ADMIN()||ent!=='terminais'||!['location_id','provider'].includes(k));
+  const inp=([k,l,t,opt])=>{const v=r[k]??'';let h;
+    if(t==='bool')return `<label class="tg"><span class="grow"><b>${l}</b></span><input type="checkbox" data-k="${k}" ${+v?'checked':''}><i></i></label>`;
+    if(t==='sel')h=`<select data-k="${k}">${opt.map(([a,b])=>`<option value="${a}" ${v==a?'selected':''}>${b}</option>`).join('')}</select>`;
+    else if(t==='tap')h=`<select data-k="${k}"><option value="">Cardápio com todas as torneiras do ponto</option>${CAT.torneiras.filter(o=>!r.location_id||CAT.devices.find(d=>d.id==o.device_id)?.location_id==r.location_id).map(o=>`<option value="${o.id}" ${v==o.id?'selected':''}>${esc(o.nome)} — ${esc(o.produto||'')}</option>`).join('')}</select>`;
+    else if(t==='date')h=`<input data-k="${k}" type="date" value="${esc(v)}">`;
+    else if(t==='loc'||t==='dev'){const L={loc:CAT.locations,dev:CAT.devices}[t];h=`<select data-k="${k}">${L.map(o=>`<option value="${o.id}" ${v==o.id?'selected':''}>${esc(o.nome)}</option>`).join('')}</select>`}
+    else h=`<input data-k="${k}" ${t==='num'?'inputmode="decimal"':''} value="${esc(v)}">`;
+    return `<label class="field"><span>${l}</span>${h}</label>`};
+  openM(sh(id?'Editar':'Adicionar')+fl.map(inp).join('')+`<div class="sbar">${id&&ADMIN()?`<button class="btn d" onclick="salvar('${ent}',${id},true)">${ic('trash')}</button>`:''}<button class="btn o" onclick="closeM()">Cancelar</button><button class="btn w" onclick="salvar('${ent}',${id})">Salvar</button></div>`)}
+async function salvar(ent,id,del){if(del&&!confirm('Excluir definitivamente?'))return;const data={id};
+  if(del)data._delete=1;else document.querySelectorAll('#sheet [data-k]').forEach(e=>data[e.dataset.k]=e.type==='checkbox'?(e.checked?1:0):e.value.replace(/^(-?\d+),(\d+)$/,'$1.$2'));
+  try{await api('admin/save',{entity:ent,data});closeM();toast('Salvo');PG.equip()}catch(e){toast(e.mensagem,true)}}
+function calibrar(id){openM(sh('Calibrar torneira')+`<p class="mut" style="margin-bottom:14px">1) Toque em "Liberar teste" com 500 ml num copo medidor.<br>2) Meça o volume real e informe abaixo — o sistema corrige os pulsos.</p>
+  <div class="fgrid"><label class="field"><span>Liberado (ml)</span><input id="ce" inputmode="numeric" value="500"></label><label class="field"><span>Medido (ml)</span><input id="cr" inputmode="numeric"></label></div>
+  <div class="sbar"><button class="btn o" onclick="closeM()">Cancelar</button><button class="btn w" onclick="doCal(${id})">Aplicar</button></div>`)}
+async function doCal(id){try{const r=await api('admin/calibrate',{tap_id:id,ml_esperado:+$('#ce').value,ml_real:+$('#cr').value});closeM();toast(`${r.campo}: ${r.antes} → ${r.depois}`);PG.equip()}catch(e){toast(e.mensagem,true)}}
+
+/* ════════ DONOS E ACESSOS (administrador) ════════ */
+PG.usuarios=async function(){const d=await api('admin/usuarios');window._us=d;
+  const papel={admin:'Administrador',dono:'Dono de quiosque',operador:'Operador'};
+  $('#main').innerHTML=`<div class="ph1"><button class="x" style="margin:0" onclick="nav('mais')">‹</button><h1>Donos e acessos<p>Cada dono entra no painel e vê só os quiosques dele.</p></h1></div>
+   ${d.usuarios.map(u=>`<button class="it" onclick="usuario(${u.id})"><span class="ic">${u.role==='dono'?'🍺':'🔑'}</span><span class="grow"><span class="t">${esc(u.nome)}</span><div class="s">${esc(u.email)} • ${papel[u.role]}${u.role==='dono'?' • '+u.pontos.map(p=>esc(d.pontos.find(x=>x.id==p)?.nome||'')).join(', '):''}</div><div class="s">Último acesso: ${dt(u.last_login)}${+u.ativo?'':' • <b class="badc">sem acesso</b>'}</div></span>${ic('chev')}</button>`).join('')}
+   <button class="btn w full" style="margin-top:6px" onclick="usuario(0)">${ic('plus')} Novo dono de quiosque</button>`};
+function usuario(id){const d=window._us,u=id?d.usuarios.find(x=>x.id===id):{nome:'',email:'',role:'dono',ativo:1,pontos:PONTO?[+PONTO]:[]};
+  openM(sh(id?'Editar acesso':'Novo acesso')+`<label class="field"><span>Nome</span><input id="uN" value="${esc(u.nome)}"></label>
+   <label class="field"><span>E-mail (login)</span><input id="uE" type="email" inputmode="email" value="${esc(u.email)}"></label>
+   <label class="field"><span>${id?'Nova senha <small>(deixe vazio para manter)</small>':'Senha inicial (8+ caracteres)'}</span><input id="uS" type="text" autocomplete="off"></label>
+   <div class="field"><span>Tipo de acesso</span><div class="opts" id="uR">${[['dono','Dono de quiosque'],['admin','Administrador'],['operador','Operador']].map(([k,t])=>`<button type="button" data-v="${k}" aria-pressed="${u.role===k}" onclick="document.querySelectorAll('#uR button').forEach(b=>b.setAttribute('aria-pressed',b===this));$('#uP').hidden=this.dataset.v!=='dono'">${t}</button>`).join('')}</div></div>
+   <div class="field" id="uP" ${u.role==='dono'?'':'hidden'}><span>Quiosques deste dono</span><div class="opts">${d.pontos.map(p=>`<button type="button" data-p="${p.id}" aria-pressed="${u.pontos.includes(p.id)}" onclick="this.setAttribute('aria-pressed',this.getAttribute('aria-pressed')!=='true')">${esc(p.nome)}</button>`).join('')||'<span class="mut">Cadastre os pontos em Equipamentos → Pontos.</span>'}</div></div>
+   <label class="tg"><span class="grow"><b>Acesso liberado</b></span><input type="checkbox" id="uA" ${+u.ativo?'checked':''}><i></i></label>
+   <div class="sbar"><button class="btn o" onclick="closeM()">Cancelar</button><button class="btn w" onclick="salvarUsuario(${id})">Salvar</button></div>`)}
+async function salvarUsuario(id){const role=document.querySelector('#uR [aria-pressed=true]')?.dataset.v||'dono';
+  try{await api('admin/usuario_salvar',{id,nome:$('#uN').value,email:$('#uE').value,senha:$('#uS').value,role,ativo:$('#uA').checked?1:0,pontos:[...document.querySelectorAll('#uP [aria-pressed=true]')].map(b=>+b.dataset.p)});
+    closeM();toast('Acesso salvo');PG.usuarios()}catch(e){toast(e.mensagem,true)}}
+
+/* ════════ CONFIGURAÇÕES (administrador) ════════ */
+PG.config=async function(){const d=await api('admin/settings');SET=d.settings;const s=SET;
+  const F=(k,l,t,opt)=>`<label class="field"><span>${l}</span>${t==='sel'?`<select data-s="${k}">${opt.map(([a,b])=>`<option value="${a}" ${s[k]==a?'selected':''}>${b}</option>`).join('')}</select>`:t==='area'?`<textarea data-s="${k}" rows="2">${esc(s[k])}</textarea>`:`<input data-s="${k}" type="${t||'text'}" value="${esc(s[k]??'')}">`}</label>`;
   const yn=[['1','Sim'],['0','Não']];
-  $('#main').innerHTML=`<h1>Configurações <span class="sp"></span><button class="btn pri" onclick="salvarCfg()">Salvar tudo</button></h1>
-  <div class="grid g2">
-  <div class="card"><h2>🍺 Marca e textos</h2><div class="grid g2">${F('marca_nome','Nome')}${F('marca_slogan','Slogan')}${F('marca_cor','Cor principal','color')}${F('cupons_ativo','Cupons de desconto','sel',yn)}</div>
+  $('#main').innerHTML=`<div class="ph1"><button class="x" style="margin:0" onclick="nav('mais')">‹</button><h1>Configurações</h1><button class="btn w sm" onclick="salvarCfg()">Salvar</button></div>
+  <div class="box"><h2>🍺 Marca e textos</h2><div class="fgrid r1">${F('marca_nome','Nome')}${F('marca_slogan','Slogan')}${F('marca_cor','Cor principal','color')}${F('cupons_ativo','Cupons de desconto','sel',yn)}</div>
    ${F('termos_texto','Tela ATENÇÃO (termos + 18 anos)','area')}${F('ajuda_texto','Botão "Preciso de ajuda" (vazio = esconde)','area')}${F('msg_final','Mensagem ao final','area')}</div>
-  <div class="card"><h2>🔞 Verificação de idade</h2><div class="grid g2">${F('verificacao_idade','Como verificar','sel',[['cpf','CPF + nascimento (+ nome no 1º acesso) — mais seguro'],['declaracao','Só "Sim, concordo" — igual BeerPass']])}${F('idade_minima','Idade mínima','number')}${F('cpf_provider','Conferência de CPF na Receita','sel',[['local','Somente dígitos + idade declarada'],['nfeio','NFE.io (CPF + nascimento → nome)'],['serpro','Serpro direto (Consulta CPF)']])}
-   ${F('nome_regra','Conferência do nome','sel',[['primeiro_e_sobrenome','Primeiro nome + 1 sobrenome'],['primeiro','Somente primeiro nome']])}${F('reverificar_dias','Reconsultar a Receita a cada (dias)','number')}
-   ${F('max_falhas_verificacao','Tentativas inválidas até bloquear','number')}${F('bloqueio_minutos','Minutos de bloqueio da maquininha','number')}
-   ${F('falha_api_permite_local','Se a API cair, vender só com dígitos?','sel',[['0','Não (mais seguro)'],['1','Sim']])}</div>
-   ${F('nfeio_api_key','Chave API NFE.io','password')}<div class="grid g2">${F('serpro_consumer_key','Serpro Consumer Key')}${F('serpro_consumer_secret','Serpro Consumer Secret','password')}</div>${F('serpro_url','URL Serpro (use {cpf}, {nasc} ou {nasc_dmy})')}</div>
-  <div class="card"><h2>🎫 Beer Pass — recarga + cartão + cobrança por ml <span class="pill">backlog</span></h2><p class="mut" style="margin-bottom:6px">Pronto, mas desligado. Com "Ativo = Não", a maquininha, a TV e as torneiras mostram só a venda de copo.</p><div class="grid g2">${F('pass_ativo','Ativo','sel',yn)}${F('recarga_valores','Valores de recarga (R$, vírgula)')}
-   ${F('recarga_bonus','Bônus (valor:bônus, ex.: 100:5,150:10)')}${F('pass_ml_minimo','Saldo mínimo para abrir (em ml)','number')}${F('pass_fim_inatividade_s','Fecha a torneira após (s) sem fluxo','number')}
-   ${F('tv_ranking','Ranking de consumo na TV (Nome S.)','sel',[['0','Não'],['1','Sim']])}</div>${F('tv_mensagem','Mensagem da TV (BeerList)','area')}
-   <p class="mut" style="margin-top:8px">O preço por litro é definido em cada torneira (Chopeiras e barris → ✏️).</p></div>
-  <div class="card"><h2>🎉 Happy Hour automático</h2><div class="grid g2">${F('happy_hour_ativo','Ativo','sel',yn)}${F('happy_hour_nome','Nome da promoção')}
-   ${F('happy_hour_inicio','Início','time')}${F('happy_hour_fim','Fim','time')}${F('happy_hour_pct','Desconto (%)','number')}${F('happy_hour_dias','Dias (1=seg … 7=dom)')}</div>
-   <p class="mut" style="margin-top:8px">No horário, todos os preços caem sozinhos e a maquininha e a TV mostram o preço cheio riscado e a faixa da promoção.</p></div>
-  <div class="card"><h2>🛒 Experiência de compra</h2><div class="grid g2">${F('avaliacao_ativa','Pedir avaliação após servir','sel',yn)}${F('inatividade_s','"Ainda está aí?" após (s) parado','number')}
-   ${F('prova_social_min','Mostrar "X copos hoje" a partir de','number')}${F('limite_copos_pedido','Máximo de copos por compra','number')}</div>
-   <p class="mut" style="margin-top:8px">O selo "🔥 Mais pedido" e o "Economize X%" nos tamanhos maiores são calculados sozinhos pelas vendas dos últimos 30 dias.</p></div>
-  <div class="card"><h2>🍻 Consumo responsável</h2><div class="grid g2">${F('limite_ml_dia_cpf','Limite por CPF por dia (ml, 0 = sem limite)','number')}</div></div>
-  <div class="card"><h2>💳 Mercado Pago (Pix e conferência de cartão)</h2>${F('mp_access_token','Access Token de produção','password')}<div class="grid g2">${F('pix_modo','Pix','sel',[['maquininha','Na própria maquininha (PagBank)'],['api_mp','QR gerado pelo servidor (Mercado Pago)']])}${F('pix_expira_min','Validade do Pix (min)','number')}${F('mp_verificar_cartao','Conferir cartão na API do MP','sel',yn)}</div>${F('pix_email_padrao','E-mail do pagador padrão (Pix)')}
-   <p class="mut" style="margin-top:10px">Webhook (Mercado Pago → Suas integrações → Webhooks → evento Pagamentos):<br><code>${esc(d.webhooks.mercadopago)}</code></p></div>
-  <div class="card"><h2>📲 Telegram</h2>${F('telegram_token','Token do bot (@BotFather)','password')}${F('telegram_chat_ids','Chat IDs (separados por vírgula)')}
-   <div class="grid g2">${F('tg_notificar_vendas','Avisar cada venda','sel',yn)}${F('tg_notificar_tentativa_menor','Avisar tentativa de menor','sel',yn)}${F('tg_resumo_diario','Resumo diário 23:55','sel',yn)}${F('offline_minutos','Considerar offline após (min)','number')}</div>
-   <button class="btn" style="margin-top:12px" onclick="tgTest()">Salvar e enviar teste + ativar comandos (/status /hoje /barris)</button></div>
-  </div>`}
-async function salvarCfg(silent){const st={};document.querySelectorAll('[data-s]').forEach(e=>st[e.dataset.s]=e.value);try{await api('admin/settings_save',{settings:st});if(!silent)toast('Configurações salvas');return true}catch(e){toast(e.mensagem)}}
-async function tgTest(){if(!await salvarCfg(true))return;try{const r=await api('admin/telegram_test',{registrar_webhook:1});toast(r.mensagem+(r.webhook?' • comandos ativos':''))}catch(e){toast(e.mensagem||'Falhou')}}
-function senha(){openM(`<h3>Alterar senha</h3><label>Senha atual</label><input id="sa" type="password"><label>Nova senha</label><input id="sn" type="password"><div class="row" style="margin-top:16px;justify-content:flex-end"><button class="btn" style="flex:0" onclick="closeM()">Cancelar</button><button class="btn pri" style="flex:0" onclick="api('admin/password',{atual:$('#sa').value,nova:$('#sn').value}).then(()=>{closeM();toast('Senha alterada')}).catch(e=>toast(e.mensagem))">Salvar</button></div>`)}
+  <div class="box"><h2>🔞 Verificação de idade</h2><div class="fgrid r1">${F('verificacao_idade','Como verificar','sel',[['cpf','CPF + nascimento (mais seguro)'],['declaracao','Só "Sim, concordo" (igual BeerPass)']])}${F('idade_minima','Idade mínima','number')}${F('cpf_provider','Conferência na Receita','sel',[['local','Só dígitos + idade declarada'],['nfeio','NFE.io (CPF + nascimento → nome)'],['serpro','Serpro (Consulta CPF)']])}
+   ${F('nome_regra','Conferência do nome','sel',[['primeiro_e_sobrenome','Primeiro nome + 1 sobrenome'],['primeiro','Só o primeiro nome']])}${F('reverificar_dias','Reconsultar a Receita a cada (dias)','number')}
+   ${F('max_falhas_verificacao','Tentativas até bloquear','number')}${F('bloqueio_minutos','Minutos de bloqueio','number')}${F('falha_api_permite_local','Se a API cair, vender só com dígitos?','sel',[['0','Não (mais seguro)'],['1','Sim']])}</div>
+   ${F('nfeio_api_key','Chave API NFE.io','password')}<div class="fgrid r1">${F('serpro_consumer_key','Serpro Consumer Key')}${F('serpro_consumer_secret','Serpro Consumer Secret','password')}</div>${F('serpro_url','URL Serpro (use {cpf}, {nasc} ou {nasc_dmy})')}</div>
+  <div class="box"><h2>🎉 Happy Hour automático</h2><div class="fgrid">${F('happy_hour_ativo','Ativo','sel',yn)}${F('happy_hour_nome','Nome da promoção')}${F('happy_hour_inicio','Início','time')}${F('happy_hour_fim','Fim','time')}${F('happy_hour_pct','Desconto (%)','number')}${F('happy_hour_dias','Dias (1=seg … 7=dom)')}</div>
+   <p class="mut" style="font-size:14px">No horário, os preços caem sozinhos e a maquininha e a TV mostram o preço cheio riscado.</p></div>
+  <div class="box"><h2>🛒 Experiência de compra</h2><div class="fgrid">${F('avaliacao_ativa','Pedir avaliação','sel',yn)}${F('inatividade_s','"Ainda está aí?" após (s)','number')}${F('prova_social_min','"X copos hoje" a partir de','number')}${F('limite_copos_pedido','Máx. copos por compra','number')}${F('limite_ml_dia_cpf','Limite por CPF/dia (ml, 0 = sem)','number')}</div></div>
+  <div class="box"><h2>💳 Pagamento (Pix e conferência)</h2>${F('mp_access_token','Mercado Pago — Access Token de produção','password')}<div class="fgrid r1">${F('pix_modo','Pix','sel',[['maquininha','Na própria maquininha (PagBank)'],['api_mp','QR gerado pelo servidor (Mercado Pago)']])}${F('pix_expira_min','Validade do Pix (min)','number')}${F('mp_verificar_cartao','Conferir cartão na API do MP','sel',yn)}</div>${F('pix_email_padrao','E-mail do pagador padrão (Pix)')}
+   <p class="mut" style="font-size:14px">Webhook do Mercado Pago (evento Pagamentos):<br><code>${esc(d.webhooks.mercadopago)}</code></p></div>
+  <div class="box"><h2>📲 Telegram</h2>${F('telegram_token','Token do bot (@BotFather)','password')}${F('telegram_chat_ids','Chat IDs (separados por vírgula)')}
+   <div class="fgrid">${F('tg_notificar_vendas','Avisar cada venda','sel',yn)}${F('tg_notificar_tentativa_menor','Avisar tentativa de menor','sel',yn)}${F('tg_resumo_diario','Resumo diário 23:55','sel',yn)}${F('offline_minutos','Offline após (min)','number')}</div>
+   <button class="btn o full" onclick="tgTest()">Salvar e enviar teste</button></div>
+  <div class="box"><h2>🎫 Beer Pass (recarga + cartão) <span class="chip">desligado por padrão</span></h2><div class="fgrid">${F('pass_ativo','Ativo','sel',yn)}${F('recarga_valores','Valores de recarga (R$)')}${F('recarga_bonus','Bônus (100:5,150:10)')}${F('pass_ml_minimo','Saldo mínimo (ml)','number')}${F('pass_fim_inatividade_s','Fecha após (s) sem fluxo','number')}${F('tv_ranking','Ranking na TV','sel',[['0','Não'],['1','Sim']])}</div>${F('tv_mensagem','Mensagem da TV (BeerList)','area')}</div>
+  <button class="btn w full" style="margin:14px 0 24px" onclick="salvarCfg()">Salvar configurações</button>`};
+async function salvarCfg(silent){const st={};document.querySelectorAll('[data-s]').forEach(e=>st[e.dataset.s]=e.value);try{await api('admin/settings_save',{settings:st});if(!silent)toast('Configurações salvas');SETPASS=st.pass_ativo==='1';return true}catch(e){toast(e.mensagem,true)}}
+async function tgTest(){if(!await salvarCfg(true))return;try{const r=await api('admin/telegram_test',{registrar_webhook:1});toast(r.mensagem+(r.webhook?' • comandos ativos':''))}catch(e){toast(e.mensagem||'Falhou',true)}}
 
-JWT?shell():login();
+/* início */
+(async()=>{if(!JWT)return login();await boot();try{const d=await api('admin/dashboard'+(PONTO?'&location_id='+PONTO:''));SETPASS=!!d.pass_ativo}catch(e){}})();
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeM()});
 </script>
 </body>
 </html>

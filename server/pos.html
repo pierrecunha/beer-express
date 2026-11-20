@@ -32,6 +32,18 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
 .brand b{color:var(--amber)}
 .slog{color:var(--mut);margin-top:4px;font-size:15px}
 .chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:18px}
+/* cardápio na tela de descanso (maquininha com todas as torneiras) */
+#idle.menuOn .logo{font-size:40px}#idle.menuOn .brand{font-size:26px;margin-top:4px}#idle.menuOn .c{margin-top:6px!important}
+.idleMenu{flex:1;min-height:0;overflow:auto;display:grid;grid-template-columns:1fr 1fr;gap:10px;align-content:start;margin:14px 0 12px;padding:2px}
+.idleMenu:empty{display:none}
+.mc{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:10px;text-align:left;display:flex;flex-direction:column;gap:6px;position:relative;overflow:hidden;min-height:0}
+.mc .ph{height:110px;border-radius:12px;background:#0006;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.mc .ph img{width:100%;height:100%;object-fit:cover}
+.mc .ph .cup{width:54px;height:68px;border-radius:8px 8px 14px 14px;background:linear-gradient(180deg,#fff8 0 18%,var(--c) 18% 100%);box-shadow:inset 0 -10px 20px #0004}
+.mc b{font-size:15px;line-height:1.2}.mc small{font-size:12px;color:var(--mut);line-height:1.25}
+.mc .pr{font-weight:800;color:var(--amber);font-size:14px}
+.mc.off{opacity:.45}.mc.off::after{content:'Indisponível';position:absolute;top:10px;left:10px;background:#000c;border-radius:99px;padding:3px 9px;font-size:11px;font-weight:700}
+.idleMenu:not(:empty)~div .cta{min-height:60px;font-size:19px}
 .chip{padding:8px 12px;border-radius:99px;background:var(--card);border:1px solid var(--line);font-size:13px;display:flex;gap:6px;align-items:center}
 .dot{width:9px;height:9px;border-radius:50%}
 .cta{font-size:22px;min-height:72px;animation:pulse 2.2s infinite}
@@ -210,6 +222,7 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
     <div class="chips" id="idleChips"></div>
     <div class="hh" id="idleHH" style="display:none;border-radius:14px;margin-top:16px"></div>
   </div>
+  <div class="idleMenu" id="idleMenu"></div>
   <div>
     <button class="btn pri cta">Toque para começar</button>
     <div class="legal"><span class="b18">18+</span>Proibida a venda de bebidas alcoólicas a menores de 18 anos (Lei 13.106/2015 – ECA art. 243). Será solicitado CPF e data de nascimento.</div>
@@ -442,7 +455,7 @@ async function api(r, body, method){
 const PASSO = {cpf:1, nasc:1, nome:1, tamanho:2, qtd:3, cupomScr:3, pagamento:4, pix:4};
 function go(id){ document.querySelectorAll('.scr').forEach(s => s.classList.toggle('on', s.id === id)); S.screen = id; armIdle();
   const n = PASSO[id] || 0, pr = $('prog'); pr.classList.toggle('on', n > 0); [...pr.children].forEach((b,i)=>b.classList.toggle('d', i < n));
-  const el = $(id); if (el) el.classList.toggle('hasprog', n > 0); }
+  const el = $(id); if (el) { el.classList.toggle('hasprog', n > 0); el.scrollTop = 0; } }
 /* Funil de vendas (abandono por etapa no painel) */
 function track(etapa){ if (S.sessao) api('pos/track', {sessao:S.sessao, etapa}).catch(()=>{}); }
 function novaSessao(){ S.sessao = [...crypto.getRandomValues(new Uint8Array(8))].map(b=>b.toString(16).padStart(2,'0')).join(''); }
@@ -486,11 +499,18 @@ function renderTapHome(){ if (!S.cfg || !S.cfg.tap_id) return; const t = S.taps[
   $('thInfoL').innerHTML = `Tipo<b>${esc(t.estilo||'—')}</b>Teor alcoólico<b>${t.abv!==null?String(t.abv).replace('.',',')+'% ABV':'—'}</b>${t.ibu!==null?`Amargor<b style="margin:0">${t.ibu} IBU</b>`:''}`;
   $('thPv').innerHTML = t.preco_100ml!==null ? preco({preco:t.preco_100ml, preco_cheio:t.preco_100ml_cheio}) : '—'; $('thMarca').textContent = S.cfg.marca.nome;
   $('thSocial').style.display = t.copos_hoje ? 'block' : 'none'; if (t.copos_hoje) $('thSocial').textContent = `🔥 ${t.copos_hoje} copos servidos hoje`; }
-function renderIdleChips(){ $('idleChips').innerHTML = S.taps.map(t => `<span class="chip"><span class="dot" style="background:${t.disponivel?t.cor:'#555'}"></span>${esc(t.produto)}</span>`).join(''); }
+/* Descanso: com a maquininha "cardápio com todas", mostra todas as bebidas (foto, tipo, teor, preço) — tocar numa já leva a ela depois da identificação */
+function renderIdleChips(){ const menu = !(S.cfg && S.cfg.tap_id) && S.taps.length > 0;
+  $('idle').classList.toggle('menuOn', menu); $('idleChips').innerHTML = menu ? '' : S.taps.map(t => `<span class="chip"><span class="dot" style="background:${t.disponivel?t.cor:'#555'}"></span>${esc(t.produto)}</span>`).join('');
+  $('idleMenu').innerHTML = !menu ? '' : S.taps.map((t,i) => { const min = t.ofertas.filter(o=>o.disponivel).sort((a,b)=>a.preco-b.preco)[0];
+    return `<button class="mc ${t.disponivel?'':'off'}" onclick="event.stopPropagation(); ${t.disponivel?`S.pre=${t.tap_id}; start()`:''}">
+      <div class="ph">${t.imagem_url ? `<img src="${esc(t.imagem_url)}" alt="">` : `<div class="cup" style="--c:${esc(t.cor)}"></div>`}</div>
+      <b>${esc(t.produto)}</b><small>${esc(t.estilo||'')}${t.abv!==null?` • ${String(t.abv).replace('.',',')}%`:''}</small>
+      <span class="pr">${min ? 'a partir de ' + brl(min.preco) : 'Indisponível'}</span></button>`; }).join(''); }
 function esc(s){ return String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
 function toIdle(){ clearInterval(S.pollT); clearInterval(S.pixT); if (S.ver && S.ver.token) api('pos/logout', {token:S.ver.token}).catch(()=>{});
-  Object.assign(S, {cpf:'', nasc:'', nome:'', ver:null, order:null, wallet:null, vinc:'', rec:null, sel:null, cup:'', prev:null}); $('vDisp') && ($('vDisp').textContent='____');
+  Object.assign(S, {cpf:'', nasc:'', nome:'', ver:null, order:null, wallet:null, vinc:'', rec:null, sel:null, cup:'', prev:null, pre:null}); $('vDisp') && ($('vDisp').textContent='____');
   updCpf(); updNasc(); updNome(); unload(); go(home()); }
 function start(){ if (!S.taps.some(t => t.disponivel)) return modal('😕','Chopeira indisponível','Estamos sem chopp disponível agora. Volte em instantes!',[['OK']]);
   $('termos').textContent = S.cfg.termos; $('ajudaBtn').style.display = S.cfg.ajuda ? 'flex' : 'none'; novaSessao(); track('inicio'); go('age'); }
@@ -499,6 +519,8 @@ async function ageYes(){ track('termos'); if (S.cfg.verificacao !== 'declaracao'
   loading('Aguarde…'); try { S.ver = await api('pos/identify', {declara_maior:true}); unload(); await depoisIdentificar(); } catch(e){ unload(); modal('⚠️','Não foi possível continuar', e.mensagem, [['OK', toIdle]]); } }
 async function depoisIdentificar(){ track('identificado'); await loadMenu(); await loadWallet();
   if (S.cfg.tap_id) return abrirTamanho(S.taps[0]);
+  const pre = S.pre && S.taps.find(t => t.tap_id === S.pre && t.disponivel); S.pre = null;
+  if (pre) return abrirTamanho(pre);   // tocou numa bebida do cardápio da tela inicial
   $('hello').innerHTML = S.ver.nome ? `👋 Olá, <b>${esc(S.ver.nome)}</b>! ${S.ver.novo ? 'Seja bem-vindo(a).' : 'Bom te ver de novo.'}` : '👋 Escolha seu chopp';
   renderMenu(); go('menu'); }
 function minor(){ modal('🔞','Venda proibida','A venda de bebidas alcoólicas é proibida para menores de 18 anos.',[['Entendi', toIdle]]); }
@@ -570,7 +592,8 @@ function abrirTamanho(t){ if (!t) return; S.sel = {tap:t, offer:null, qtd:1}; S.
   const top = t.ofertas.findIndex(o=>o.disponivel && o.mais_pedido);   // pré-seleciona o mais pedido (ancoragem)
   pickSize(top >= 0 ? top : t.ofertas.findIndex(o=>o.disponivel)); track('tamanho'); go('tamanho'); }
 function pickSize(j){ S.sel.offer = S.sel.tap.ofertas[j] || null; [...$('tmOpts').children].forEach((b,k)=>b.classList.toggle('sel', k===j)); $('tmOk').disabled = !S.sel.offer; }
-function voltarTamanho(){ S.cfg.tap_id ? toIdle() : go('menu'); }
+function voltarTamanho(){ if (S.cfg.tap_id) return toIdle();
+  $('hello').innerHTML = S.ver && S.ver.nome ? `👋 Olá, <b>${esc(S.ver.nome)}</b>!` : '👋 Escolha seu chopp'; renderMenu(); go('menu'); }
 
 function botoesPagamento(ms, excluir){ const lbl = {credito:['💳','CRÉDITO'], debito:['💳','DÉBITO'], pix:['⚡','PIX']};
   return [...ms].filter(m=>m!==excluir).sort((a,b)=>(b==='pix')-(a==='pix'))   // Pix primeiro: mais rápido e taxa menor

@@ -285,6 +285,58 @@ st, r = call("dev/poll", h=DK)
 ok(st == 401, "chopeira simulada deixa de existir", st)
 ok(not any(x["ref"] == o["ref"] for x in call("admin/orders", h=AD)[1]["pedidos"]), "vendas simuladas somem do painel")
 
+print("── painel pelo celular: editor de bebidas")
+b = call("admin/bebidas", h=AD)[1]
+ok(b.get("ok") and any(t["id"] == tap for t in b["torneiras"]) and b["controladores"], "lista torneiras com bebida, tamanhos e barril", b.get("mensagem"))
+t1 = next(t for t in b["torneiras"] if t["id"] == tap)
+PNG = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAIAAAAlC+aJAAAAUElEQVR42u3PQQkAAAgEsPvYP469TGAE38JgBZbpei0CAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICApcFAL/hhw4sMksAAAAASUVORK5CYII="
+st, r = call("admin/bebida_salvar", {"tap_id": tap, "produto": {"id": t1["produto"]["id"], "nome": "Pilsen Premium", "estilo": "Pilsen", "abv": "5,2", "ibu": 12, "cor": "#F2D46B", "cervejaria": "Casa"},
+    "ofertas": [{"id": o300, "volume_ml": 300, "preco": "10,90"}, {"volume_ml": 1000, "preco": 29.9}], "barril_ml": 50000, "trocou_barril": 1, "ativo": 1, "foto": PNG}, AD)
+ok(r.get("ok"), "salva bebida + tamanhos + barril + foto de uma vez", r)
+t1 = next(t for t in call("admin/bebidas", h=AD)[1]["torneiras"] if t["id"] == tap)
+ok(t1["produto"]["nome"] == "Pilsen Premium" and float(t1["produto"]["abv"]) == 5.2 and (t1["produto"]["imagem_url"] or "").startswith("uploads/produtos/"), "bebida atualizada com foto", t1["produto"])
+ok(sorted((o["volume_ml"], o["preco"]) for o in t1["ofertas"] if o["ativo"]) == [(300, 10.9), (1000, 29.9)], "tamanhos: editado, criado e o de 500 (já vendido) desativado", t1["ofertas"])
+ok(t1["barril_ml"] == 50000 and t1["restante_ml"] == 50000, "troca de barril zera o contador", t1)
+st, r = call("admin/bebida_salvar", {"tap_id": tap, "produto": {"nome": ""}, "ofertas": [{"volume_ml": 300, "preco": 9}]}, AD)
+ok(st == 400 and "nome" in r.get("mensagem", ""), "sem nome não salva", r)
+st, r = call("admin/bebida_salvar", {"tap_id": tap, "produto": {"nome": "X"}, "ofertas": [{"volume_ml": 300, "preco": 9}, {"volume_ml": 300, "preco": 8}]}, AD)
+ok(st == 400 and "repetido" in r.get("mensagem", ""), "tamanho repetido não salva", r)
+st, r = call("admin/bebida_salvar", {"tap_id": 0, "device_id": dev, "canal": 2, "produto": {"nome": "IPA Nova", "estilo": "IPA", "abv": 6.5},
+    "ofertas": [{"volume_ml": 400, "preco": 16}], "barril_ml": 20000}, AD)
+ok(r.get("ok") and r.get("tap_id"), "cria torneira nova com bebida pelo celular", r)
+TAP2 = r.get("tap_id")
+m = call("pos/menu", h=T)[1]["torneiras"]
+ok(any(x["produto"] == "IPA Nova" for x in m) and any(x["produto"] == "Pilsen Premium" and x["imagem_url"] for x in m), "maquininha mostra as bebidas editadas (cardápio com todas)", [x["produto"] for x in m])
+st, r = call("admin/bebida_salvar", {"tap_id": 0, "device_id": dev, "canal": 2, "produto": {"nome": "Dup"}, "ofertas": [{"volume_ml": 300, "preco": 9}]}, AD)
+ok(st == 400, "não deixa duas torneiras no mesmo canal", r)
+
+print("── dono de quiosque (vê e edita só o dele)")
+loc2 = save("locations", {"nome": "Quiosque do João"})
+dev2 = save("devices", {"location_id": loc2, "nome": "Freezer João"})
+st, r = call("admin/usuario_salvar", {"nome": "João", "email": "joao@teste.com", "senha": "senha12345", "role": "dono", "pontos": [loc2]}, AD)
+ok(r.get("ok"), "admin cria dono com 1 quiosque", r)
+DN = {"Authorization": "Bearer " + call("admin/login", {"email": "joao@teste.com", "senha": "senha12345"})[1].get("token", "")}
+tapJ = save("torneiras", {"device_id": dev2, "canal": 1, "nome": "Torneira 1", "product_id": t1["produto"]["id"], "barril_ml": 30000})   # admin pôs a bebida da plataforma
+st, r = call("admin/bebida_salvar", {"tap_id": tapJ, "produto": {"id": t1["produto"]["id"], "nome": "Pilsen do João", "abv": 4.5},
+    "ofertas": [{"volume_ml": 300, "preco": 8}]}, DN)
+ok(r.get("ok"), "dono edita a torneira do quiosque dele", r)
+st, r2 = call("admin/bebida_salvar", {"tap_id": 0, "device_id": dev2, "canal": 2, "produto": {"nome": "Weiss do João", "estilo": "Weiss"}, "ofertas": [{"volume_ml": 500, "preco": 15}]}, DN)
+ok(r2.get("ok"), "dono cria torneira nova no quiosque dele", r2)
+ok(r.get("produto_id") != t1["produto"]["id"], "bebida de outro ponto vira cópia do dono (não altera o outro quiosque)", r)
+ok(next(t for t in call("admin/bebidas", h=AD)[1]["torneiras"] if t["id"] == tap)["produto"]["nome"] == "Pilsen Premium", "bebida do outro ponto continua igual")
+bd = call("admin/bebidas", h=DN)[1]
+ok({t["location_id"] for t in bd["torneiras"]} == {loc2} and len(bd["torneiras"]) == 2 and all(c["location_id"] == loc2 for c in bd["controladores"]), "dono só vê as torneiras dele", [t["loc"] for t in bd["torneiras"]])
+st, r = call("admin/bebida_salvar", {"tap_id": tap, "produto": {"nome": "Hack"}, "ofertas": [{"volume_ml": 300, "preco": 1}]}, DN)
+ok(st == 403, "dono não edita torneira de outro ponto", r)
+st, r = call("admin/settings_save", {"settings": {"marca_nome": "Hack"}}, DN); ok(st == 403, "dono não mexe nas configurações gerais", r)
+st, r = call("admin/save", {"entity": "locations", "data": {"nome": "Hack"}}, DN); ok(st == 403, "dono não cria ponto", r)
+ok(call("admin/orders", h=DN)[1]["total"] == 0 and call("admin/dashboard", h=DN)[1]["hoje"]["n"] == 0, "dono não vê vendas dos outros")
+ok(all(d.get("device_key") is None for d in call("admin/catalog", h=DN)[1]["devices"]), "dono não vê a chave secreta do ESP32")
+ok(call("admin/dashboard&location_id=" + str(loc), h=AD)[1]["hoje"]["n"] >= 1, "admin filtra o painel por quiosque")
+st, r = call("admin/dashboard&location_id=" + str(loc), h=DN); ok(st == 403, "dono não abre o painel de outro quiosque", r)
+r = call("admin/torneira_remover", {"tap_id": TAP2}, AD)[1]
+ok(r.get("ok") and r.get("desativada") is False, "remove torneira que nunca vendeu", r)
+
 print("── segurança")
 for i in range(6): st, r = call("pos/identify", {"cpf": "123.456.789-00", "nascimento": "01/01/1990", "declara_maior": True}, T)
 ok(r.get("erro") == "terminal_bloqueado", "força bruta bloqueia a maquininha", r)
