@@ -1624,6 +1624,25 @@ if (PHP_SAPI === 'cli') {
         try { $_GET = ['fw' => 'diag-cli', 'temp' => '3']; $d = row('SELECT d.*, l.nome location_nome FROM be_devices d JOIN be_locations l ON l.id = d.location_id WHERE d.device_key = ?', [$key]);
               $x = r_dev_poll($d); echo "diag cli: ok cmd=" . json_encode($x['cmd']) . "\n"; }
         catch (Throwable $e) { echo 'diag cli ERRO: ' . get_class($e) . ': ' . $e->getMessage() . ' @ linha ' . $e->getLine() . "\n"; }
+        // Totem no modo "cardápio com todas" (sem torneira fixa): config → cardápio → identificação → cálculo do pedido. Tudo desfeito no fim.
+        foreach (rows('SELECT t.*, l.nome location_nome FROM be_terminals t JOIN be_locations l ON l.id = t.location_id WHERE t.ativo = 1 ORDER BY t.id LIMIT 5') as $tm) {
+            $etapa = 'config';
+            try {
+                db()->beginTransaction();
+                $tm['tap_id'] = null;
+                $c = r_pos_config($tm); $etapa = 'menu';
+                $m = r_pos_menu($tm); $etapa = 'identify';
+                $ofs = []; foreach ($m['torneiras'] as $tp) foreach ($tp['ofertas'] as $o) if ($o['disponivel']) { $ofs[] = $o['id']; break; }
+                $cx = row('SELECT nome, nascimento FROM be_customers WHERE cpf = ?', ['52998224725']);
+                $_GET = ['declara_maior' => '1', 'cpf' => '52998224725', 'nascimento' => $cx ? date('d/m/Y', strtotime($cx['nascimento'])) : '10/05/1990', 'nome' => $cx['nome'] ?? 'Cliente Diagnostico'];
+                $id = r_pos_identify($tm); $etapa = 'pedido';
+                if ($ofs) { $_GET = ['token' => $id['token']]; [, $cust] = pos_sessao($tm); pedido_calcular($tm, $cust, [['offer_id' => $ofs[0], 'qtd' => 1]]); }
+                echo "diag totem #{$tm['id']} ({$tm['nome']}, cardápio com todas): ok — métodos " . implode(',', $c['metodos']) . ', ' . count($m['torneiras']) . ' torneira(s), '
+                    . count(array_filter($m['torneiras'], fn($x) => $x['disponivel'])) . ' disponível(is)' . ($ofs ? ', pedido calculado' : ', NENHUM tamanho disponível') . "\n";
+            } catch (Throwable $e) {
+                echo "diag totem #{$tm['id']} ERRO na etapa $etapa: " . get_class($e) . ': ' . $e->getMessage() . ' @ linha ' . $e->getLine() . "\n";
+            } finally { if (db()->inTransaction()) db()->rollBack(); }
+        }
         echo 'diag versoes: PHP ' . PHP_VERSION . ' | banco ' . val('SELECT VERSION()') . ' | sql_mode ' . val('SELECT @@SESSION.sql_mode') . "\n";
         echo 'diag ultimo_sinal: ' . val('SELECT MAX(last_seen) FROM be_devices') . "\n";
         exit(0);
