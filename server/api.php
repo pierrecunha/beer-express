@@ -36,6 +36,9 @@ function db(): PDO {
         PDO::ATTR_EMULATE_PREPARES => false,
     ]);
     $pdo->exec("SET time_zone = '-03:00'");
+    // A conexão usa a mesma collation do banco (MariaDB 11.8 da Hostinger usa padrões novos; evita "Illegal mix of collations")
+    $coll = (string)$pdo->query('SELECT @@collation_database')->fetchColumn();
+    if (preg_match('/^utf8mb4_[a-z0-9_]+$/', $coll)) $pdo->exec("SET NAMES utf8mb4 COLLATE $coll");
     return $pdo;
 }
 
@@ -895,8 +898,8 @@ function r_dev_poll(array $d): array {
     $door = isset($_GET['door']) && $_GET['door'] !== '' ? (int)$_GET['door'] : null;
     $ctx = ['device_id' => $d['id'], 'location_id' => $d['location_id']];
     if (!$d['online']) log_event('info', 'device_online', "✅ Chopeira {$d['nome']} ({$d['location_nome']}) online", $ctx, (bool)$d['last_seen']);
-    q('UPDATE be_devices SET last_seen = NOW(), online = 1, ip = ?, fw_version = COALESCE(NULLIF(?, ""), fw_version), rssi = COALESCE(?, rssi), temperatura = COALESCE(?, temperatura), porta_aberta = COALESCE(?, porta_aberta) WHERE id = ?',
-        [client_ip(), substr((string)($_GET['fw'] ?? ''), 0, 20), isset($_GET['rssi']) ? (int)$_GET['rssi'] : null, $temp, $door, $d['id']]);
+    q('UPDATE be_devices SET last_seen = NOW(), online = 1, ip = ?, fw_version = COALESCE(?, fw_version), rssi = COALESCE(?, rssi), temperatura = COALESCE(?, temperatura), porta_aberta = COALESCE(?, porta_aberta) WHERE id = ?',
+        [client_ip(), ($_GET['fw'] ?? '') !== '' ? substr((string)$_GET['fw'], 0, 20) : null, isset($_GET['rssi']) ? (int)$_GET['rssi'] : null, $temp, $door, $d['id']]);
 
     // Telemetria a cada 5 min
     $ult = val('SELECT MAX(created_at) FROM be_telemetry WHERE device_id = ?', [$d['id']]);

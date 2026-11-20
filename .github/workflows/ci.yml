@@ -21,7 +21,7 @@ jobs:
     timeout-minutes: 10
     services:
       mysql:
-        image: mariadb:10.11
+        image: mariadb:11.8   # mesma versão da Hostinger
         env:
           MARIADB_ROOT_PASSWORD: root
         ports: ["3306:3306"]
