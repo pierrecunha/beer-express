@@ -194,7 +194,7 @@ function exige_ponto($location_id): void {
 function ponto_da_torneira(int $tap_id): int { return (int)val('SELECT d.location_id FROM be_taps t JOIN be_devices d ON d.id = t.device_id WHERE t.id = ?', [$tap_id]); }
 /** Rotas que só o administrador da plataforma usa (configurações gerais, carteiras, usuários, demonstração). */
 const ROTAS_SO_ADMIN = ['admin/settings', 'admin/settings_save', 'admin/telegram_test', 'admin/demo_seed', 'admin/demo_clear', 'admin/customer_block',
-    'admin/wallet_adjust', 'admin/card_update', 'admin/usuarios', 'admin/usuario_salvar'];
+    'admin/wallet_adjust', 'admin/card_update', 'admin/usuarios', 'admin/usuario_salvar', 'admin/leads'];
 
 /* ============================ CPF / IDADE ============================ */
 
@@ -1354,7 +1354,7 @@ function produto_exclusivo(int $pid): bool {
 /** Salvar/excluir genérico com lista branca de campos. */
 function r_admin_save(array $u): array {
     $map = [
-        'locations' => ['be_locations', ['nome', 'endereco', 'ativo']],
+        'locations' => ['be_locations', ['nome', 'endereco', 'lat', 'lng', 'horario', 'publico', 'ativo']],
         'devices' => ['be_devices', ['location_id', 'nome', 'tipo', 'start_mode', 'arm_timeout_s', 'temp_min', 'temp_max', 'ativo']],
         'terminais' => ['be_terminals', ['location_id', 'tap_id', 'nome', 'provider', 'aceita_pix', 'aceita_credito', 'aceita_debito', 'ativo']],
         'produtos' => ['be_products', ['nome', 'cervejaria', 'estilo', 'descricao', 'abv', 'ibu', 'imagem_url', 'cor', 'ativo']],
@@ -1473,7 +1473,7 @@ function r_admin_demo_seed(array $u): array {
     $ids = json_decode((string)setting('demo_ids'), true) ?: [];
     if (!empty($ids['location']) && val('SELECT id FROM be_locations WHERE id = ?', [$ids['location']])) return demo_info($ids);
     db()->beginTransaction();
-    q('INSERT INTO be_locations (nome, endereco) VALUES (?,?)', ['Demonstração (simulado)', 'Simulador no navegador']);
+    q('INSERT INTO be_locations (nome, endereco, publico) VALUES (?,?,0)', ['Demonstração (simulado)', 'Simulador no navegador']);
     $ids['location'] = (int)db()->lastInsertId();
     q('INSERT INTO be_devices (location_id, nome, tipo, device_key, start_mode, arm_timeout_s) VALUES (?,?,?,?,?,?)', [$ids['location'], 'Chopeira simulada', 'central', rand_token(16), 'auto', 120]);
     $ids['device'] = (int)db()->lastInsertId();
@@ -1775,6 +1775,62 @@ function r_admin_card_update(array $u): array {
     return ['ok' => true];
 }
 
+/* ---------- Portal público (index.html) ---------- */
+
+/** Tudo que o portal mostra: marca, contatos, pontos no mapa e o cardápio que está nas torneiras agora. */
+function r_pub_site(): array {
+    $locs = rows('SELECT id, nome, endereco, lat, lng, horario FROM be_locations WHERE ativo = 1 AND publico = 1 ORDER BY id');
+    $pontos = []; $bebidas = [];
+    foreach ($locs as $l) {
+        $taps = rows('SELECT t.id, p.id pid, p.nome, p.estilo, p.descricao, p.abv, p.ibu, p.cor, p.imagem_url, p.cervejaria, d.last_seen, d.ativo dev_ativo, t.restante_ml
+            FROM be_taps t JOIN be_devices d ON d.id = t.device_id JOIN be_products p ON p.id = t.product_id
+            WHERE d.location_id = ? AND t.ativo = 1 AND p.ativo = 1 ORDER BY d.id, t.canal', [$l['id']]);
+        $nomes = [];
+        foreach ($taps as $t) {
+            $min = val('SELECT MIN(preco) FROM be_offers WHERE tap_id = ? AND ativo = 1', [$t['id']]);
+            $on = $t['dev_ativo'] && device_online($t) && (int)$t['restante_ml'] > 0;
+            $nomes[] = $t['nome'];
+            $k = (int)$t['pid'];
+            if (!isset($bebidas[$k])) $bebidas[$k] = ['nome' => $t['nome'], 'estilo' => $t['estilo'], 'descricao' => $t['descricao'], 'cervejaria' => $t['cervejaria'],
+                'abv' => $t['abv'] !== null ? (float)$t['abv'] : null, 'ibu' => $t['ibu'] !== null ? (int)$t['ibu'] : null, 'cor' => $t['cor'] ?: '#F5B301',
+                'imagem_url' => $t['imagem_url'], 'a_partir' => null, 'pontos' => [], 'online' => false];
+            if ($min !== null) $bebidas[$k]['a_partir'] = $bebidas[$k]['a_partir'] === null ? preco_vigente((float)$min) : min($bebidas[$k]['a_partir'], preco_vigente((float)$min));
+            $bebidas[$k]['pontos'][] = $l['nome']; $bebidas[$k]['online'] = $bebidas[$k]['online'] || $on;
+        }
+        $pontos[] = ['id' => (int)$l['id'], 'nome' => $l['nome'], 'endereco' => $l['endereco'], 'horario' => $l['horario'],
+            'lat' => $l['lat'] !== null ? (float)$l['lat'] : null, 'lng' => $l['lng'] !== null ? (float)$l['lng'] : null, 'torneiras' => count($taps), 'bebidas' => array_values(array_unique($nomes))];
+    }
+    foreach ($bebidas as &$b) $b['pontos'] = array_values(array_unique($b['pontos']));
+    unset($b);
+    $copos = (int)val("SELECT COUNT(*) FROM be_dispenses WHERE status = 'concluido'");
+    return ['ok' => true,
+        'marca' => ['nome' => setting('marca_nome', 'Beer Express'), 'slogan' => setting('marca_slogan'), 'cor' => setting('marca_cor', '#F5B301')],
+        'contato' => ['whatsapp' => preg_replace('/\D/', '', (string)setting('site_whatsapp')), 'email' => setting('site_email'), 'instagram' => ltrim((string)setting('site_instagram'), '@'), 'cidade' => setting('site_cidade', 'Brasília')],
+        'equipamento' => ['dimensoes' => setting('site_dimensoes'), 'torneiras' => (int)setting('site_torneiras', 2)],
+        'idade_minima' => (int)setting('idade_minima', 18), 'verificacao' => setting('verificacao_idade', 'cpf'),
+        'pontos' => $pontos, 'cardapio' => array_values($bebidas), 'happy_hour' => happy_hour(),
+        'copos_servidos' => $copos >= (int)setting('site_min_copos', 100) ? $copos : null];
+}
+/** "Quero a Beer Express no meu espaço" / "Avise quando chegar perto de mim" — salva e avisa no Telegram. */
+function r_pub_lead(): array {
+    $ip = substr(client_ip(), 0, 45);
+    if ((int)val('SELECT COUNT(*) FROM be_leads WHERE ip = ? AND created_at >= NOW() - INTERVAL 1 HOUR', [$ip]) >= 5) fail('limite', 'Recebemos seus contatos. Em breve falamos com você!', 429);
+    if (trim((string)arg('site', '')) !== '') return ['ok' => true];   // campo-isca contra robôs
+    $tipo = in_array(arg('tipo'), ['espaco', 'avise', 'contato'], true) ? (string)arg('tipo') : 'contato';
+    $nome = trim(mb_substr((string)arg('nome', ''), 0, 120)); $contato = trim(mb_substr((string)arg('contato', ''), 0, 160));
+    $cidade = trim(mb_substr((string)arg('cidade', ''), 0, 120)); $msg = trim(mb_substr((string)arg('mensagem', ''), 0, 500));
+    if (mb_strlen($nome) < 2) fail('dados', 'Diga seu nome');
+    if (!filter_var($contato, FILTER_VALIDATE_EMAIL) && strlen(preg_replace('/\D/', '', $contato)) < 10) fail('dados', 'Informe um WhatsApp com DDD ou um e-mail');
+    q('INSERT INTO be_leads (tipo, nome, contato, cidade, mensagem, ip) VALUES (?,?,?,?,?,?)', [$tipo, $nome, $contato, $cidade ?: null, $msg ?: null, $ip]);
+    $rot = ['espaco' => '🏪 Quer a Beer Express no espaço dele', 'avise' => '📍 Quer saber quando chegar perto', 'contato' => '💬 Contato pelo site'][$tipo];
+    log_event('info', 'lead', "$rot: " . h($nome) . ' — ' . h($contato) . ($cidade ? ' (' . h($cidade) . ')' : '') . ($msg ? "\n" . h($msg) : ''), [], true);
+    return ['ok' => true];
+}
+function r_admin_leads(array $u): array {
+    if (arg('atendido') !== null && arg('id')) q('UPDATE be_leads SET atendido = ? WHERE id = ?', [(int)!empty(arg('atendido')), (int)arg('id')]);
+    return ['ok' => true, 'leads' => rows('SELECT * FROM be_leads ORDER BY atendido, id DESC LIMIT 300')];
+}
+
 /* ---------- BeerList (TV / tela pública do ponto) ---------- */
 function r_pub_tv(): array {
     $loc = row('SELECT id, nome FROM be_locations WHERE id = ? AND ativo = 1', [(int)arg('loc', 0)]);
@@ -1939,6 +1995,8 @@ try {
             if (!$fn) fail('rota', 'Rota inexistente', 404);
             out($fn($d));
         case $r === 'pub/tv': out(r_pub_tv());
+        case $r === 'pub/site': out(r_pub_site());
+        case $r === 'pub/lead': out(r_pub_lead());
         case $r === 'mp/webhook': out(r_mp_webhook());
         case $r === 'tg/webhook': out(r_tg_webhook());
         case $r === 'admin/needs_setup': out(r_admin_needs_setup());

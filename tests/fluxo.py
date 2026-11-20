@@ -337,6 +337,18 @@ st, r = call("admin/dashboard&location_id=" + str(loc), h=DN); ok(st == 403, "do
 r = call("admin/torneira_remover", {"tap_id": TAP2}, AD)[1]
 ok(r.get("ok") and r.get("desativada") is False, "remove torneira que nunca vendeu", r)
 
+print("── portal público")
+call("admin/save", {"entity": "locations", "data": {"id": loc, "lat": -15.79, "lng": -47.88, "horario": "Todos os dias"}}, AD)
+st, r = call("pub/site")
+ok(st == 200 and r.get("ok") and any(p["id"] == loc and p["lat"] for p in r["pontos"]), "portal lista os pontos com mapa", r.get("pontos"))
+ok(any(b["nome"] == "Pilsen Gelada" or b["a_partir"] for b in r["cardapio"]), "portal mostra o cardápio das torneiras", r.get("cardapio"))
+ok(not any(p["nome"].startswith("Demonstração") for p in r["pontos"]), "ponto de demonstração não aparece no portal")
+st, r = call("pub/lead", {"tipo": "espaco", "nome": "Maria", "contato": "61 99999-8888", "cidade": "Asa Sul"})
+ok(r.get("ok"), "portal recebe contato de quem tem espaço", r)
+st, r = call("pub/lead", {"tipo": "avise", "nome": "M", "contato": "x"}); ok(st == 400, "contato inválido é recusado", r)
+ok(call("admin/leads", h=AD)[1]["leads"][0]["nome"] == "Maria", "contato aparece no painel")
+ok(call("admin/leads", h=DN)[0] == 403, "dono de quiosque não vê os contatos do portal")
+
 print("── segurança")
 for i in range(6): st, r = call("pos/identify", {"cpf": "123.456.789-00", "nascimento": "01/01/1990", "declara_maior": True}, T)
 ok(r.get("erro") == "terminal_bloqueado", "força bruta bloqueia a maquininha", r)

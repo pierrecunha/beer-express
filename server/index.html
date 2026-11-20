@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Beer Express — chopp self-service: escolha, pague e sirva-se</title>
+<meta name="description" content="Chopeira self-service com verificação de idade, pagamento na maquininha e liberação por telemetria. Leve a Beer Express para o seu espaço.">
+<meta name="theme-color" content="#140D07">
+<meta property="og:title" content="Beer Express — chopp self-service">
+<meta property="og:description" content="Escolha, pague e sirva-se. Chopp gelado no seu ritmo, com controle de idade e operação 100% monitorada.">
+<link rel="preload" href="fontes/bricolage.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fontes/figtree.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='16' fill='%23140D07'/><path d='M18 20h22v28a4 4 0 0 1-4 4H22a4 4 0 0 1-4-4z' fill='%23F5B301'/><path d='M16 16a7 7 0 0 1 12-5 7 7 0 0 1 12 3 6 6 0 0 1 2 8H16z' fill='%23FFF3D6'/><path d='M40 26h5a5 5 0 0 1 5 5v8a5 5 0 0 1-5 5h-5' stroke='%23F5B301' stroke-width='4' fill='none'/></svg>">
+<style>
+@font-face{font-family:'Bricolage Grotesque';src:url(fontes/bricolage.woff2) format('woff2');font-weight:200 800;font-stretch:75% 100%;font-display:swap}
+@font-face{font-family:'Figtree';src:url(fontes/figtree.woff2) format('woff2');font-weight:300 900;font-display:swap}
+/* Identidade Beer Express: "stout" (marrom quase preto) + âmbar dourado + espuma creme. */
+:root{
+  --stout:#140D07;--stout2:#1E140B;--stout3:#2A1C10;--malt:#3B2814;
+  --amber:#F5B301;--amber2:#FFC93C;--copper:#D9771C;--foam:#FFF6E3;--foam2:#F7E9CC;
+  --ink:#1B120A;--txt:#4D3A24;--mut:#8A7356;--line:rgba(27,18,10,.1);
+  --on:#F3E6CF;--onm:#BFA987;--online:rgba(255,236,200,.1);
+  --fh:'Bricolage Grotesque',system-ui,sans-serif;--fb:'Figtree',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --r:22px;--max:1180px;--ease:cubic-bezier(.2,.8,.2,1)}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;scroll-padding-top:84px}
+body{font-family:var(--fb);color:var(--txt);background:var(--foam);font-size:17px;line-height:1.55;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+img,svg{display:block;max-width:100%}
+a{color:inherit}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;border:0;background:none}
+:focus-visible{outline:3px solid var(--amber);outline-offset:3px;border-radius:8px}
+.wrap{max-width:var(--max);margin:0 auto;padding:0 24px}
+.kick{display:inline-flex;align-items:center;gap:10px;font-weight:800;font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--copper)}
+.kick::before{content:'';width:26px;height:3px;border-radius:2px;background:currentColor}
+.dark .kick{color:var(--amber)}
+h1,h2,h3{font-family:var(--fh);color:var(--ink);letter-spacing:-.03em;line-height:1.02}
+h2{font-size:clamp(34px,5.2vw,62px);font-weight:800;margin:14px 0 14px}
+h3{font-size:22px;font-weight:700;letter-spacing:-.02em;line-height:1.15}
+.dark h2,.dark h3{color:var(--foam)}
+.lead{font-size:clamp(17px,1.7vw,20px);color:var(--mut);max-width:600px}
+.dark .lead{color:var(--onm)}
+section{padding:110px 0;position:relative}
+.dark{background:var(--stout);color:var(--on)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:56px;padding:0 26px;border-radius:999px;font-weight:800;font-size:16.5px;text-decoration:none;transition:transform .2s var(--ease),box-shadow .2s,background .2s;white-space:nowrap}
+.btn:hover{transform:translateY(-2px)}
+.btn.pri{background:linear-gradient(180deg,var(--amber2),var(--amber));color:var(--stout);box-shadow:0 10px 30px rgba(245,179,1,.35)}
+.btn.pri:hover{box-shadow:0 14px 38px rgba(245,179,1,.5)}
+.btn.out{border:2px solid rgba(255,246,227,.28);color:var(--foam)}
+.btn.out:hover{border-color:var(--amber);color:var(--amber)}
+.btn.ink{background:var(--stout);color:var(--foam)}
+.btn .ar{transition:transform .2s}.btn:hover .ar{transform:translateX(4px)}
+/* topo */
+header{position:fixed;inset:0 0 auto;z-index:50;transition:background .3s,box-shadow .3s,padding .3s;padding:18px 0}
+header.sc{background:rgba(20,13,7,.86);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 1px 0 rgba(255,236,200,.08);padding:10px 0}
+header .wrap{display:flex;align-items:center;gap:24px}
+.logo{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--foam);font-family:var(--fh);font-weight:800;font-size:22px;letter-spacing:-.04em}
+.logo b{color:var(--amber);font-weight:800}
+.logo svg{width:36px;height:36px}
+nav.top{margin-left:auto;display:flex;align-items:center;gap:4px}
+nav.top a{color:var(--on);text-decoration:none;font-weight:700;font-size:15px;padding:10px 12px;border-radius:10px;opacity:.85}
+nav.top a:hover{opacity:1;color:var(--amber)}
+nav.top .btn{min-height:46px;padding:0 20px;margin-left:10px;font-size:15px}
+.burger{display:none;margin-left:auto;width:46px;height:46px;border-radius:14px;background:var(--online);color:var(--foam);place-items:center}
+@media(max-width:960px){
+  nav.top{position:fixed;inset:0;background:var(--stout);flex-direction:column;justify-content:center;gap:6px;opacity:0;pointer-events:none;transition:opacity .25s}
+  nav.top.on{opacity:1;pointer-events:auto}
+  nav.top a{font-size:24px;font-family:var(--fh)}
+  nav.top .btn{margin:16px 0 0}
+  .burger{display:grid;position:relative;z-index:60}
+}
+/* hero */
+.hero{min-height:100vh;min-height:100svh;padding:130px 0 90px;background:radial-gradient(90% 70% at 78% 30%,#4A2E0E 0%,transparent 60%),radial-gradient(60% 50% at 10% 100%,#2B1A0B 0%,transparent 70%),var(--stout);overflow:hidden;display:flex;align-items:center}
+.hero .wrap{display:grid;grid-template-columns:1.1fr .9fr;gap:40px;align-items:center;position:relative;z-index:2}
+.hero h1{font-size:clamp(52px,8.4vw,112px);font-weight:800;color:var(--foam);letter-spacing:-.05em;line-height:.92;margin:18px 0 22px}
+.hero h1 span{display:block}
+.hero h1 .g{background:linear-gradient(180deg,var(--amber2) 30%,var(--copper));-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero p.lead{color:var(--onm);margin-bottom:34px}
+.hero .ctas{display:flex;gap:14px;flex-wrap:wrap}
+.trust{display:flex;gap:22px;flex-wrap:wrap;margin-top:38px;color:var(--onm);font-size:14.5px;font-weight:600}
+.trust span{display:flex;align-items:center;gap:8px}
+.trust i{width:8px;height:8px;border-radius:50%;background:var(--amber);box-shadow:0 0 0 4px rgba(245,179,1,.15)}
+.bubbles{position:absolute;inset:0;pointer-events:none;z-index:1;overflow:hidden}
+.bubbles i{position:absolute;bottom:-20px;border-radius:50%;background:radial-gradient(circle at 35% 35%,rgba(255,240,200,.55),rgba(255,201,60,.08));animation:up linear infinite}
+@keyframes up{to{transform:translate3d(var(--dx,0),-110vh,0);opacity:0}}
+/* máquina ilustrada */
+.mach{position:relative;justify-self:center;width:min(380px,100%)}
+.mach svg{width:100%;height:auto;filter:drop-shadow(0 40px 60px rgba(0,0,0,.55))}
+.badge{position:absolute;background:var(--foam);color:var(--ink);border-radius:18px;padding:12px 16px;box-shadow:0 18px 40px rgba(0,0,0,.35);font-size:13.5px;font-weight:600;line-height:1.3;animation:float 5s ease-in-out infinite}
+.badge b{display:block;font-family:var(--fh);font-size:18px;letter-spacing:-.02em}
+.badge.b1{left:-34px;bottom:22%}.badge.b2{right:-26px;top:30%;animation-delay:-2.5s}
+.badge .live{display:inline-block;width:8px;height:8px;border-radius:50%;background:#2FBF71;margin-right:6px;box-shadow:0 0 0 4px rgba(47,191,113,.2)}
+@keyframes float{50%{transform:translateY(-10px)}}
+.flow{animation:pour 3.6s ease-in-out infinite}
+@keyframes pour{0%,15%{transform:scaleY(0)}35%,75%{transform:scaleY(1)}90%,100%{transform:scaleY(0)}}
+.glassfill{animation:fill 3.6s ease-in-out infinite;transform-origin:bottom}
+@keyframes fill{0%,20%{transform:scaleY(.05)}80%,100%{transform:scaleY(1)}}
+.wave{display:block;width:100%;height:70px;margin-top:-1px}
+@media(max-width:900px){
+  .hero{padding-top:110px}.hero .wrap{grid-template-columns:1fr;text-align:left}
+  .mach{width:min(300px,82%);margin-top:20px}.badge.b1{left:-18px;bottom:2%}.badge.b2{display:none}
+}
+/* jornada */
+.steps{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center;margin-top:46px}
+.slist{display:flex;flex-direction:column;gap:10px}
+.st{display:grid;grid-template-columns:56px 1fr;gap:16px;align-items:start;text-align:left;padding:18px;border-radius:20px;border:1px solid transparent;transition:background .25s,border-color .25s;position:relative;overflow:hidden}
+.st .n{width:56px;height:56px;border-radius:16px;background:var(--foam2);display:grid;place-items:center;font-family:var(--fh);font-weight:800;font-size:22px;color:var(--copper);transition:background .25s,color .25s}
+.st h3{font-size:20px;margin-top:4px}
+.st p{font-size:15.5px;color:var(--mut);margin-top:4px;max-height:0;overflow:hidden;transition:max-height .35s var(--ease)}
+.st.on{background:#fff;border-color:var(--line);box-shadow:0 14px 34px rgba(59,40,20,.08)}
+.st.on .n{background:var(--amber);color:var(--stout)}
+.st.on p{max-height:120px}
+.st .bar{position:absolute;left:0;bottom:0;height:3px;background:var(--amber);width:0}
+.st.on .bar{animation:bar 5.2s linear forwards}
+@keyframes bar{to{width:100%}}
+.paused .st.on .bar{animation-play-state:paused}
+/* aparelho */
+.dev{justify-self:center;width:min(330px,100%);aspect-ratio:9/17;background:#0B0805;border-radius:42px;padding:12px;box-shadow:0 40px 80px rgba(59,40,20,.28),inset 0 0 0 2px #2b2016;position:relative}
+.dev::before{content:'';position:absolute;top:22px;left:50%;width:70px;height:6px;border-radius:3px;background:#2b2016;transform:translateX(-50%)}
+.scr{position:absolute;inset:12px;border-radius:32px;overflow:hidden;background:var(--stout);color:#F7EFE2;padding:44px 18px 18px;display:flex;flex-direction:column;opacity:0;transform:scale(.97);transition:opacity .45s,transform .45s var(--ease);font-family:system-ui,sans-serif}
+.scr.on{opacity:1;transform:none}
+.scr .t{font-weight:900;font-size:21px;line-height:1.1;text-align:center}
+.scr .m{color:#A9987E;font-size:12.5px;text-align:center;margin-top:6px}
+.scr .b{margin-top:auto;background:#F5B301;color:#1A1206;border-radius:14px;text-align:center;font-weight:900;padding:14px;font-size:15px}
+.scr .b2{background:#2A2117;color:#F7EFE2;margin-top:8px}
+.mn{display:flex;flex-direction:column;gap:9px;margin-top:16px}
+.mn div{display:flex;gap:10px;align-items:center;background:#1E1810;border:1px solid #33291c;border-radius:14px;padding:10px}
+.mn i{width:30px;height:38px;border-radius:5px 5px 9px 9px;background:linear-gradient(180deg,#fff9 0 18%,var(--c) 18%);flex:none}
+.mn b{font-size:14px;display:block}.mn small{font-size:11px;color:#A9987E}.mn em{margin-left:auto;font-style:normal;color:#F5B301;font-weight:800;font-size:13px}
+.sz{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:18px}
+.sz div{background:#1E1810;border:2px solid #33291c;border-radius:14px;padding:14px 8px;text-align:center}
+.sz div.on{border-color:#F5B301;background:#2c2210}
+.sz b{display:block;font-size:20px}.sz span{color:#F5B301;font-weight:800;font-size:14px}
+.age{background:#F5B301;color:#1A1206}.age .m{color:#5a4210}
+.age .big{font-size:76px;font-weight:900;text-align:center;line-height:1;margin-top:18px}
+.pad{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:12px}
+.pad i{background:#1E1810;border-radius:10px;height:34px;display:grid;place-items:center;font-style:normal;font-weight:700}
+.disp{background:#1E1810;border:2px solid #33291c;border-radius:12px;text-align:center;font-weight:800;font-size:19px;padding:10px;margin-top:14px;letter-spacing:.04em}
+.pay{display:flex;flex-direction:column;gap:8px;margin-top:18px}
+.pay div{background:#1E1810;border:1px solid #33291c;border-radius:14px;padding:13px;font-weight:800;display:flex;justify-content:space-between}
+.pay div.on{border-color:#F5B301}
+.ok{width:86px;height:86px;border-radius:50%;background:#1d3b28;color:#3FCB88;display:grid;place-items:center;font-size:44px;margin:26px auto 8px;animation:pop .5s var(--ease)}
+@keyframes pop{from{transform:scale(.4)}}
+.cupd{width:96px;height:130px;margin:22px auto 0;border:4px solid #d9cdb8;border-top:0;border-radius:0 0 18px 18px;position:relative;overflow:hidden}
+.cupd i{position:absolute;inset:auto 0 0;height:0;background:linear-gradient(180deg,#FFF3D6 0 14%,#F5B301 14%)}
+.scr.on .cupd i{animation:cup 2.8s .3s ease-out forwards}
+@keyframes cup{to{height:92%}}
+@media(max-width:900px){.steps{grid-template-columns:1fr;gap:30px}.dev{order:-1;width:min(270px,78%)}}
+/* sistema */
+.diag{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:50px;position:relative}
+.node{background:var(--stout2);border:1px solid var(--online);border-radius:var(--r);padding:24px;position:relative}
+.node .ic{width:56px;height:56px;border-radius:16px;background:rgba(245,179,1,.12);color:var(--amber);display:grid;place-items:center;margin-bottom:18px}
+.node .ic svg{width:28px;height:28px}
+.node h3{font-size:19px}
+.node p{color:var(--onm);font-size:15px;margin-top:8px}
+.node:not(:last-child)::after{content:'';position:absolute;top:52px;right:-17px;width:18px;height:2px;background:repeating-linear-gradient(90deg,var(--amber) 0 4px,transparent 4px 8px);z-index:2}
+.pulse{position:absolute;top:47px;left:0;right:0;height:12px;pointer-events:none;z-index:3}
+.pulse i{position:absolute;top:0;width:12px;height:12px;border-radius:50%;background:var(--amber);box-shadow:0 0 18px var(--amber);animation:travel 4.5s linear infinite}
+@keyframes travel{0%{left:5%;opacity:0}8%{opacity:1}92%{opacity:1}100%{left:93%;opacity:0}}
+.feats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:16px}
+.feat{background:var(--online);border-radius:18px;padding:18px;font-size:15px;color:var(--onm)}
+.feat b{display:block;color:var(--foam);font-size:16px;margin-bottom:4px}
+.panelmock{margin-top:40px;display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:center;background:linear-gradient(135deg,#2A1C10,#1A120A);border:1px solid var(--online);border-radius:28px;padding:40px}
+.pm{background:#FBF6EC;border-radius:24px;padding:16px;color:#2A1D08;font-size:13px;box-shadow:0 30px 60px rgba(0,0,0,.45);max-width:330px;justify-self:center;width:100%}
+.pm .k{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.pm .k div{background:#fff;border:1px solid #eadfcb;border-radius:14px;padding:10px}
+.pm .k small{color:#7A6646;font-weight:600}.pm .k b{display:block;font-family:var(--fh);font-size:20px;letter-spacing:-.03em}
+.pm .tp{display:grid;grid-template-columns:44px 1fr;gap:10px;background:#fff;border:1px solid #eadfcb;border-radius:14px;padding:9px;margin-top:8px;align-items:center}
+.pm .tp i{height:52px;border-radius:9px;background:linear-gradient(180deg,#fffc 0 16%,var(--c) 16%)}
+.pm .tp b{display:block;font-size:14px}.pm .tp small{color:#7A6646}
+.pm .mt{height:5px;border-radius:3px;background:#efe7d8;margin-top:5px;overflow:hidden}.pm .mt span{display:block;height:100%;background:#0B8A56;border-radius:3px}
+.tg{background:#1E2A38;border-radius:16px;padding:12px 14px;color:#E6EEF7;font-size:13px;margin-top:10px;font-family:system-ui,sans-serif}
+.tg b{color:#7FC1FF}
+@media(max-width:960px){.diag,.feats{grid-template-columns:1fr 1fr}.node:nth-child(2)::after,.pulse{display:none}.panelmock{grid-template-columns:1fr;padding:26px}}
+@media(max-width:560px){.diag,.feats{grid-template-columns:1fr}.node::after{display:none}}
+/* idade */
+.agebox{display:grid;grid-template-columns:1fr 1fr;gap:50px;align-items:center}
+.lock{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:28px}
+.lock div{border-radius:18px;padding:18px;border:2px solid var(--line);background:#fff}
+.lock div.y{background:var(--amber);border-color:var(--amber);color:var(--stout)}
+.lock b{display:block;font-size:16px;color:var(--ink)}.lock small{font-size:14px}
+.law{display:flex;gap:14px;align-items:center;background:var(--foam2);border-radius:18px;padding:16px 18px;margin-top:14px;font-size:15px}
+.law .s18{flex:none;width:46px;height:46px;border-radius:50%;border:3px solid #C2372D;color:#C2372D;display:grid;place-items:center;font-weight:900;font-size:14px}
+.chk{display:flex;flex-direction:column;gap:12px}
+.chk div{display:flex;gap:14px;align-items:flex-start;background:#fff;border:1px solid var(--line);border-radius:18px;padding:16px 18px}
+.chk span:first-child{flex:none;width:36px;height:36px;border-radius:11px;background:var(--foam2);display:grid;place-items:center;font-size:18px}.chk span+span{flex:1;min-width:0}
+.chk b{color:var(--ink);display:block}.chk p{font-size:15px;color:var(--mut)}
+@media(max-width:900px){.agebox{grid-template-columns:1fr;gap:30px}}
+/* negócio */
+.models{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:46px}
+.model{border-radius:28px;padding:36px;position:relative;overflow:hidden}
+.model.a{background:var(--stout);color:var(--on)}
+.model.b{background:linear-gradient(160deg,var(--amber2),var(--amber) 60%,#E8A100);color:var(--stout)}
+.model .tag{display:inline-block;font-weight:800;font-size:12.5px;letter-spacing:.1em;text-transform:uppercase;padding:6px 12px;border-radius:999px;background:rgba(245,179,1,.15);color:var(--amber)}
+.model.b .tag{background:rgba(20,13,7,.12);color:var(--stout)}
+.model h3{font-size:clamp(26px,3vw,34px);margin:16px 0 12px;color:inherit}
+.model.a h3{color:var(--foam)}
+.model ul{list-style:none;display:flex;flex-direction:column;gap:12px;margin:22px 0 28px}
+.model li{display:flex;gap:12px;align-items:flex-start;font-size:16px}
+.model li::before{content:'';flex:none;width:22px;height:22px;border-radius:50%;margin-top:1px;background:var(--amber) url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23140D07' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'><path d='M6 12l4 4 8-8'/></svg>") center/14px no-repeat}
+.model.b li::before{background-color:var(--stout);background-image:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23F5B301' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'><path d='M6 12l4 4 8-8'/></svg>")}
+.model.a p{color:var(--onm)}
+.who{display:flex;flex-wrap:wrap;gap:10px;margin-top:28px}
+.who span{background:#fff;border:1px solid var(--line);border-radius:999px;padding:10px 16px;font-weight:700;color:var(--ink);font-size:15px}
+@media(max-width:860px){.models{grid-template-columns:1fr}.model{padding:28px}}
+/* requisitos + operação */
+.req{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:40px}
+.rq{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:24px;transition:transform .25s var(--ease),box-shadow .25s}
+.rq:hover{transform:translateY(-4px);box-shadow:0 18px 40px rgba(59,40,20,.1)}
+.rq .ic{width:52px;height:52px;border-radius:15px;background:var(--foam2);color:var(--copper);display:grid;place-items:center;margin-bottom:16px}
+.rq .ic svg{width:26px;height:26px}
+.rq p{font-size:15px;color:var(--mut);margin-top:6px}
+.rq .v{display:block;margin-top:10px;font-weight:800;color:var(--copper);font-size:14.5px}
+.ops{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:14px}
+.op{background:var(--foam2);border-radius:var(--r);padding:24px}
+.op h3{font-size:18px;display:flex;gap:10px;align-items:center}
+.op ul{list-style:none;margin-top:12px;display:flex;flex-direction:column;gap:8px;font-size:15px}
+.op li{padding-left:18px;position:relative}.op li::before{content:'';position:absolute;left:0;top:9px;width:7px;height:7px;border-radius:50%;background:var(--copper)}
+@media(max-width:960px){.req{grid-template-columns:1fr 1fr}.ops{grid-template-columns:1fr}}
+@media(max-width:520px){.req{grid-template-columns:1fr}}
+/* cardápio */
+.menu{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:16px;margin-top:40px}
+.bev{background:var(--stout2);border:1px solid var(--online);border-radius:var(--r);overflow:hidden;display:flex;flex-direction:column}
+.bev .ph{height:200px;overflow:hidden;background:radial-gradient(circle at 50% 70%,#3B2814,#1A120A);display:grid;place-items:center;position:relative}
+.bev .ph img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.bev .ph .cup{width:76px;height:100px;border-radius:9px 9px 18px 18px;background:linear-gradient(180deg,#FFF3D6 0 18%,var(--c) 18%);box-shadow:inset 0 -14px 24px rgba(0,0,0,.25)}
+.bev .st2{position:absolute;top:12px;left:12px;background:rgba(20,13,7,.75);color:var(--foam);border-radius:999px;padding:4px 10px;font-size:12.5px;font-weight:700}
+.bev .bd{padding:18px;flex:1;display:flex;flex-direction:column}
+.bev h3{font-size:20px}
+.bev .meta{color:var(--onm);font-size:14px;margin-top:4px}
+.bev .ds{color:var(--onm);font-size:14.5px;margin-top:10px;flex:1}
+.bev .pr{margin-top:14px;font-weight:800;color:var(--amber)}
+/* onde */
+.where{display:grid;grid-template-columns:.85fr 1.15fr;border-radius:28px;overflow:hidden;background:#fff;border:1px solid var(--line);box-shadow:0 30px 60px rgba(59,40,20,.08);margin-top:40px;min-height:460px}
+.wl{padding:30px;display:flex;flex-direction:column;gap:10px;background:var(--foam2)}
+.pt{text-align:left;padding:16px;border-radius:18px;border:2px solid transparent;background:#fff;transition:border-color .2s}
+.pt.on{border-color:var(--amber)}
+.pt b{display:block;color:var(--ink);font-size:17px}.pt small{display:block;color:var(--mut);font-size:14px;margin-top:2px}
+.pt .bs{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}.pt .bs span{background:var(--foam2);border-radius:999px;padding:3px 9px;font-size:12.5px;font-weight:700}
+.map{position:relative;background:#e9e2d4;min-height:340px}
+.map iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.map .ab{position:absolute;right:12px;bottom:12px;background:#fff;border-radius:999px;padding:8px 14px;font-weight:800;font-size:13.5px;text-decoration:none;box-shadow:0 6px 18px rgba(0,0,0,.15)}
+.soon{display:grid;place-items:center;text-align:center;padding:40px;height:100%;color:var(--mut)}
+@media(max-width:860px){.where{grid-template-columns:1fr}.map{min-height:320px}}
+/* faq */
+.faq{max-width:860px;margin:40px auto 0;display:flex;flex-direction:column;gap:10px}
+.faq details{background:#fff;border:1px solid var(--line);border-radius:18px;padding:0 22px;transition:box-shadow .2s}
+.faq details[open]{box-shadow:0 14px 34px rgba(59,40,20,.08)}
+.faq summary{list-style:none;cursor:pointer;padding:20px 0;font-weight:800;color:var(--ink);font-size:17.5px;display:flex;justify-content:space-between;gap:14px}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:'+';font-size:26px;line-height:1;color:var(--copper);transition:transform .25s}
+.faq details[open] summary::after{transform:rotate(45deg)}
+.faq p{padding:0 0 20px;color:var(--mut)}
+/* cta final */
+.final{background:linear-gradient(160deg,var(--amber2),var(--amber) 55%,#E59A00);padding:100px 0;overflow:hidden}
+.final .wrap{display:grid;grid-template-columns:1.3fr .7fr;gap:30px;align-items:center}
+.final h2{font-size:clamp(42px,6.4vw,84px);color:var(--stout);line-height:.95}
+.final h2 span{color:#fff}
+.final .cb{display:flex;flex-direction:column;gap:12px}
+.final .btn.wh{background:#fff;color:var(--stout)}
+.final .btn.ln{border:2px solid rgba(20,13,7,.35);color:var(--stout)}
+@media(max-width:860px){.final .wrap{grid-template-columns:1fr}}
+footer{background:var(--stout);color:var(--onm);padding:60px 0 30px;font-size:15px}
+footer .g{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:30px}
+footer h4{color:var(--amber);font-size:13px;letter-spacing:.12em;text-transform:uppercase;margin-bottom:14px}
+footer a{text-decoration:none;display:block;padding:4px 0;color:var(--on)}
+footer a:hover{color:var(--amber)}
+footer .bt{border-top:1px solid var(--online);margin-top:40px;padding-top:22px;display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;font-size:13.5px}
+@media(max-width:760px){footer .g{grid-template-columns:1fr}}
+/* folha de contato */
+.sbg{position:fixed;inset:0;background:rgba(20,13,7,.6);backdrop-filter:blur(4px);z-index:80;opacity:0;pointer-events:none;transition:opacity .25s}
+.sbg.on{opacity:1;pointer-events:auto}
+.sheet{position:fixed;z-index:81;left:50%;top:50%;width:min(520px,calc(100vw - 24px));max-height:92vh;overflow:auto;background:var(--foam);border-radius:28px;padding:30px;transform:translate(-50%,-46%);opacity:0;pointer-events:none;transition:transform .3s var(--ease),opacity .25s}
+.sheet.on{transform:translate(-50%,-50%);opacity:1;pointer-events:auto}
+@media(max-width:600px){.sheet{left:0;right:0;top:auto;bottom:0;width:auto;border-radius:26px 26px 0 0;transform:translateY(100%);padding:26px 20px calc(26px + env(safe-area-inset-bottom))}.sheet.on{transform:none}}
+.sheet h3{font-size:28px}
+.sheet .x{position:absolute;top:16px;right:16px;width:42px;height:42px;border-radius:12px;background:var(--foam2);font-size:22px}
+.fld{display:block;margin-top:14px}
+.fld span{display:block;font-weight:800;font-size:14.5px;color:var(--ink);margin-bottom:6px}
+.fld input,.fld textarea{width:100%;background:#fff;border:1.5px solid var(--line);border-radius:14px;padding:14px;font-size:16px;outline:none}
+.fld input:focus,.fld textarea:focus{border-color:var(--amber);box-shadow:0 0 0 4px rgba(245,179,1,.18)}
+.seg{display:flex;gap:6px;background:var(--foam2);border-radius:14px;padding:5px;margin-top:18px}
+.seg button{flex:1;padding:11px 8px;border-radius:10px;font-weight:800;font-size:14px;color:var(--mut)}
+.seg button.on{background:#fff;color:var(--ink);box-shadow:0 2px 6px rgba(59,40,20,.1)}
+.msg{margin-top:12px;font-weight:700;min-height:22px}
+.wa{position:fixed;right:18px;bottom:18px;z-index:40;width:60px;height:60px;border-radius:50%;background:#25D366;display:grid;place-items:center;box-shadow:0 12px 30px rgba(0,0,0,.3);transition:transform .2s}
+.wa:hover{transform:scale(1.06)}
+/* revelar ao rolar */
+.rv{opacity:0;transform:translateY(26px);transition:opacity .7s var(--ease),transform .7s var(--ease)}
+.rv.in{opacity:1;transform:none}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}.rv{opacity:1;transform:none}html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+ <symbol id="logo" viewBox="0 0 64 64"><rect width="64" height="64" rx="18" fill="#F5B301"/><path d="M19 23h22v24a5 5 0 0 1-5 5H24a5 5 0 0 1-5-5z" fill="#140D07"/><path d="M17 21a7 7 0 0 1 11-5.5 7 7 0 0 1 12 2.5 5.5 5.5 0 0 1 2 7H17z" fill="#FFF6E3"/><path d="M41 28h4a5 5 0 0 1 5 5v6a5 5 0 0 1-5 5h-4" stroke="#140D07" stroke-width="4" fill="none"/><path d="M26 30v14M33 30v14" stroke="#F5B301" stroke-width="3" stroke-linecap="round"/></symbol>
+</svg>
+
+<header id="hd"><div class="wrap">
+  <a class="logo" href="#topo" aria-label="Beer Express — início"><svg><use href="#logo"/></svg><span>Beer <b>Express</b></span></a>
+  <nav class="top" id="nv">
+    <a href="#como">Como funciona</a><a href="#sistema">O sistema</a><a href="#negocio">Para o seu espaço</a><a href="#cardapio" data-cardapio>Cardápio</a><a href="#onde">Onde encontrar</a><a href="#faq">Dúvidas</a>
+    <button class="btn pri" onclick="contato('espaco')">Quero no meu espaço</button>
+  </nav>
+  <button class="burger" id="bg" aria-label="Abrir menu" aria-expanded="false"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+</div></header>
+
+<!-- ══ HERO ══ -->
+<section class="hero dark" id="topo">
+  <div class="bubbles" id="bb"></div>
+  <div class="wrap">
+    <div>
+      <span class="kick">Chopp self-service</span>
+      <h1><span>Escolha.</span><span class="g">Pague.</span><span>Sirva-se.</span></h1>
+      <p class="lead">A chopeira inteligente que libera o chopp sozinha depois da verificação de idade e do pagamento. O cliente se serve no ritmo dele — e o dono acompanha tudo pelo celular.</p>
+      <div class="ctas"><a class="btn pri" href="#como">Ver como funciona <span class="ar">→</span></a><button class="btn out" onclick="contato('espaco')">Quero no meu espaço</button></div>
+      <div class="trust"><span><i></i>Maior de 18 conferido</span><span><i></i>Cartão e Pix</span><span><i></i>Medido ml a ml</span></div>
+    </div>
+    <div class="mach">
+      <svg viewBox="0 0 360 560" role="img" aria-label="Ilustração da chopeira Beer Express com duas torneiras">
+        <defs>
+          <linearGradient id="cab" x1="0" x2="1"><stop offset="0" stop-color="#2C1D10"/><stop offset=".55" stop-color="#3A2715"/><stop offset="1" stop-color="#22160C"/></linearGradient>
+          <linearGradient id="side" x1="0" x2="1"><stop offset="0" stop-color="#1A1109"/><stop offset="1" stop-color="#120B06"/></linearGradient>
+          <linearGradient id="gold" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#FFC93C"/><stop offset="1" stop-color="#D9771C"/></linearGradient>
+          <linearGradient id="steel" x1="0" x2="1"><stop offset="0" stop-color="#8d8579"/><stop offset=".5" stop-color="#f1ece2"/><stop offset="1" stop-color="#8d8579"/></linearGradient>
+        </defs>
+        <ellipse cx="180" cy="540" rx="150" ry="14" fill="#000" opacity=".45"/>
+        <path d="M300 40l30 18v460l-30 14z" fill="url(#side)"/>
+        <rect x="40" y="30" width="262" height="502" rx="22" fill="url(#cab)"/>
+        <rect x="40" y="30" width="262" height="502" rx="22" fill="none" stroke="#FFC93C" stroke-opacity=".18"/>
+        <rect x="40" y="360" width="262" height="10" fill="url(#gold)"/>
+        <text x="171" y="84" text-anchor="middle" font-family="Bricolage Grotesque,system-ui" font-weight="800" font-size="30" fill="#FFF6E3" letter-spacing="-1.2">Beer <tspan fill="#F5B301">Express</tspan></text>
+        <text x="171" y="106" text-anchor="middle" font-family="Figtree,system-ui" font-weight="700" font-size="11" fill="#BFA987" letter-spacing="3">ESCOLHA • PAGUE • SIRVA-SE</text>
+        <g id="tap1">
+          <rect x="74" y="132" width="78" height="112" rx="10" fill="#0B0805" stroke="#3a2a18"/>
+          <rect x="80" y="138" width="66" height="88" rx="6" fill="#F5B301"/>
+          <text x="113" y="172" text-anchor="middle" font-family="system-ui" font-weight="900" font-size="11" fill="#1A1206">TOQUE</text>
+          <text x="113" y="186" text-anchor="middle" font-family="system-ui" font-weight="900" font-size="11" fill="#1A1206">PARA</text>
+          <text x="113" y="200" text-anchor="middle" font-family="system-ui" font-weight="900" font-size="11" fill="#1A1206">COMEÇAR</text>
+          <circle cx="113" cy="236" r="3" fill="#3a2a18"/>
+        </g>
+        <g id="tap2">
+          <rect x="190" y="132" width="78" height="112" rx="10" fill="#0B0805" stroke="#3a2a18"/>
+          <rect x="196" y="138" width="66" height="88" rx="6" fill="#1E1810"/>
+          <text x="229" y="168" text-anchor="middle" font-family="system-ui" font-weight="900" font-size="20" fill="#F5B301">02</text>
+          <text x="229" y="186" text-anchor="middle" font-family="system-ui" font-weight="800" font-size="9" fill="#F7EFE2">IPA</text>
+          <text x="229" y="210" text-anchor="middle" font-family="system-ui" font-weight="900" font-size="11" fill="#F5B301">100 ml</text>
+          <circle cx="229" cy="236" r="3" fill="#3a2a18"/>
+        </g>
+        <g>
+          <rect x="104" y="262" width="18" height="40" rx="7" fill="#0B0805"/><rect x="220" y="262" width="18" height="40" rx="7" fill="#0B0805"/>
+          <rect x="98" y="298" width="30" height="16" rx="5" fill="url(#steel)"/><rect x="214" y="298" width="30" height="16" rx="5" fill="url(#steel)"/>
+          <rect x="108" y="312" width="10" height="12" rx="2" fill="url(#steel)"/><rect x="224" y="312" width="10" height="12" rx="2" fill="url(#steel)"/>
+          <rect class="flow" x="110.5" y="324" width="5" height="44" fill="#F5B301" style="transform-origin:113px 324px"/>
+        </g>
+        <g>
+          <path d="M92 344h42l-4 48a6 6 0 0 1-6 5h-22a6 6 0 0 1-6-5z" fill="#ffffff" opacity=".14" stroke="#FFF6E3" stroke-opacity=".6"/>
+          <clipPath id="gc"><path d="M93 345h40l-4 47a5 5 0 0 1-5 4h-22a5 5 0 0 1-5-4z"/></clipPath>
+          <g clip-path="url(#gc)"><rect class="glassfill" x="90" y="345" width="46" height="52" fill="url(#gold)" style="transform-origin:113px 397px"/></g>
+        </g>
+        <rect x="64" y="398" width="214" height="12" rx="4" fill="url(#steel)"/>
+        <g font-family="Figtree,system-ui" font-weight="800" font-size="10" fill="#BFA987">
+          <text x="70" y="440">01 ESCOLHA</text><text x="158" y="440">02 PAGUE</text><text x="232" y="440">03 SIRVA</text>
+        </g>
+        <circle cx="76" cy="478" r="15" fill="none" stroke="#E2554A" stroke-width="2.5"/><text x="76" y="482" text-anchor="middle" font-family="system-ui" font-weight="900" font-size="10" fill="#E2554A">18+</text>
+        <text x="100" y="474" font-family="Figtree,system-ui" font-size="9.5" fill="#BFA987">Venda proibida para menores de 18 anos.</text>
+        <text x="100" y="487" font-family="Figtree,system-ui" font-size="9.5" fill="#BFA987">Idade conferida antes de liberar.</text>
+        <g fill="#0d0805" opacity=".9"><rect x="70" y="502" width="200" height="4" rx="2"/><rect x="70" y="512" width="200" height="4" rx="2"/></g>
+      </svg>
+      <div class="badge b1"><span class="live"></span>Online agora<b id="hbN">2 torneiras</b>chopp pronto para servir</div>
+      <div class="badge b2">Medido na torneira<b>300 ml = 300 ml</b>fluxômetro em cada copo</div>
+    </div>
+  </div>
+</section>
+<svg class="wave" viewBox="0 0 1440 70" preserveAspectRatio="none" aria-hidden="true" style="background:var(--foam)"><path d="M0 0h1440v20c-240 40-480 50-720 30S240 10 0 40z" fill="#140D07"/></svg>
+
+<!-- ══ COMO FUNCIONA ══ -->
+<section id="como" style="padding-top:70px">
+  <div class="wrap">
+    <span class="kick rv">A jornada do cliente</span>
+    <h2 class="rv">Do toque ao brinde<br>em menos de 1 minuto.</h2>
+    <p class="lead rv">Nenhum atendente, nenhuma fila no caixa. A tela da maquininha conduz cada passo — e a torneira só abre quando tudo estiver certo.</p>
+    <div class="steps" id="stp">
+      <div class="slist">
+        <button class="st on" data-i="0"><span class="n">1</span><span><h3>Escolha o chopp</h3><p>Fotos, tipo, teor alcoólico e preço de cada torneira na tela. É só tocar no que der vontade.</p></span><i class="bar"></i></button>
+        <button class="st" data-i="1"><span class="n">2</span><span><h3>Confirme que tem 18+</h3><p>CPF e data de nascimento conferidos na hora. Menor de idade não passa desta tela.</p></span><i class="bar"></i></button>
+        <button class="st" data-i="2"><span class="n">3</span><span><h3>Escolha o tamanho</h3><p>300 ml, 500 ml ou o que o ponto oferecer — com o desconto dos copos maiores à vista.</p></span><i class="bar"></i></button>
+        <button class="st" data-i="3"><span class="n">4</span><span><h3>Pague por aproximação</h3><p>Crédito, débito ou Pix na própria maquininha. Aprovado, o sistema avisa a chopeira em segundos.</p></span><i class="bar"></i></button>
+        <button class="st" data-i="4"><span class="n">5</span><span><h3>Puxe a alavanca</h3><p>A torneira libera exatamente o volume pago e fecha sozinha. Copo cheio, brinde garantido.</p></span><i class="bar"></i></button>
+      </div>
+      <div class="dev" aria-hidden="true">
+        <div class="scr on"><div class="t">Escolha seu chopp</div><div class="m">Toque na bebida</div>
+          <div class="mn" id="demoMenu"><div style="--c:#F2B705"><i></i><span><b>Pilsen</b><small>Pilsen • 4,8%</small></span><em>R$ 9,90</em></div><div style="--c:#C46A0F"><i></i><span><b>IPA</b><small>IPA • 6,5%</small></span><em>R$ 12,90</em></div><div style="--c:#8E2B1E"><i></i><span><b>Red Ale</b><small>Red Ale • 5,4%</small></span><em>R$ 11,90</em></div></div></div>
+        <div class="scr age"><div class="t">⚠️ ATENÇÃO</div><div class="big">18+</div><div class="m">Digite seu CPF</div><div class="disp" style="background:#fff6;border-color:#0002;color:#1A1206">529.982.247-25</div>
+          <div class="pad"><i>1</i><i>2</i><i>3</i><i>4</i><i>5</i><i>6</i><i>7</i><i>8</i><i>9</i></div><div class="b" style="background:#1A1206;color:#F5B301">CONFIRMAR</div></div>
+        <div class="scr"><div class="t">IPA</div><div class="m">Escolha o tamanho</div><div class="sz"><div><b>300 ml</b><span>R$ 12,90</span></div><div class="on"><b>500 ml</b><span>R$ 19,90</span><br><small style="color:#3FCB88;font-weight:800">economize 7%</small></div></div><div class="b">✓ CONFIRMAR</div></div>
+        <div class="scr"><div class="t">Como quer pagar?</div><div class="m">Total R$ 19,90</div><div class="pay"><div class="on">⚡ Pix <span>➜</span></div><div>💳 Crédito <span>➜</span></div><div>💳 Débito <span>➜</span></div></div><div class="m" style="margin-top:auto">Aproxime o cartão ou celular</div></div>
+        <div class="scr"><div class="ok">✓</div><div class="t">Pagamento aprovado!</div><div class="m">Torneira 2 liberada — puxe a alavanca</div><div class="cupd"><i></i></div><div class="b" style="background:#1d3b28;color:#3FCB88">500 ml liberados</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ O SISTEMA ══ -->
+<section class="dark" id="sistema">
+  <div class="wrap">
+    <span class="kick rv">Por dentro da Beer Express</span>
+    <h2 class="rv">Telemetria que libera,<br>mede e avisa.</h2>
+    <p class="lead rv">Cada copo passa por quatro etapas conectadas. Se algo sai do normal — barril no fim, freezer quente, chopeira offline — o dono fica sabendo na hora.</p>
+    <div class="diag rv">
+      <div class="pulse"><i></i><i style="animation-delay:-1.5s"></i><i style="animation-delay:-3s"></i></div>
+      <div class="node"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M9 6h6M12 18h.01"/></svg></div><h3>Maquininha na torneira</h3><p>Mostra o cardápio, confere a idade e recebe cartão ou Pix.</p></div>
+      <div class="node"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18a5 5 0 0 1-.6-9.96A6 6 0 0 1 18 9a4.5 4.5 0 0 1-.5 9z"/><path d="M10 14l2 2 3-4"/></svg></div><h3>Servidor Beer Express</h3><p>Confirma o pagamento, registra a venda e manda o comando para a chopeira certa.</p></div>
+      <div class="node"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M9 9h6v6H9zM9 1v3M15 1v3M9 20v3M15 20v3M1 9h3M1 15h3M20 9h3M20 15h3"/></svg></div><h3>Chopeira inteligente</h3><p>Abre a válvula, conta os pulsos do fluxômetro e fecha no volume exato.</p></div>
+      <div class="node"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V5M4 19h16M8 15l4-4 3 3 5-6"/></svg></div><h3>Painel + Telegram</h3><p>Vendas, barris, temperatura e alertas no celular do dono, em tempo real.</p></div>
+    </div>
+    <div class="feats rv">
+      <div class="feat"><b>📏 Cobrança justa</b>Fluxômetro em cada torneira: o cliente recebe o que pagou.</div>
+      <div class="feat"><b>🛢️ Barril sob controle</b>Contagem ml a ml e aviso antes de acabar.</div>
+      <div class="feat"><b>🌡️ Chopp sempre gelado</b>Temperatura do freezer monitorada o tempo todo.</div>
+      <div class="feat"><b>🔒 Sem fraude</b>Torneira só abre com pagamento confirmado no servidor.</div>
+      <div class="feat"><b>🎉 Happy hour automático</b>Preços caem sozinhos no horário definido.</div>
+      <div class="feat"><b>🏷️ Cupons</b>Campanhas e descontos direto na maquininha.</div>
+      <div class="feat"><b>📺 BeerList na TV</b>Cardápio vivo com nível dos barris para o ponto.</div>
+      <div class="feat"><b>⭐ Avaliação</b>Cliente avalia depois de servir; você vê no painel.</div>
+    </div>
+    <div class="panelmock rv">
+      <div>
+        <span class="kick">Painel do dono</span>
+        <h3 style="font-size:clamp(26px,3vw,36px);margin:14px 0 12px">Seu quiosque inteiro<br>no bolso.</h3>
+        <p style="color:var(--onm)">Troque a foto, o nome, o tipo, o teor alcoólico e os preços de cada chopp em poucos toques. Veja quanto vendeu hoje, quais barris estão acabando e receba no Telegram cada venda e cada alerta.</p>
+        <div class="tg"><b>Beer Express</b> • agora<br>🍺 Venda R$ 19,90 — IPA 500 ml • Pix<br>🛢️ Pilsen com 3,1 L no barril (10%)</div>
+      </div>
+      <div class="pm" aria-hidden="true">
+        <div style="font-family:var(--fh);font-weight:800;font-size:18px;margin:2px 4px 10px">Olá 👋</div>
+        <div class="k"><div><small>Vendido hoje</small><b>R$ 1.284</b></div><div><small>Chopp servido</small><b>61,5 L</b></div></div>
+        <div class="tp" style="--c:#F2B705"><i></i><span><b>Pilsen da Casa</b><small>300 ml R$ 9,90 • 500 ml R$ 14,90</small><span class="mt"><span style="width:72%"></span></span></span></div>
+        <div class="tp" style="--c:#C46A0F"><i></i><span><b>IPA do Cerrado</b><small>300 ml R$ 12,90 • 500 ml R$ 19,90</small><span class="mt"><span style="width:18%;background:#C2372D"></span></span></span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ IDADE ══ -->
+<section id="idade">
+  <div class="wrap agebox">
+    <div>
+      <span class="kick rv">Responsabilidade em primeiro lugar</span>
+      <h2 class="rv">Sem 18+,<br>sem chopp.</h2>
+      <p class="lead rv" id="idadeTxt">Antes de qualquer venda, o cliente informa CPF e data de nascimento. O sistema confere a idade e só então mostra o pagamento. Tentativas repetidas bloqueiam a maquininha e avisam o responsável.</p>
+      <div class="lock rv"><div><b>🔒 Sem verificação</b><small>Torneira travada</small></div><div class="y"><b>🔓 Idade confirmada</b><small>Pagamento liberado</small></div></div>
+      <div class="law rv"><span class="s18">18+</span><span>Venda de bebida alcoólica proibida para menores de 18 anos — Lei 13.106/2015 (ECA, art. 243).</span></div>
+    </div>
+    <div class="chk rv">
+      <div><span>🪪</span><span><b>CPF válido e idade conferida</b><p>Dígitos verificados na hora e, se configurado, consulta à Receita.</p></span></div>
+      <div><span>🚫</span><span><b>Menor de idade é barrado</b><p>A tentativa fica registrada e o dono é avisado no Telegram.</p></span></div>
+      <div><span>⏱️</span><span><b>Proteção contra tentativas</b><p>Muitos erros seguidos bloqueiam a maquininha por alguns minutos.</p></span></div>
+      <div><span>🍻</span><span><b>Consumo responsável</b><p>Limite de copos por compra e, se quiser, limite diário por CPF.</p></span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ NEGÓCIO ══ -->
+<section id="negocio" style="background:var(--foam2)">
+  <div class="wrap">
+    <span class="kick rv">Como funciona o negócio</span>
+    <h2 class="rv">Chopp vendendo sozinho.<br>Você escolhe como participar.</h2>
+    <p class="lead rv">A Beer Express é um ponto de venda autônomo: ocupa pouco espaço, funciona sem atendente e fatura enquanto o seu público circula.</p>
+    <div class="models">
+      <div class="model a rv"><span class="tag">Para quem tem o espaço</span><h3>Receba uma chopeira no seu ponto.</h3>
+        <p>Shopping, feira, condomínio, clube, academia, coworking, posto ou evento: você cede o espaço e a energia, e a gente cuida do resto.</p>
+        <ul><li>Instalação e treinamento rápido do local</li><li>Abastecimento de barris, CO₂ e copos</li><li>Higienização e manutenção periódicas</li><li>Monitoramento remoto 24 h e suporte</li><li>Parceria combinada caso a caso, com participação nas vendas</li></ul>
+        <button class="btn pri" onclick="contato('espaco')">Quero no meu espaço <span class="ar">→</span></button></div>
+      <div class="model b rv"><span class="tag">Para quem quer empreender</span><h3>Opere o seu próprio quiosque.</h3>
+        <p>Tenha uma ou várias chopeiras e administre tudo pelo celular com a plataforma Beer Express.</p>
+        <ul><li>Painel próprio: você vê só os seus pontos</li><li>Cardápio, fotos e preços editados por você</li><li>Vendas, barris e temperatura em tempo real</li><li>Alertas e resumo diário no Telegram</li><li>Cartão e Pix direto na maquininha</li></ul>
+        <button class="btn ink" onclick="contato('contato','Quero operar meu próprio quiosque Beer Express.')">Quero ser operador <span class="ar">→</span></button></div>
+    </div>
+    <div class="who rv"><span>🛍️ Shoppings</span><span>🎪 Feiras e eventos</span><span>🏢 Condomínios</span><span>🏋️ Academias e clubes</span><span>💼 Coworkings</span><span>⛽ Conveniências</span><span>🏨 Hotéis</span></div>
+  </div>
+</section>
+
+<!-- ══ REQUISITOS + OPERAÇÃO ══ -->
+<section id="requisitos">
+  <div class="wrap">
+    <span class="kick rv">Instalação</span>
+    <h2 class="rv">O que o seu espaço precisa ter.</h2>
+    <div class="req">
+      <div class="rq rv"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8"/></svg></div><h3>Espaço</h3><p>Uma área pequena e plana, perto da circulação do público.</p><span class="v" id="dimV" hidden></span></div>
+      <div class="rq rv"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg></div><h3>Energia</h3><p>Uma tomada comum, aterrada, exclusiva para a chopeira.</p></div>
+      <div class="rq rv"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 18v-3M10 18v-7M15 18V8M20 18V4"/></svg></div><h3>Internet</h3><p>Sinal de celular (4G) ou Wi-Fi no local para a telemetria.</p></div>
+      <div class="rq rv"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/><path d="M4 4l16 16"/></svg></div><h3>Sem hidráulica</h3><p>Não precisa de água nem de obra: chega e começa a servir.</p></div>
+    </div>
+    <div class="ops">
+      <div class="op rv"><h3>🛢️ Abastecimento</h3><ul><li>Barris de chopp trocados antes de acabar</li><li>Cilindro de CO₂ na pressão certa</li><li>Copos sempre à mão</li></ul></div>
+      <div class="op rv"><h3>🧽 Manutenção</h3><ul><li>Higienização das linhas e torneiras</li><li>Limpeza da pingadeira</li><li>Revisão de mangueiras e conexões</li></ul></div>
+      <div class="op rv"><h3>📡 Monitoramento</h3><ul><li>Chopeira e maquininha online/offline</li><li>Temperatura e nível de cada barril</li><li>Alertas automáticos no Telegram</li></ul></div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ CARDÁPIO (ao vivo) ══ -->
+<section class="dark" id="cardapio" hidden>
+  <div class="wrap">
+    <span class="kick rv">Nas torneiras agora</span>
+    <h2 class="rv">O cardápio de hoje.</h2>
+    <p class="lead rv" id="cardTxt">Atualizado direto das chopeiras — o que está aqui está gelado e pronto para servir.</p>
+    <div class="menu" id="menu"></div>
+  </div>
+</section>
+
+<!-- ══ ONDE ══ -->
+<section id="onde">
+  <div class="wrap">
+    <span class="kick rv">Onde encontrar</span>
+    <h2 class="rv">Seu próximo chopp<br>pode estar logo ali.</h2>
+    <p class="lead rv" id="ondeTxt">Estamos chegando a novos pontos. Deixe seu contato e avisamos quando houver uma Beer Express perto de você.</p>
+    <div class="where rv">
+      <div class="wl" id="pts"></div>
+      <div class="map" id="map"><div class="soon"><div><div style="font-size:46px">📍</div><b style="color:var(--ink);font-size:20px;display:block;margin:8px 0 4px">Novos pontos em breve</b>Seja o primeiro a saber.</div></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ FAQ ══ -->
+<section id="faq" style="background:var(--foam2)">
+  <div class="wrap">
+    <div style="text-align:center"><span class="kick rv">Dúvidas</span><h2 class="rv">Perguntas frequentes.</h2></div>
+    <div class="faq">
+      <details class="rv"><summary>Como a Beer Express sabe que o cliente tem 18 anos?</summary><p>Antes do pagamento, o cliente informa CPF e data de nascimento na maquininha. O sistema confere os dados e só libera a compra para maiores de 18. Tentativas inválidas repetidas bloqueiam a maquininha e avisam o responsável.</p></details>
+      <details class="rv"><summary>E se o chopp acabar no meio do copo?</summary><p>O sistema acompanha o barril ml a ml e avisa antes de acabar. Se mesmo assim um copo não for servido por completo, a venda fica marcada no painel e o volume que faltou pode ser liberado de novo ou estornado.</p></details>
+      <details class="rv"><summary>Quais formas de pagamento são aceitas?</summary><p>Crédito, débito e Pix, por aproximação ou com o cartão, direto na maquininha presa à chopeira. Não há troco nem dinheiro em espécie no ponto.</p></details>
+      <details class="rv"><summary>O cliente recebe exatamente o que pagou?</summary><p>Sim. Cada torneira tem um fluxômetro que mede o volume; a válvula fecha sozinha quando o copo atinge os ml comprados. As torneiras são calibradas periodicamente.</p></details>
+      <details class="rv"><summary>Precisa de funcionário no local?</summary><p>Não para vender. A operação é autônoma; o local só precisa manter a área organizada. Abastecimento e manutenção são feitos pela equipe responsável pela chopeira.</p></details>
+      <details class="rv"><summary>O que acontece se a internet cair?</summary><p>A chopeira não libera chopp sem confirmação do servidor — por segurança, nada sai sem pagamento. Assim que a conexão volta, tudo segue normalmente e o dono recebe o aviso de que ela ficou offline.</p></details>
+      <details class="rv"><summary>Quanto espaço a chopeira ocupa?</summary><p id="faqDim">Ela cabe numa área pequena, parecida com a de uma geladeira. Fale com a gente para receber as medidas do modelo indicado para o seu espaço.</p></details>
+    </div>
+  </div>
+</section>
+
+<!-- ══ CTA FINAL ══ -->
+<section class="final">
+  <div class="wrap">
+    <h2 class="rv">Seu espaço.<br>Seu público.<br><span>Seu próximo brinde.</span></h2>
+    <div class="cb rv" id="ctaBtns">
+      <button class="btn wh" onclick="contato('espaco')">Quero a Beer Express no meu espaço →</button>
+      <button class="btn ln" onclick="contato('avise')">Avise quando chegar perto de mim</button>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="g">
+      <div><a class="logo" href="#topo" style="padding:0"><svg style="width:36px;height:36px"><use href="#logo"/></svg><span>Beer <b>Express</b></span></a><p style="margin-top:14px;max-width:320px" id="ftSlog">Escolha. Pague. Sirva-se. Chopp self-service com controle de idade e operação monitorada.</p></div>
+      <div><h4>Contato</h4><div id="ftCont"><a href="#" onclick="contato('contato');return false">Fale com a gente</a></div></div>
+      <div><h4>Site</h4><a href="#como">Como funciona</a><a href="#sistema">O sistema</a><a href="#negocio">Para o seu espaço</a><a href="#onde">Onde encontrar</a><a href="#faq">Dúvidas</a></div>
+    </div>
+    <div class="bt"><span>© <span id="ano"></span> Beer Express. Beba com moderação. Venda proibida para menores de 18 anos.</span><a href="#topo" style="display:inline;padding:0">Voltar ao topo ↑</a></div>
+  </div>
+</footer>
+
+<a class="wa" id="wa" hidden target="_blank" rel="noopener" aria-label="Falar pelo WhatsApp"><svg width="30" height="30" viewBox="0 0 24 24" fill="#fff"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.6.1-.7.8-.8 1-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.3-.4.7-1.4a.5.5 0 0 0 0-.4c0-.1-.6-1.4-.8-1.9s-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.7 11.8 11.8 0 0 0 4.5 4c1.7.7 2.3.8 3.2.6a2.7 2.7 0 0 0 1.8-1.2 2.2 2.2 0 0 0 .2-1.3c-.1-.1-.3-.2-.6-.3z"/></svg></a>
+
+<div class="sbg" id="sbg" onclick="fechar()"></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="shT">
+  <button class="x" onclick="fechar()" aria-label="Fechar">×</button>
+  <h3 id="shT">Vamos conversar?</h3>
+  <p style="color:var(--mut);margin-top:6px" id="shS">Deixe seu contato que a gente retorna rapidinho.</p>
+  <div class="seg" id="shSeg"><button data-t="espaco">Tenho um espaço</button><button data-t="avise">Avise quando chegar</button><button data-t="contato">Outro assunto</button></div>
+  <label class="fld"><span>Seu nome</span><input id="fN" autocomplete="name"></label>
+  <label class="fld"><span>WhatsApp ou e-mail</span><input id="fC" autocomplete="tel" inputmode="email" placeholder="(61) 99999-9999"></label>
+  <label class="fld"><span id="fCiL">Cidade / bairro</span><input id="fCi" autocomplete="address-level2"></label>
+  <label class="fld"><span>Mensagem <small style="font-weight:500;color:var(--mut)">(opcional)</small></span><textarea id="fM" rows="3" placeholder="Ex.: tenho um quiosque na praça de alimentação"></textarea></label>
+  <input id="fS" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px" aria-hidden="true">
+  <button class="btn pri" style="width:100%;margin-top:18px" id="fB" onclick="enviar()">Enviar</button>
+  <div class="msg" id="fMsg" role="status"></div>
+</div>
+
+<script>
+const $=s=>document.querySelector(s), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const brl=v=>'R$ '+Number(v).toFixed(2).replace('.',',');
+const RM=matchMedia('(prefers-reduced-motion: reduce)').matches;
+$('#ano').textContent=new Date().getFullYear();
+
+/* topo que encolhe + menu do celular */
+const hd=$('#hd');addEventListener('scroll',()=>hd.classList.toggle('sc',scrollY>30),{passive:true});
+$('#bg').onclick=()=>{const on=$('#nv').classList.toggle('on');$('#bg').setAttribute('aria-expanded',on);document.body.style.overflow=on?'hidden':''};
+document.querySelectorAll('#nv a').forEach(a=>a.addEventListener('click',()=>{$('#nv').classList.remove('on');document.body.style.overflow=''}));
+
+/* bolhas do chopp */
+if(!RM){const bb=$('#bb');for(let i=0;i<26;i++){const e=document.createElement('i'),s=4+Math.random()*12;Object.assign(e.style,{left:Math.random()*100+'%',width:s+'px',height:s+'px',animationDuration:(7+Math.random()*9)+'s',animationDelay:(-Math.random()*14)+'s'});e.style.setProperty('--dx',(Math.random()*60-30)+'px');bb.appendChild(e)}}
+
+/* revelar ao rolar */
+const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}}),{threshold:.12,rootMargin:'0px 0px -40px 0px'});
+document.querySelectorAll('.rv').forEach((el,i)=>{el.style.transitionDelay=(i%4)*60+'ms';io.observe(el)});
+
+/* demonstração da jornada: troca sozinha, pausa quando o mouse está em cima, clique para ver um passo */
+const sts=[...document.querySelectorAll('.st')], scrs=[...document.querySelectorAll('.scr')];let cur=0,tm=null;
+function passo(i){cur=i;sts.forEach((s,k)=>s.classList.toggle('on',k===i));scrs.forEach((s,k)=>s.classList.toggle('on',k===i));
+  sts[i].querySelector('.bar').style.animation='none';void sts[i].offsetWidth;sts[i].querySelector('.bar').style.animation='';
+  clearTimeout(tm);if(!RM)tm=setTimeout(()=>{if(!$('#stp').classList.contains('paused'))passo((cur+1)%sts.length);else passo(cur)},5200)}
+sts.forEach((s,i)=>s.onclick=()=>passo(i));
+$('#stp').addEventListener('mouseenter',()=>$('#stp').classList.add('paused'));$('#stp').addEventListener('mouseleave',()=>{$('#stp').classList.remove('paused')});
+new IntersectionObserver(es=>{if(es[0].isIntersecting){passo(cur)}else clearTimeout(tm)},{threshold:.3}).observe($('#stp'));
+
+/* contato */
+let TIPO='espaco', SITE={};
+const TXT={espaco:['Leve a Beer Express para o seu espaço','Conte onde fica o seu espaço e a gente retorna com a proposta.','Onde fica o espaço?','Ex.: quiosque na praça de alimentação, 2 mil pessoas/dia'],
+  avise:['Avisamos quando chegar perto','Diga sua cidade ou bairro e você fica sabendo primeiro.','Cidade / bairro','Ex.: Asa Norte, perto do trabalho'],
+  contato:['Fale com a gente','Dúvidas, parcerias, eventos ou imprensa.','Cidade','Escreva sua mensagem']};
+function contato(t,m){TIPO=t;tipo(t);if(m)$('#fM').value=m;$('#fMsg').textContent='';$('#sbg').classList.add('on');$('#sheet').classList.add('on');document.body.style.overflow='hidden';setTimeout(()=>$('#fN').focus(),250)}
+function tipo(t){TIPO=t;document.querySelectorAll('#shSeg button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));const x=TXT[t];$('#shT').textContent=x[0];$('#shS').textContent=x[1];$('#fCiL').textContent=x[2];$('#fM').placeholder=x[3]}
+document.querySelectorAll('#shSeg button').forEach(b=>b.onclick=()=>tipo(b.dataset.t));
+function fechar(){$('#sbg').classList.remove('on');$('#sheet').classList.remove('on');document.body.style.overflow=''}
+addEventListener('keydown',e=>{if(e.key==='Escape'){fechar();$('#nv').classList.remove('on')}});
+async function enviar(){const b=$('#fB'),m=$('#fMsg');b.disabled=true;b.textContent='Enviando…';m.style.color='';
+  try{const r=await fetch('api.php?r=pub/lead',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tipo:TIPO,nome:$('#fN').value,contato:$('#fC').value,cidade:$('#fCi').value,mensagem:$('#fM').value,site:$('#fS').value})}).then(r=>r.json());
+    if(!r.ok)throw r;m.style.color='#0B8A56';m.textContent='🍻 Recebido! Em breve falamos com você.';['#fN','#fC','#fCi','#fM'].forEach(s=>$(s).value='');setTimeout(fechar,2200)}
+  catch(e){m.style.color='#C2372D';m.textContent=e.mensagem||'Não foi possível enviar agora. Tente pelo WhatsApp.'}
+  b.disabled=false;b.textContent='Enviar'}
+
+/* dados ao vivo do servidor: contatos, cardápio e pontos */
+let MAPA=[];
+function mapa(p){if(p.lat===null||p.lng===null){$('#map').innerHTML=`<div class="soon"><div><div style="font-size:46px">📍</div><b style="color:var(--ink);font-size:20px;display:block;margin:8px 0 4px">${esc(p.nome)}</b>${esc(p.endereco||'')}<br><a class="btn ink" style="margin-top:16px" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((p.endereco||p.nome))}">Ver no mapa</a></div></div>`;return}
+  const d=.006,bb=[p.lng-d*1.6,p.lat-d,p.lng+d*1.6,p.lat+d].join(',');
+  $('#map').innerHTML=`<iframe title="Mapa: ${esc(p.nome)}" loading="lazy" src="https://www.openstreetmap.org/export/embed.html?bbox=${bb}&layer=mapnik&marker=${p.lat},${p.lng}"></iframe><a class="ab" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}">Como chegar ↗</a>`}
+function pontoSel(i){document.querySelectorAll('.pt').forEach((b,k)=>b.classList.toggle('on',k===i));mapa(MAPA[i])}
+(async()=>{try{const d=await fetch('api.php?r=pub/site').then(r=>r.json());if(!d.ok)return;SITE=d;
+  const c=d.contato;
+  if(d.marca&&d.marca.nome&&d.marca.nome!=='Beer Express')document.title=d.marca.nome+' — chopp self-service';
+  if(c.whatsapp){const w='https://wa.me/'+(c.whatsapp.startsWith('55')?c.whatsapp:'55'+c.whatsapp)+'?text='+encodeURIComponent('Olá! Vim pelo site da Beer Express.');$('#wa').href=w;$('#wa').hidden=false;
+    $('#ctaBtns').insertAdjacentHTML('beforeend',`<a class="btn ln" href="${w}" target="_blank" rel="noopener">Falar pelo WhatsApp</a>`)}
+  $('#ftCont').innerHTML=(c.email?`<a href="mailto:${esc(c.email)}">${esc(c.email)}</a>`:'')+(c.whatsapp?`<a href="${$('#wa').href}" target="_blank" rel="noopener">WhatsApp ${esc(c.whatsapp.replace(/^55/,'').replace(/^(\d{2})(\d{4,5})(\d{4})$/,'($1) $2-$3'))}</a>`:'')
+    +(c.instagram?`<a href="https://instagram.com/${encodeURIComponent(c.instagram)}" target="_blank" rel="noopener">@${esc(c.instagram)}</a>`:'')+`<a href="#" onclick="contato('contato');return false">Formulário de contato</a>`;
+  if(d.equipamento.dimensoes){$('#dimV').textContent=d.equipamento.dimensoes;$('#dimV').hidden=false;$('#faqDim').textContent=`As medidas do equipamento são ${d.equipamento.dimensoes}. Basta uma área plana, com tomada e sinal de internet.`}
+  if(d.equipamento.torneiras)$('#hbN').textContent=d.equipamento.torneiras+' torneira'+(d.equipamento.torneiras>1?'s':'');
+  if(d.verificacao==='declaracao')$('#idadeTxt').textContent='Antes de qualquer venda, o cliente precisa confirmar na tela que tem 18 anos ou mais e aceitar os termos. Só então o pagamento é liberado — e o local pode exigir documento a qualquer momento.';
+  // cardápio ao vivo
+  const bs=d.cardapio.filter(b=>b.a_partir!==null);
+  if(bs.length){$('#cardapio').hidden=false;
+    if(d.happy_hour&&d.happy_hour.ativo)$('#cardTxt').innerHTML=`🎉 <b style="color:var(--amber)">${esc(d.happy_hour.nome)} agora:</b> −${Math.round(d.happy_hour.pct)}% até ${esc(d.happy_hour.ate)}. Preços já com desconto.`;
+    $('#menu').innerHTML=bs.map(b=>`<article class="bev rv"><div class="ph">${b.imagem_url?`<img src="${esc(b.imagem_url)}" alt="${esc(b.nome)}" loading="lazy">`:`<div class="cup" style="--c:${esc(b.cor)}"></div>`}${b.online?'':'<span class="st2">Volta em breve</span>'}</div>
+      <div class="bd"><h3>${esc(b.nome)}</h3><div class="meta">${esc([b.estilo,b.abv!==null?String(b.abv).replace('.',',')+'% ABV':'',b.ibu!==null?b.ibu+' IBU':''].filter(Boolean).join(' • '))}</div>
+      ${b.descricao?`<p class="ds">${esc(b.descricao)}</p>`:'<p class="ds"></p>'}<div class="pr">a partir de ${brl(b.a_partir)}</div>${b.pontos.length&&d.pontos.length>1?`<small style="color:var(--onm);margin-top:4px">📍 ${esc(b.pontos.join(', '))}</small>`:''}</div></article>`).join('');
+    document.querySelectorAll('#menu .rv').forEach(el=>io.observe(el))}
+  else document.querySelectorAll('[data-cardapio]').forEach(a=>a.remove());
+  // onde encontrar
+  MAPA=d.pontos;
+  if(MAPA.length){$('#ondeTxt').textContent=MAPA.length===1?'Nosso ponto está pronto para servir. Em breve, novos locais perto de você.':`${MAPA.length} pontos servindo chopp gelado. Toque num ponto para ver no mapa.`;
+    $('#pts').innerHTML=MAPA.map((p,i)=>`<button class="pt" onclick="pontoSel(${i})"><b>${esc(p.nome)}</b><small>${esc(p.endereco||'')}</small>${p.horario?`<small>🕒 ${esc(p.horario)}</small>`:''}${p.bebidas.length?`<div class="bs">${p.bebidas.slice(0,5).map(n=>`<span>🍺 ${esc(n)}</span>`).join('')}</div>`:''}</button>`).join('')
+      +`<button class="btn pri" style="margin-top:auto" onclick="contato('avise')">Quero saber quando chegar perto de mim</button>`;
+    pontoSel(0)}
+  else $('#pts').innerHTML=`<div style="padding:10px 4px"><div style="font-size:40px">🍺</div><h3 style="margin:10px 0 8px">Em breve em ${esc(c.cidade||'sua cidade')}</h3><p style="color:var(--mut)">Os primeiros pontos estão sendo preparados.</p></div><button class="btn pri" style="margin-top:auto" onclick="contato('avise')">Quero saber quando chegar</button>`;
+}catch(e){}})();
+</script>
+</body>
+</html>

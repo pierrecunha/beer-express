@@ -37,8 +37,26 @@ CREATE TABLE IF NOT EXISTS be_locations (
   id INT AUTO_INCREMENT PRIMARY KEY,
   nome VARCHAR(120) NOT NULL,
   endereco VARCHAR(255) NULL,
+  lat DECIMAL(10,7) NULL,                -- posição no mapa do portal
+  lng DECIMAL(10,7) NULL,
+  horario VARCHAR(120) NULL,             -- ex.: "Ter a dom, 10h às 22h"
+  publico TINYINT(1) NOT NULL DEFAULT 1, -- aparece em "Onde encontrar" no portal
   ativo TINYINT(1) NOT NULL DEFAULT 1,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Contatos recebidos pelo portal (quero levar para o meu espaço / avise quando chegar)
+CREATE TABLE IF NOT EXISTS be_leads (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  tipo ENUM('espaco','avise','contato') NOT NULL DEFAULT 'contato',
+  nome VARCHAR(120) NOT NULL,
+  contato VARCHAR(160) NOT NULL,
+  cidade VARCHAR(120) NULL,
+  mensagem VARCHAR(500) NULL,
+  ip VARCHAR(45) NULL,
+  atendido TINYINT(1) NOT NULL DEFAULT 0,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Controladores ESP32 (cada um comanda até 4 torneiras)
@@ -394,3 +412,13 @@ INSERT IGNORE INTO be_settings (k, v) VALUES
  ('prova_social_min','5'),              -- só mostra "X copos hoje" a partir deste número
  ('avaliacao_ativa','1'),
  ('inatividade_s','45');
+
+-- Portal público (index.html): contatos e textos editáveis no painel → Configurações → Portal
+INSERT IGNORE INTO be_settings (k, v) VALUES
+ ('site_whatsapp',''),                  -- só números com DDD, ex.: 61999998888 (vazio = esconde o botão)
+ ('site_email',''),
+ ('site_instagram',''),                 -- usuário sem @
+ ('site_cidade','Brasília'),
+ ('site_dimensoes',''),                 -- ex.: 60 × 70 × 190 cm (vazio = esconde)
+ ('site_torneiras','2'),
+ ('site_min_copos','100');              -- só mostra "copos servidos" a partir deste número
