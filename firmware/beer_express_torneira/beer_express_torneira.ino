@@ -90,7 +90,8 @@ enum Modo { LIVRE, PASS, COPO_ARMADO, COPO_SERVINDO, MSG };
 Modo modo = LIVRE;
 struct { String produto = "Beer Express", estilo = ""; float precoL = 0, ppl = 1925, abv = 0; int restante = 0; uint16_t cor = 0xFDA0; bool pass = true; } tap;
 struct { int id = 0; float precoL = 0; int limite = 0; uint32_t inicio = 0, ultimoPulso = 0, ultimoReport = 0; uint32_t ult = 0; float saldo = 0; String nome; int inatividadeS = 8; } pour;
-struct { int id = 0, volume = 0, alvo = 0, timeoutS = 120; String startMode = "pos"; uint32_t armadoEm = 0, inicio = 0, ultimoPulso = 0, ult = 0, ultimoReport = 0; } copo;
+struct { int id = 0, volume = 0, alvo = 0, timeoutS = 120; String startMode = "pos"; uint32_t armadoEm = 0, inicio = 0, ultimoPulso = 0, ult = 0, ultimoReport = 0;
+         uint32_t esperaInicioMs = SEM_FLUXO_COPO_MS, pausaMaxMs = 5000; } copo;
 uint32_t msgAte = 0, lastPoll = 0, pollMs = 2000, lastTemp = 0, cfgPressed = 0, lastWifi = 0, lastStray = 0, strayBase = 0;
 float temperatura = -127;
 String ultimoUid = ""; uint32_t ultimoUidEm = 0;
@@ -224,7 +225,7 @@ void iniciarCopo() {
   copo.inicio = copo.ultimoPulso = copo.ultimoReport = millis(); copo.ult = 0; modo = COPO_SERVINDO;
   prefs.putInt("cid", copo.id);
   reportCopo("servindo");
-  telaServindo(0, copo.volume, 0, "Servindo seu copo");
+  telaServindo(0, copo.volume, 0, copo.startMode == "auto" ? "Puxe a alavanca!" : "Servindo seu copo");
 }
 void fimCopo(const char* st, const char* erro = "") {
   noInterrupts(); alvo = 0; interrupts(); digitalWrite(PIN_VALVE, VALVE_OFF); delay(400);
@@ -243,9 +244,9 @@ void cuidarCopo() {
   if (p != copo.ult) { copo.ult = p; copo.ultimoPulso = millis(); }
   telaServindo(ml(p), copo.volume, 0, "Servindo seu copo");
   if (alvo == 0 || p >= (uint32_t)copo.alvo) fimCopo("concluido");
-  else if (p == 0 && millis() - copo.inicio > SEM_FLUXO_COPO_MS) fimCopo("erro", "sem_fluxo (barril vazio ou CO2?)");
-  else if (p > 0 && millis() - copo.ultimoPulso > 5000) fimCopo("erro", "fluxo_interrompido");
-  else if (millis() - copo.inicio > 20000UL + (uint32_t)copo.volume * 60UL) fimCopo("erro", "tempo_maximo");
+  else if (p == 0 && millis() - copo.inicio > copo.esperaInicioMs) fimCopo(copo.startMode == "auto" ? "timeout" : "erro", copo.startMode == "auto" ? "cliente nao puxou a alavanca" : "sem_fluxo (barril vazio ou CO2?)");
+  else if (p > 0 && millis() - copo.ultimoPulso > copo.pausaMaxMs) fimCopo("erro", "fluxo_interrompido");
+  else if (millis() - copo.inicio > 20000UL + (uint32_t)copo.volume * 60UL + copo.esperaInicioMs) fimCopo("erro", "tempo_maximo");
   else if (millis() - copo.ultimoReport > 1000) { copo.ultimoReport = millis(); reportCopo("servindo"); }
 }
 
@@ -271,6 +272,7 @@ void poll() {
     if (modo != COPO_ARMADO) {
       copo.id = cmd["id"]; copo.volume = cmd["volume_ml"]; copo.alvo = cmd["pulsos_alvo"]; copo.timeoutS = cmd["timeout_s"] | 120;
       copo.startMode = (const char*)(cmd["start_mode"] | "pos"); copo.armadoEm = millis(); modo = COPO_ARMADO;
+      copo.esperaInicioMs = (uint32_t)(cmd["espera_inicio_s"] | 6) * 1000UL; copo.pausaMaxMs = (uint32_t)(cmd["pausa_max_s"] | 5) * 1000UL;
       tft.fillScreen(BG); centro("Seu copo esta pronto", 40, &fonts::FreeSansBold12pt7b, AMB);
       centro(String(copo.volume) + " ml", 100, &fonts::FreeSansBold24pt7b, TFT_WHITE);
       centro("Coloque o copo inclinado", 180, &fonts::FreeSans12pt7b, MUT);

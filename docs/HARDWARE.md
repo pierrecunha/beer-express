@@ -4,20 +4,24 @@ Dois jeitos de vender, que funcionam juntos no mesmo ponto:
 
 | | **Beer Pass** (igual BeerPass/myTapp) | **Copo fechado** |
 |---|---|---|
-| Como paga | Recarrega crédito na maquininha (cartão ou Pix) | Paga o copo (300/500 ml) na maquininha |
+| Como paga | Recarrega crédito na maquininha (cartão ou Pix) — **backlog, desligado** | Paga o copo (tamanhos e preços do painel) na maquininha da torneira |
 | Como serve | Aproxima o cartão/pulseira na torneira e se serve à vontade | Toca SERVIR e a torneira libera o volume exato |
 | Cobrança | Por ml servido (R$/litro), debitado do saldo | Valor fixo do copo |
-| Verificação 18+ | Uma vez, no cadastro (CPF + nascimento + nome) | A cada compra (CPF + nascimento) |
+| Verificação 18+ | Uma vez, no cadastro (CPF + nascimento + nome) | "Sim, concordo" (igual BeerPass) ou CPF + nascimento — escolha no painel |
 
-## 1. Maquininha (1 por ponto) — totem de recarga + venda de copo
+## 1. Maquininha — uma por torneira (igual BeerPass)
 
-**Compre: Mercado Pago Point Smart 2.** Android, tela touch, 4G/Wi-Fi, Pix por QR. É a única do Mercado Pago que roda app próprio (SmartApp "Main App", distribuição privada para a sua empresa, após homologação).
-Por que Mercado Pago: um só fornecedor para cartão, Pix pela API (QR na tela) e estorno automático pelo painel; o servidor confere cada pagamento na API.
+**Compre: PagBank Moderninha Smart 2**, a mesma usada pelo BeerPass. Fica presa num suporte logo acima da torneira e a **tela dela é a tela da torneira**: foto do chopp, tipo, teor alcoólico, IBU e valor por 100 ml. O cliente toca na imagem → aceita os termos 18+ → escolhe o tamanho → quantidade e cupom → paga (crédito, débito ou Pix na própria maquininha) → puxa a alavanca da torneira.
 
-- Alternativa: **PagBank Moderninha Smart 2** (garantia maior; app via PlugPag — o projeto já tem o flavor `pagbank`).
-- **Não servem:** Point Pro/Mini/Air, Moderninha Pro, Ton T1/T2 (não rodam app de terceiros).
-- Antes de comprar várias: peça ao comercial do Mercado Pago a liberação de SmartApp na sua conta. Teste tudo antes com o app `simulado` num celular.
-- Fixe a maquininha num suporte com carregador (ela é portátil, com bateria).
+- Painel → Maquininhas → **Presa à torneira** = a torneira dela. Sem torneira definida, a maquininha mostra o cardápio do ponto inteiro (útil para 1 maquininha servindo várias torneiras).
+- Painel → Configurações → **Pix = "Na própria maquininha"** (PagBank) — não precisa de conta Mercado Pago.
+- App: flavor `pagbank` (SDK PlugPag). O app precisa ser liberado pelo PagBank para rodar em produção — fale com o time de parceiros/desenvolvedores do PagBank antes de comprar várias.
+- Alternativa: Mercado Pago Point Smart 2 (flavor `mercadopago`; Pix pelo QR do servidor).
+- **Não servem:** Moderninha Pro, Point Pro/Mini, Ton T1/T2 (não rodam app próprio).
+- Monte a maquininha num suporte com o carregador ligado (é portátil, com bateria).
+
+### Como o cliente se serve (modo alavanca)
+Painel → Controladores → **Como o cliente se serve = Alavanca da torneira**. Depois do pagamento a válvula é liberada; o cliente inclina o copo e puxa a alavanca normalmente; o fluxômetro **fecha a válvula no volume pago**. Se ninguém puxar a alavanca em 2 min (configurável), o copo fica como "tempo esgotado" e você pode reliberar ou estornar pelo painel.
 
 ## 2. Torneira inteligente (1 kit por torneira) — o "BeerPass" de baixo custo
 

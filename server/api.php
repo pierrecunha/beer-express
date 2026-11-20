@@ -276,8 +276,8 @@ function mp_criar_pix(array $order, array $cust): array {
         'external_reference' => $order['ref'],
         'notification_url' => BE_BASE_URL . '/api.php?r=mp/webhook',
         'date_of_expiration' => $exp,
-        'payer' => ['email' => $email, 'first_name' => $nomes[0] ?? 'Cliente', 'last_name' => count($nomes) > 1 ? end($nomes) : '',
-            'identification' => ['type' => 'CPF', 'number' => $cust['cpf']]],
+        'payer' => ['email' => $email, 'first_name' => $nomes[0] ?? 'Cliente', 'last_name' => count($nomes) > 1 ? end($nomes) : '']
+            + (!empty($cust['cpf']) ? ['identification' => ['type' => 'CPF', 'number' => $cust['cpf']]] : []),
     ], ['X-Idempotency-Key: ' . $order['ref']]);
     $td = $r['body']['point_of_interaction']['transaction_data'] ?? null;
     if (!in_array($r['code'], [200, 201], true) || !$td) {
@@ -329,6 +329,7 @@ function pedido_marcar_pago(array $o, array $pg): void {
         }
         return;
     }
+    if (!empty($cur['cupom'])) q('UPDATE be_coupons SET usos = usos + 1 WHERE codigo = ?', [$cur['cupom']]);
     $seq = 0;
     foreach (rows('SELECT i.*, t.device_id FROM be_order_items i JOIN be_taps t ON t.id = i.tap_id WHERE i.order_id = ? ORDER BY i.id', [$o['id']]) as $it) {
         for ($n = 0; $n < (int)$it['qtd']; $n++) {
@@ -340,12 +341,13 @@ function pedido_marcar_pago(array $o, array $pg): void {
         [$o['total_ml'], $o['total'], $o['customer_id']]);
     $pdo->commit();
 
-    if (setting('tg_notificar_vendas', '1') === '1' && (float)$o['total'] > 0) {
+    if (setting('tg_notificar_vendas', '1') === '1' && ((float)$o['total'] > 0 || !empty($o['cupom']))) {
         $loc = val('SELECT nome FROM be_locations WHERE id = ?', [$o['location_id']]);
         $cli = $o['customer_id'] ? row('SELECT nome, cpf, compras FROM be_customers WHERE id = ?', [$o['customer_id']]) : null;
         $itens = rows('SELECT produto, volume_ml, qtd FROM be_order_items WHERE order_id = ?', [$o['id']]);
         $lin = implode("\n", array_map(fn($i) => "• {$i['qtd']}× " . h($i['produto']) . " {$i['volume_ml']} ml", $itens));
-        $met = ['credito' => '💳 Crédito', 'debito' => '💳 Débito', 'pix' => '⚡ Pix'][$pg['metodo'] ?? $o['metodo']] ?? '-';
+        $met = ['credito' => '💳 Crédito', 'debito' => '💳 Débito', 'pix' => '⚡ Pix'][$pg['metodo'] ?? $o['metodo']] ?? '🎟️ Cupom';
+        if (!empty($o['cupom'])) $met .= " • cupom " . h($o['cupom']) . " (−" . money($o['desconto']) . ")";
         $hoje = row("SELECT COUNT(*) n, COALESCE(SUM(total),0) s FROM be_orders WHERE status IN ('pago','servindo','concluido','parcial') AND created_at >= CURDATE() AND location_id = ?", [$o['location_id']]);
         tg_send("🍺 <b>Venda " . money($o['total']) . "</b> — " . h((string)$loc) . "\n$lin\n$met" . (!empty($pg['bandeira']) ? ' ' . h($pg['bandeira']) . ' •••' . h((string)$pg['final_cartao']) : '') .
             ($cli ? "\n👤 " . h(nome_exibicao($cli['nome'])) . " (" . cpf_mask($cli['cpf']) . ") — {$cli['compras']}ª compra" : '') .
@@ -476,7 +478,7 @@ function r_pos_config(array $t): array {
     $metodos = [];
     if ($t['aceita_credito']) $metodos[] = 'credito';
     if ($t['aceita_debito']) $metodos[] = 'debito';
-    if ($t['aceita_pix'] && ($t['provider'] !== 'simulado' ? mp_token() : true)) $metodos[] = 'pix';
+    if ($t['aceita_pix'] && (pix_nativo($t) || ($t['provider'] !== 'simulado' ? mp_token() : true))) $metodos[] = 'pix';
     return [
         'ok' => true,
         'marca' => ['nome' => setting('marca_nome', 'Beer Express'), 'slogan' => setting('marca_slogan'), 'cor' => setting('marca_cor', '#F5B301')],
@@ -486,14 +488,28 @@ function r_pos_config(array $t): array {
         'nome_regra' => setting('nome_regra', 'primeiro_e_sobrenome'),
         'limite_copos_pedido' => (int)setting('limite_copos_pedido', 4),
         'msg_final' => setting('msg_final'),
+        'verificacao' => setting('verificacao_idade', 'cpf') === 'declaracao' ? 'declaracao' : 'cpf',
+        'termos' => setting('termos_texto', 'Para prosseguir com a compra de chope você deve concordar com os termos de uso e que tem mais de 18 anos.'),
+        'ajuda' => setting('ajuda_texto'),
+        'cupons' => setting('cupons_ativo', '1') === '1' && (int)val('SELECT COUNT(*) FROM be_coupons WHERE ativo = 1') > 0,
+        'pix_nativo' => pix_nativo($t),
+        'tap_id' => $t['tap_id'] !== null ? (int)$t['tap_id'] : null,
         'server_time' => now(),
     ];
 }
+/** Pix pago na própria maquininha (PagBank) em vez do QR gerado pelo servidor. */
+function pix_nativo(array $t): bool { return $t['provider'] === 'pagbank' && setting('pix_modo', 'api_mp') === 'maquininha'; }
+/** Preço de referência por 100 ml (como o BeerPass mostra na tela da torneira): menor preço proporcional entre os tamanhos. */
+function preco_100ml(array $ofertas): ?float {
+    $v = null;
+    foreach ($ofertas as $o) if ($o['volume_ml'] > 0) { $x = $o['preco'] * 100 / $o['volume_ml']; $v = $v === null ? $x : min($v, $x); }
+    return $v === null ? null : round($v, 2);
+}
 
 function r_pos_menu(array $t): array {
-    $taps = rows('SELECT t.*, p.nome produto, p.estilo, p.descricao, p.abv, p.imagem_url, p.cor, d.last_seen, d.start_mode, d.ativo dev_ativo
+    $taps = rows('SELECT t.*, p.nome produto, p.cervejaria, p.estilo, p.descricao, p.abv, p.ibu, p.imagem_url, p.cor, d.last_seen, d.start_mode, d.ativo dev_ativo
         FROM be_taps t JOIN be_devices d ON d.id = t.device_id LEFT JOIN be_products p ON p.id = t.product_id
-        WHERE d.location_id = ? AND t.ativo = 1 AND p.ativo = 1 ORDER BY d.id, t.canal', [$t['location_id']]);
+        WHERE d.location_id = ? AND t.ativo = 1 AND p.ativo = 1 AND (? IS NULL OR t.id = ?) ORDER BY d.id, t.canal', [$t['location_id'], $t['tap_id'], $t['tap_id']]);
     $out = [];
     foreach ($taps as $tp) {
         $on = $tp['dev_ativo'] && device_online($tp);
@@ -503,6 +519,7 @@ function r_pos_menu(array $t): array {
         $out[] = [
             'tap_id' => (int)$tp['id'], 'torneira' => $tp['nome'], 'canal' => (int)$tp['canal'], 'produto' => $tp['produto'], 'estilo' => $tp['estilo'],
             'descricao' => $tp['descricao'], 'abv' => $tp['abv'] !== null ? (float)$tp['abv'] : null, 'imagem_url' => $tp['imagem_url'], 'cor' => $tp['cor'] ?: '#F5B301',
+            'cervejaria' => $tp['cervejaria'], 'ibu' => $tp['ibu'] !== null ? (int)$tp['ibu'] : null, 'preco_100ml' => preco_100ml($offers),
             'online' => $on, 'start_mode' => $tp['start_mode'], 'ofertas' => $offers,
             'disponivel' => $on && count(array_filter($offers, fn($o) => $o['disponivel'])) > 0,
         ];
@@ -533,6 +550,11 @@ function r_pos_identify(array $t): array {
     };
 
     if (!filter_var(arg('declara_maior', false), FILTER_VALIDATE_BOOLEAN)) $falha('sem_declaracao', 'É preciso declarar ter 18 anos ou mais.');
+    if (setting('verificacao_idade', 'cpf') === 'declaracao' && $cpf === '') {   // modo BeerPass: só o "Sim, concordo"
+        $token = rand_token(16);
+        q('INSERT INTO be_verifications (terminal_id, ok, motivo, token, expira_em) VALUES (?,1,"declaracao",?, NOW() + INTERVAL 10 MINUTE)', [$t['id'], $token]);
+        return ['ok' => true, 'token' => $token, 'nome' => null, 'novo' => false, 'compras' => 0, 'restante_ml_dia' => 999999, 'declaracao' => true];
+    }
     if (!cpf_valido($cpf)) $falha('cpf_invalido', 'CPF inválido. Confira os números.');
     $nasc = parse_nasc($nascRaw);
     if (!$nasc) $falha('nascimento_invalido', 'Data de nascimento inválida.');
@@ -588,18 +610,29 @@ function r_pos_identify(array $t): array {
 function pos_sessao(array $t): array {
     $ver = row('SELECT * FROM be_verifications WHERE token = ? AND terminal_id = ? AND ok = 1', [(string)arg('token'), $t['id']]);
     if (!$ver || $ver['usado'] || strtotime($ver['expira_em']) < time()) fail('sessao', 'Sessão expirada. Identifique-se novamente.', 401);
-    $cust = row('SELECT * FROM be_customers WHERE id = ?', [$ver['customer_id']]);
+    $cust = $ver['customer_id'] ? row('SELECT * FROM be_customers WHERE id = ?', [$ver['customer_id']])
+        : ['id' => 0, 'cpf' => '', 'nome' => 'Cliente', 'saldo' => 0, 'bloqueado' => 0, 'compras' => 0];   // modo declaração (sem CPF)
     if (!$cust || $cust['bloqueado']) fail('bloqueado', 'Cadastro bloqueado. Procure o responsável pelo ponto.', 403);
     q('UPDATE be_verifications SET expira_em = NOW() + INTERVAL 10 MINUTE WHERE id = ?', [$ver['id']]);
     return [$ver, $cust];
 }
 
-function r_pos_order(array $t): array {
-    [$ver, $cust] = pos_sessao($t);
-    $metodo = (string)arg('metodo', '');
-    if (!in_array($metodo, r_pos_config($t)['metodos'], true)) fail('metodo', 'Forma de pagamento indisponível');
+/** Cupom de desconto: valida e devolve [desconto, cupom]. */
+function cupom_aplicar(string $codigo, float $subtotal): array {
+    $codigo = strtoupper(trim($codigo));
+    if ($codigo === '') return [0.0, null];
+    if (setting('cupons_ativo', '1') !== '1') fail('cupom', 'Cupons desativados');
+    $c = row('SELECT * FROM be_coupons WHERE codigo = ? AND ativo = 1', [$codigo]);
+    if (!$c) fail('cupom', 'Cupom inválido');
+    if ($c['validade'] && $c['validade'] < date('Y-m-d')) fail('cupom', 'Cupom vencido');
+    if ($c['usos_max'] !== null && (int)$c['usos'] >= (int)$c['usos_max']) fail('cupom', 'Cupom esgotado');
+    if ($subtotal < (float)$c['minimo']) fail('cupom', 'Cupom válido para compras a partir de ' . money($c['minimo']));
+    $d = $c['tipo'] === 'percentual' ? $subtotal * min(100, (float)$c['valor']) / 100 : (float)$c['valor'];
+    return [round(min($d, $subtotal), 2), $c];
+}
 
-    $itens = arg('itens', []);
+/** Valida os itens do carrinho (estoque, chopeira online, limites) e calcula os valores. */
+function pedido_calcular(array $t, array $cust, $itens): array {
     if (!is_array($itens) || !$itens) fail('itens', 'Carrinho vazio');
     $copos = 0; $total = 0; $totalMl = 0; $linhas = []; $porTap = [];
     foreach ($itens as $i) {
@@ -607,7 +640,8 @@ function r_pos_order(array $t): array {
         $of = row('SELECT o.*, t.device_id, t.restante_ml, t.ativo tap_ativo, p.nome produto, d.last_seen, d.location_id, d.ativo dev_ativo
             FROM be_offers o JOIN be_taps t ON t.id = o.tap_id JOIN be_devices d ON d.id = t.device_id LEFT JOIN be_products p ON p.id = t.product_id
             WHERE o.id = ? AND o.ativo = 1', [(int)($i['offer_id'] ?? 0)]);
-        if (!$of || !$of['tap_ativo'] || !$of['dev_ativo'] || (int)$of['location_id'] !== (int)$t['location_id']) fail('oferta', 'Produto indisponível');
+        if (!$of || !$of['tap_ativo'] || !$of['dev_ativo'] || (int)$of['location_id'] !== (int)$t['location_id']
+            || ($t['tap_id'] !== null && (int)$of['tap_id'] !== (int)$t['tap_id'])) fail('oferta', 'Produto indisponível');
         if (!device_online($of)) fail('offline', 'Chopeira momentaneamente offline. Tente em instantes.');
         $porTap[$of['tap_id']] = ($porTap[$of['tap_id']] ?? 0) + $of['volume_ml'] * $qtd;
         if ($porTap[$of['tap_id']] > (int)$of['restante_ml']) fail('estoque', "Não há {$of['produto']} suficiente no barril.");
@@ -616,12 +650,32 @@ function r_pos_order(array $t): array {
     }
     if ($copos > (int)setting('limite_copos_pedido', 4)) fail('limite', 'Máximo de ' . setting('limite_copos_pedido', 4) . ' copos por pedido.');
     $limite = (int)setting('limite_ml_dia_cpf', 3000);
-    if ($limite > 0 && ml_hoje_cliente((int)$cust['id']) + $totalMl > $limite) fail('limite_diario', 'Esse pedido ultrapassa o limite diário de ' . ml_fmt($limite) . ' por CPF.');
+    if ($limite > 0 && $cust['id'] && ml_hoje_cliente((int)$cust['id']) + $totalMl > $limite) fail('limite_diario', 'Esse pedido ultrapassa o limite diário de ' . ml_fmt($limite) . ' por CPF.');
+    return [$linhas, round($total, 2), $totalMl, $copos];
+}
+
+/** Prévia do cupom na tela de resumo. */
+function r_pos_coupon(array $t): array {
+    [, $cust] = pos_sessao($t);
+    [, $sub] = pedido_calcular($t, $cust, arg('itens', []));
+    [$desc, $c] = cupom_aplicar((string)arg('codigo'), $sub);
+    return ['ok' => true, 'codigo' => $c['codigo'] ?? null, 'descricao' => $c['descricao'] ?? null, 'subtotal' => $sub, 'desconto' => $desc, 'total' => round($sub - $desc, 2)];
+}
+
+function r_pos_order(array $t): array {
+    [$ver, $cust] = pos_sessao($t);
+    $metodo = (string)arg('metodo', '');
+    [$linhas, $sub, $totalMl] = pedido_calcular($t, $cust, arg('itens', []));
+    [$desc, $cup] = cupom_aplicar((string)arg('cupom', ''), $sub);
+    $total = round($sub - $desc, 2);
+    if ($total > 0 && !in_array($metodo, r_pos_config($t)['metodos'], true)) fail('metodo', 'Forma de pagamento indisponível');
+    if ($total <= 0) $metodo = null;   // cupom de 100%: não passa pela maquininha
 
     $ref = 'BE' . date('ymdHis') . strtoupper(substr(rand_token(3), 0, 4));
+    $provider = $total <= 0 ? 'cupom' : ($metodo === 'pix' && !pix_nativo($t) ? 'mercadopago_pix' : $t['provider']);
     db()->beginTransaction();
-    q('INSERT INTO be_orders (ref, terminal_id, location_id, customer_id, total, total_ml, metodo, provider) VALUES (?,?,?,?,?,?,?,?)',
-        [$ref, $t['id'], $t['location_id'], $cust['id'], round($total, 2), $totalMl, $metodo, $metodo === 'pix' ? 'mercadopago_pix' : $t['provider']]);
+    q('INSERT INTO be_orders (ref, terminal_id, location_id, customer_id, total, subtotal, desconto, cupom, total_ml, metodo, provider) VALUES (?,?,?,?,?,?,?,?,?,?,?)',
+        [$ref, $t['id'], $t['location_id'], $cust['id'], $total, $sub, $desc, $cup['codigo'] ?? null, $totalMl, $metodo, $provider]);
     $oid = (int)db()->lastInsertId();
     foreach ($linhas as [$of, $qtd])
         q('INSERT INTO be_order_items (order_id, tap_id, offer_id, produto, volume_ml, qtd, preco_unit) VALUES (?,?,?,?,?,?,?)',
@@ -629,9 +683,12 @@ function r_pos_order(array $t): array {
     db()->commit();
     $order = row('SELECT * FROM be_orders WHERE id = ?', [$oid]);
 
-    $resp = ['ok' => true, 'ref' => $ref, 'total' => (float)$order['total'], 'total_centavos' => (int)round($order['total'] * 100),
-        'descricao' => setting('marca_nome', 'Beer Express') . ' ' . $ref, 'metodo' => $metodo];
-    if ($metodo === 'pix') {
+    $resp = ['ok' => true, 'ref' => $ref, 'total' => (float)$order['total'], 'subtotal' => $sub, 'desconto' => $desc, 'total_centavos' => (int)round($order['total'] * 100),
+        'descricao' => setting('marca_nome', 'Beer Express') . ' ' . $ref, 'metodo' => $metodo, 'pix_nativo' => $metodo === 'pix' && pix_nativo($t)];
+    if ($total <= 0) {
+        pedido_marcar_pago($order, ['metodo' => null, 'verificado' => 1]);
+        $resp['pago'] = true;
+    } elseif ($metodo === 'pix' && !pix_nativo($t)) {
         if ($t['provider'] === 'simulado' && !mp_token()) {
             $resp['pix'] = ['simulado' => true, 'copia_cola' => '00020126SIMULADO' . $ref, 'qr_base64' => ''];
         } else {
@@ -656,7 +713,7 @@ function r_pos_paid(array $t): array {
     $metodo = (string)arg('metodo', $o['metodo']);
     $verificado = 0; $pid = (string)arg('pagamento_id', '');
     if ($metodo === 'pix' && $t['provider'] === 'simulado' && !mp_token()) $verificado = 0;
-    elseif ($metodo === 'pix') fail('pix', 'Pix é confirmado pelo servidor, aguarde.', 409);
+    elseif ($metodo === 'pix' && !pix_nativo($t)) fail('pix', 'Pix é confirmado pelo servidor, aguarde.', 409);
     elseif ($t['provider'] === 'mercadopago' && setting('mp_verificar_cartao', '1') === '1' && mp_token()) {
         for ($i = 0; $i < 3 && !$verificado; $i++) {
             $p = mp_pagamento_aprovado_ref($o['ref'], (float)$o['total']);
@@ -832,6 +889,8 @@ function r_dev_poll(array $d): array {
             'tipo' => 'servir', 'id' => (int)$disp['id'], 'canal' => (int)$tap['canal'], 'modo' => $tap['modo'], 'volume_ml' => (int)$disp['volume_ml'],
             'pulsos_alvo' => $tap['modo'] === 'flow' ? (int)round($disp['volume_ml'] * $tap['pulsos_por_litro'] / 1000) : (int)max(1, round($disp['volume_ml'] / max(1, $tap['ml_por_pulso']))),
             'start_mode' => $d['start_mode'], 'go' => in_array($disp['status'], ['liberado', 'servindo'], true), 'timeout_s' => (int)$d['arm_timeout_s'],
+            // Alavanca (auto, igual BeerPass): válvula libera e espera o cliente puxar; pausas para a espuma são permitidas
+            'espera_inicio_s' => $d['start_mode'] === 'auto' ? (int)$d['arm_timeout_s'] : 6, 'pausa_max_s' => $d['start_mode'] === 'auto' ? 25 : 5,
         ];
     }
     return $resp;
@@ -1158,14 +1217,15 @@ function r_admin_customer_block(array $u): array {
 function r_admin_catalog(): array {
     $devices = rows('SELECT * FROM be_devices ORDER BY id');
     foreach ($devices as &$d) $d['online'] = device_online($d);
-    $terms = rows('SELECT id, location_id, nome, codigo, provider, serial, app_version, last_seen, aceita_pix, aceita_credito, aceita_debito, bloqueado_ate, ativo, (token IS NOT NULL) pareado FROM be_terminals ORDER BY id');
+    $terms = rows('SELECT id, location_id, tap_id, nome, codigo, provider, serial, app_version, last_seen, aceita_pix, aceita_credito, aceita_debito, bloqueado_ate, ativo, (token IS NOT NULL) pareado FROM be_terminals ORDER BY id');
     foreach ($terms as &$t) $t['online'] = device_online($t);
     return ['ok' => true,
         'locations' => rows('SELECT * FROM be_locations ORDER BY id'),
         'devices' => $devices, 'terminais' => $terms,
         'produtos' => rows('SELECT * FROM be_products ORDER BY ativo DESC, nome'),
         'torneiras' => rows('SELECT t.*, p.nome produto FROM be_taps t LEFT JOIN be_products p ON p.id = t.product_id ORDER BY t.device_id, t.canal'),
-        'ofertas' => rows('SELECT * FROM be_offers ORDER BY tap_id, ordem, volume_ml')];
+        'ofertas' => rows('SELECT * FROM be_offers ORDER BY tap_id, ordem, volume_ml'),
+        'cupons' => rows('SELECT * FROM be_coupons ORDER BY ativo DESC, id DESC')];
 }
 
 /** Salvar/excluir genérico com lista branca de campos. */
@@ -1173,8 +1233,9 @@ function r_admin_save(array $u): array {
     $map = [
         'locations' => ['be_locations', ['nome', 'endereco', 'ativo']],
         'devices' => ['be_devices', ['location_id', 'nome', 'tipo', 'start_mode', 'arm_timeout_s', 'temp_min', 'temp_max', 'ativo']],
-        'terminais' => ['be_terminals', ['location_id', 'nome', 'provider', 'aceita_pix', 'aceita_credito', 'aceita_debito', 'ativo']],
-        'produtos' => ['be_products', ['nome', 'estilo', 'descricao', 'abv', 'imagem_url', 'cor', 'ativo']],
+        'terminais' => ['be_terminals', ['location_id', 'tap_id', 'nome', 'provider', 'aceita_pix', 'aceita_credito', 'aceita_debito', 'ativo']],
+        'produtos' => ['be_products', ['nome', 'cervejaria', 'estilo', 'descricao', 'abv', 'ibu', 'imagem_url', 'cor', 'ativo']],
+        'cupons' => ['be_coupons', ['codigo', 'descricao', 'tipo', 'valor', 'minimo', 'validade', 'usos_max', 'ativo']],
         'torneiras' => ['be_taps', ['device_id', 'canal', 'nome', 'product_id', 'modo', 'pulsos_por_litro', 'ml_por_pulso', 'preco_litro', 'max_ml_servida', 'barril_ml', 'alerta_pct', 'ativo']],
         'ofertas' => ['be_offers', ['tap_id', 'volume_ml', 'preco', 'ordem', 'ativo']],
     ];
@@ -1193,6 +1254,7 @@ function r_admin_save(array $u): array {
     }
     $vals = [];
     foreach ($campos as $c) if (array_key_exists($c, $data)) $vals[$c] = $data[$c] === '' ? null : $data[$c];
+    if ($ent === 'cupons' && isset($vals['codigo'])) $vals['codigo'] = strtoupper(preg_replace('/[^A-Za-z0-9_-]/', '', (string)$vals['codigo']));
     if (!$vals) fail('dados', 'Nada para salvar');
     if ($id) {
         q("UPDATE $tab SET " . implode(', ', array_map(fn($c) => "$c = ?", array_keys($vals))) . " WHERE id = ?", [...array_values($vals), $id]);
@@ -1443,7 +1505,7 @@ try {
             $fn = ['pos/config' => 'r_pos_config', 'pos/menu' => 'r_pos_menu', 'pos/identify' => 'r_pos_identify', 'pos/order' => 'r_pos_order',
                 'pos/paid' => 'r_pos_paid', 'pos/payment_failed' => 'r_pos_payment_failed', 'pos/order_status' => 'r_pos_order_status',
                 'pos/serve' => 'r_pos_serve', 'pos/cancel' => 'r_pos_cancel', 'pos/wallet' => 'r_pos_wallet', 'pos/recharge' => 'r_pos_recharge',
-                'pos/link_card' => 'r_pos_link_card', 'pos/card_block' => 'r_pos_card_block', 'pos/logout' => 'r_pos_logout'][$r] ?? null;
+                'pos/link_card' => 'r_pos_link_card', 'pos/coupon' => 'r_pos_coupon', 'pos/card_block' => 'r_pos_card_block', 'pos/logout' => 'r_pos_logout'][$r] ?? null;
             if ($r === 'pos/heartbeat') { q('UPDATE be_terminals SET app_version = COALESCE(?, app_version) WHERE id = ?', [arg('app_version'), $t['id']]); out(['ok' => true]); }
             if (!$fn) fail('rota', 'Rota inexistente', 404);
             out($fn($t));

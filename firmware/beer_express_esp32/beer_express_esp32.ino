@@ -69,6 +69,7 @@ enum Estado { LIVRE, ARMADO, SERVINDO };
 struct Copo {
   Estado estado = LIVRE;
   int id = 0, canal = 0, volume = 0, alvo = 0, timeoutS = 120;
+  uint32_t esperaInicioMs = SEM_FLUXO_MS, pausaMaxMs = FLUXO_PAROU_MS;   // alavanca (auto): espera o cliente puxar e tolera pausas
   String modo = "flow", startMode = "button";
   uint32_t armadoEm = 0, inicioEm = 0, ultimoPulsoEm = 0, ultimoReport = 0, ultimaContagem = 0;
 } copo;
@@ -184,9 +185,9 @@ void cuidarDoCopo() {
   if (p != copo.ultimaContagem) { copo.ultimaContagem = p; copo.ultimoPulsoEm = millis(); }
   uint32_t maxMs = 20000UL + (uint32_t)copo.volume * 60UL;   // 500 ml → 50 s
   if (p >= (uint32_t)copo.alvo || pulseTarget[ch] == 0) finalizar("concluido");
-  else if (p == 0 && millis() - copo.inicioEm > SEM_FLUXO_MS) finalizar("erro", "sem_fluxo (barril vazio ou CO2?)");
-  else if (p > 0 && millis() - copo.ultimoPulsoEm > FLUXO_PAROU_MS) finalizar("erro", "fluxo_interrompido");
-  else if (millis() - copo.inicioEm > maxMs) finalizar("erro", "tempo_maximo");
+  else if (p == 0 && millis() - copo.inicioEm > copo.esperaInicioMs) finalizar(copo.startMode == "auto" ? "timeout" : "erro", copo.startMode == "auto" ? "cliente nao puxou a alavanca" : "sem_fluxo (barril vazio ou CO2?)");
+  else if (p > 0 && millis() - copo.ultimoPulsoEm > copo.pausaMaxMs) finalizar("erro", "fluxo_interrompido");
+  else if (millis() - copo.inicioEm > maxMs + copo.esperaInicioMs) finalizar("erro", "tempo_maximo");
   else if (millis() - copo.ultimoReport > 1000) {          // progresso para a tela do cliente
     copo.ultimoReport = millis();
     prefs.putUInt("cpl", p);
@@ -229,6 +230,7 @@ void poll() {
     copo.id = id; copo.canal = cmd["canal"]; copo.volume = cmd["volume_ml"]; copo.alvo = cmd["pulsos_alvo"];
     copo.modo = (const char*)(cmd["modo"] | "flow"); copo.startMode = (const char*)(cmd["start_mode"] | "button");
     copo.timeoutS = cmd["timeout_s"] | 120; copo.estado = ARMADO; copo.armadoEm = millis();
+    copo.esperaInicioMs = (uint32_t)(cmd["espera_inicio_s"] | 6) * 1000UL; copo.pausaMaxMs = (uint32_t)(cmd["pausa_max_s"] | 5) * 1000UL;
     if (copo.canal < 1 || copo.canal > MAX_CH) { report(id, "erro", 0, 0, "canal_invalido"); copo = Copo(); return; }
   }
   if (copo.estado == ARMADO && (cmd["go"] | false)) iniciar();              // SERVIR na tela / automático

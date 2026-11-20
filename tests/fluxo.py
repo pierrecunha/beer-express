@@ -182,6 +182,52 @@ call("pos/logout", {"token": VT2}, T)
 st, r = call("pos/wallet", {"token": VT2}, T)
 ok(r.get("erro") == "sessao", "sair encerra a sessão do cliente", r)
 
+print("── fluxo BeerPass: maquininha por torneira, IBU, valor 100 ml, cupom, declaração 18+")
+save("produtos", {"id": prod, "cervejaria": "Haisten Beer", "ibu": 10})
+term2 = save("terminais", {"location_id": loc, "tap_id": tap, "nome": "POS Torneira 1", "provider": "simulado"})
+cat = call("admin/catalog", h=AD)[1]
+COD2 = next(x["codigo"] for x in cat["terminais"] if x["id"] == term2)
+T2 = {"X-Terminal-Token": call("pos/pair", {"codigo": COD2, "serial": "T2"})[1].get("token", "")}
+cfg = call("pos/config", h=T2)[1]
+ok(cfg.get("tap_id") == tap and cfg.get("verificacao") == "cpf", "maquininha presa à torneira 1", cfg.get("tap_id"))
+m = call("pos/menu", h=T2)[1]["torneiras"]
+ok(len(m) == 1 and m[0]["ibu"] == 10 and m[0]["cervejaria"] == "Haisten Beer" and m[0]["preco_100ml"] == 2.98, "tela da torneira: IBU, cervejaria e valor 100 ml", m[0] if m else m)
+call("admin/save", {"entity": "cupons", "data": {"codigo": "beer10", "descricao": "10% off", "tipo": "percentual", "valor": 10, "minimo": 10, "ativo": 1}}, AD)
+call("admin/save", {"entity": "cupons", "data": {"codigo": "CORTESIA", "tipo": "percentual", "valor": 100, "usos_max": 1, "ativo": 1}}, AD)
+ok(call("pos/config", h=T2)[1].get("cupons") is True, "cupom aparece quando há cupom ativo")
+call("admin/settings_save", {"settings": {"verificacao_idade": "declaracao"}}, AD)
+st, r = call("pos/identify", {"declara_maior": True}, T2)
+ok(r.get("ok") and r.get("declaracao") is True and r.get("token"), "modo declaração: só 'Sim, concordo'", r)
+VD = r.get("token")
+it = [{"offer_id": o500, "qtd": 2}]
+st, r = call("pos/coupon", {"token": VD, "itens": it, "codigo": "BEER10"}, T2)
+ok(abs(r.get("desconto", 0) - 2.98) < 0.001 and abs(r.get("total", 0) - 26.82) < 0.001, "cupom 10%: R$29,80 → R$26,82", r)
+st, r = call("pos/coupon", {"token": VD, "itens": [{"offer_id": o300, "qtd": 1}], "codigo": "BEER10"}, T2)
+ok(r.get("erro") == "cupom", "cupom respeita valor mínimo", r)
+st, r = call("pos/coupon", {"token": VD, "itens": it, "codigo": "NAOEXISTE"}, T2)
+ok(r.get("erro") == "cupom", "cupom inválido recusado", r)
+st, r = call("pos/order", {"token": VD, "metodo": "credito", "itens": it, "cupom": "beer10"}, T2)
+ok(abs(r.get("total", 0) - 26.82) < 0.001 and r.get("total_centavos") == 2682, "pedido com cupom cobra R$26,82", r)
+RB = r.get("ref")
+call("pos/paid", {"ref": RB, "metodo": "credito"}, T2)
+cup = next(c for c in call("admin/catalog", h=AD)[1]["cupons"] if c["codigo"] == "BEER10")
+ok(int(cup["usos"]) == 1, "uso do cupom contado no pagamento", cup)
+st, r = call("pos/order", {"token": VD, "metodo": "", "itens": [{"offer_id": o300, "qtd": 1}], "cupom": "CORTESIA"}, T2)
+ok(r.get("pago") is True and r.get("total") == 0, "cupom 100%: liberado sem pagamento", r)
+st, r = call("pos/order", {"token": VD, "metodo": "", "itens": [{"offer_id": o300, "qtd": 1}], "cupom": "CORTESIA"}, T2)
+ok(r.get("erro") == "cupom", "cupom esgotado (1 uso)", r)
+st, r = call("pos/order", {"token": VD, "metodo": "credito", "itens": [{"offer_id": 999999, "qtd": 1}]}, T2)
+ok(r.get("erro") == "oferta", "maquininha da torneira não vende outra torneira", r)
+c = call("dev/poll", h=D)[1].get("cmd") or {}
+ok(c.get("espera_inicio_s") == 6 and c.get("pausa_max_s") == 5, "modo SERVIR: tempos curtos", c)
+call("admin/save", {"entity": "devices", "data": {"id": dev, "start_mode": "auto"}}, AD)
+o = call("admin/orders", h=AD)[1]
+for p in o["pedidos"]:
+    if p["ref"] == RB or p["total"] == 0 and p["status"] in ("pago", "servindo"): call("admin/order_refund", {"id": p["id"]}, AD)
+call("admin/settings_save", {"settings": {"verificacao_idade": "cpf"}}, AD)
+st, r = call("pos/identify", {"declara_maior": True}, T2)
+ok(r.get("erro") == "cpf_invalido", "voltando ao modo CPF, o CPF é exigido de novo", r)
+
 print("── segurança")
 for i in range(6): st, r = call("pos/identify", {"cpf": "123.456.789-00", "nascimento": "01/01/1990", "declara_maior": True}, T)
 ok(r.get("erro") == "terminal_bloqueado", "força bruta bloqueia a maquininha", r)

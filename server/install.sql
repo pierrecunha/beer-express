@@ -61,6 +61,7 @@ CREATE TABLE IF NOT EXISTS be_devices (
 CREATE TABLE IF NOT EXISTS be_terminals (
   id INT AUTO_INCREMENT PRIMARY KEY,
   location_id INT NOT NULL,
+  tap_id INT NULL,                         -- maquininha presa a uma torneira (igual BeerPass); NULL = todas do ponto
   nome VARCHAR(80) NOT NULL,
   codigo VARCHAR(12) NOT NULL UNIQUE,      -- código de pareamento digitado no app
   token VARCHAR(64) NULL UNIQUE,           -- gerado no pareamento
@@ -82,9 +83,11 @@ CREATE TABLE IF NOT EXISTS be_terminals (
 CREATE TABLE IF NOT EXISTS be_products (
   id INT AUTO_INCREMENT PRIMARY KEY,
   nome VARCHAR(80) NOT NULL,
+  cervejaria VARCHAR(80) NULL,
   estilo VARCHAR(80) NULL,
   descricao VARCHAR(255) NULL,
   abv DECIMAL(4,1) NULL,
+  ibu SMALLINT NULL,
   imagem_url VARCHAR(255) NULL,
   cor VARCHAR(9) NULL DEFAULT '#F5B301',
   ativo TINYINT(1) NOT NULL DEFAULT 1,
@@ -166,6 +169,9 @@ CREATE TABLE IF NOT EXISTS be_orders (
   status ENUM('aguardando_pagamento','pago','servindo','concluido','parcial','falhou','cancelado','estornado') NOT NULL DEFAULT 'aguardando_pagamento',
   total DECIMAL(10,2) NOT NULL,
   bonus DECIMAL(10,2) NOT NULL DEFAULT 0,
+  subtotal DECIMAL(10,2) NULL,
+  desconto DECIMAL(10,2) NOT NULL DEFAULT 0,
+  cupom VARCHAR(30) NULL,
   total_ml INT NOT NULL,
   metodo ENUM('credito','debito','pix') NULL,
   provider VARCHAR(20) NULL,
@@ -290,6 +296,20 @@ CREATE TABLE IF NOT EXISTS be_pours (
   KEY (customer_id), KEY (status), KEY (tap_id, inicio_em), KEY (location_id, inicio_em)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE IF NOT EXISTS be_coupons (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  codigo VARCHAR(30) NOT NULL UNIQUE,
+  descricao VARCHAR(120) NULL,
+  tipo ENUM('percentual','valor') NOT NULL DEFAULT 'percentual',
+  valor DECIMAL(10,2) NOT NULL,
+  minimo DECIMAL(10,2) NOT NULL DEFAULT 0,      -- subtotal mínimo
+  validade DATE NULL,
+  usos_max INT NULL,                             -- NULL = ilimitado
+  usos INT NOT NULL DEFAULT 0,
+  ativo TINYINT(1) NOT NULL DEFAULT 1,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- Configurações padrão (todas editáveis no painel → Configurações)
 INSERT IGNORE INTO be_settings (k, v) VALUES
  ('marca_nome','Beer Express'),
@@ -327,3 +347,10 @@ INSERT IGNORE INTO be_settings (k, v) VALUES
  ('pass_fim_inatividade_s','8'),        -- fecha a torneira após X s sem fluxo
  ('tv_ranking','0'),                    -- mostra ranking (Nome S.) na TV
  ('tv_mensagem','Aproxime seu cartão Beer Express na torneira e sirva-se. Pague só o que beber!');
+
+INSERT IGNORE INTO be_settings (k, v) VALUES
+ ('verificacao_idade','cpf'),            -- cpf = CPF + nascimento (+ nome no 1º acesso) • declaracao = só "Sim, concordo" (igual BeerPass)
+ ('termos_texto','Para prosseguir com a compra de chope você deve concordar com os termos de uso e que tem mais de 18 anos.'),
+ ('ajuda_texto','Precisa de ajuda? Chame no WhatsApp do responsável pelo ponto.'),
+ ('cupons_ativo','1'),
+ ('pix_modo','api_mp');                  -- api_mp = QR gerado pelo servidor (Mercado Pago) • maquininha = Pix da própria maquininha (PagBank)

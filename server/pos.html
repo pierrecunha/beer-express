@@ -64,6 +64,42 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
 .tap h3{font-size:19px}.tap p{font-size:13px;color:var(--mut);margin-top:2px}
 .tap .pr{margin-top:6px;font-weight:800;color:var(--amber)}
 .tap.off{opacity:.45}.tap.off::after{content:"Indisponível";position:absolute;right:12px;top:12px;font-size:11px;background:#000a;padding:4px 8px;border-radius:99px}
+.tapHome{padding:12px 12px 10px !important;background:#111}
+.th{display:flex;flex-direction:column;height:100%;border-radius:18px;overflow:hidden;background:#141008}
+.thHead{background:var(--amber);color:#1A1206;display:flex;align-items:center;gap:10px;padding:10px 14px}
+.thHead .num{font-size:44px;font-weight:900;line-height:1;padding-right:10px;border-right:3px solid #1A1206}
+.thHead h1{font-size:21px;font-weight:900;line-height:1.05}.thHead small{font-size:12px;font-weight:700;opacity:.75}
+.thBuy{background:#3DDC84;color:#062b16;font-weight:800;text-align:center;margin:8px 10px 0;border-radius:99px;padding:9px;font-size:15px;animation:pulse 2.2s infinite}
+.thImg{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;margin:8px 0 0;background:radial-gradient(circle at 50% 40%,#3a2a08,#141008 70%)}
+.thImg img{width:100%;height:100%;object-fit:cover}
+.thImg .bigcup{width:150px;height:210px;border-radius:12px 12px 30px 30px;background:linear-gradient(180deg,#fffbe9 0 16%,var(--c) 16%);box-shadow:inset 0 -24px 40px #0005,0 20px 60px #0008}
+.thInfo{display:grid;grid-template-columns:1.15fr 1fr;background:#1b1610;border-top:3px solid var(--amber)}
+.thInfo .l{padding:10px 12px;border-right:1px solid #3a2e1c;font-size:12px;color:var(--amber2);font-weight:800;line-height:1.15}
+.thInfo .l b{display:block;color:#fff;font-size:16px;margin-bottom:6px}
+.thInfo .r{padding:10px;text-align:center;display:flex;flex-direction:column;justify-content:center;gap:4px}
+.thInfo .r .lbl{font-size:18px;font-weight:900;color:#fff}.thInfo .r small{color:var(--mut);font-size:12px}
+.thInfo .r .pv{background:var(--amber);color:#1A1206;font-weight:900;border-radius:10px;padding:6px 4px;font-size:26px}
+.thOff{position:absolute;inset:12px;background:#000c;border-radius:18px;display:none;align-items:center;justify-content:center;text-align:center;padding:30px;font-size:18px;font-weight:800}
+#age{background:var(--amber);color:#1A1206}
+#age .warn{font-size:30px;font-weight:900;display:flex;gap:10px;align-items:center;justify-content:center;margin-top:16px}
+#age .termos{font-size:22px;font-weight:800;line-height:1.3;text-align:center;margin:auto 6px}
+#age .btn{background:#fff;color:#1A1206;border:0;font-size:17px}
+#age .btn.help{background:transparent;border:2px solid #1A120655;color:#1A1206}
+.opts{display:flex;flex-direction:column;gap:9px;margin:6px 0 10px;overflow:auto}
+.opt{display:flex;align-items:center;gap:14px;background:var(--card);border:2px solid var(--line);border-radius:16px;padding:10px 14px;text-align:left}
+.opt.sel{border-color:var(--amber);background:#3a2a08}
+.opt .mc{flex:none;width:30px;display:flex;align-items:flex-end;justify-content:center;height:46px}
+.opt .mc i{display:block;width:100%;border-radius:4px 4px 8px 8px;background:linear-gradient(180deg,#fffbe9 0 18%,var(--amber) 18%)}
+.opt b{font-size:22px}.opt small{color:var(--mut);font-size:13px}
+.opt .pr{margin-left:auto;font-size:15px;color:var(--mut)}.opt .pr b{font-size:26px;color:var(--txt)}
+.opt:disabled{opacity:.35}
+.box{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:10px}
+.box h4{font-size:13px;color:var(--mut);letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px}
+.qtyc{display:flex;align-items:center;justify-content:center;gap:28px}.qtyc button{width:58px;height:58px;border-radius:50%;background:#2a2116;font-size:32px;font-weight:800}.qtyc b{font-size:40px;min-width:46px;text-align:center}
+.cupom{display:flex;align-items:center;gap:10px}.cupom .t{flex:1;font-size:14px}.cupom .t small{display:block;color:var(--mut)}
+.cupom button{color:var(--amber);font-weight:800;padding:8px}
+.lin{display:flex;justify-content:space-between;font-size:15px;padding:4px 0;color:var(--mut)}.lin.tt{color:var(--txt);font-size:24px;font-weight:900;border-top:1px solid var(--line);margin-top:6px;padding-top:10px}
+.lin .dsc{color:var(--ok)}
 .wallet{display:flex;gap:8px;align-items:center;margin:-4px 0 12px}
 .wallet .sal{flex:1;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:8px 12px;font-size:12px;color:var(--mut)}
 .wallet .sal{min-width:0;white-space:nowrap}.wallet .sal b{display:block;font-size:19px;color:var(--txt);white-space:nowrap}
@@ -154,17 +190,28 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
   </div>
 </section>
 
+<!-- TELA DA TORNEIRA (maquininha presa à torneira — igual BeerPass) -->
+<section class="scr tapHome" id="tapHome" onclick="start()">
+  <div class="th">
+    <div class="thHead"><div class="num" id="thNum">01</div><div><h1 id="thNome">CHOPP</h1><small id="thCerv"></small></div></div>
+    <div class="thBuy">👆 Toque na imagem para comprar</div>
+    <div class="thImg" id="thImg"></div>
+    <div class="thInfo">
+      <div class="l" id="thInfoL"></div>
+      <div class="r"><div class="lbl">VALOR</div><small>100 ml</small><div class="pv" id="thPv">—</div><small id="thMarca" style="margin-top:2px"></small></div>
+    </div>
+  </div>
+  <div class="thOff" id="thOff">Torneira momentaneamente indisponível.<br>Volte em instantes 🍺</div>
+</section>
+
 <!-- IDADE -->
 <section class="scr" id="age">
-  <div class="top"><button class="back" onclick="toIdle()">✕</button><h2>Verificação de idade</h2><span class="step">1/4</span></div>
-  <div class="grow c" style="display:flex;flex-direction:column;justify-content:center">
-    <div class="big18">18+</div>
-    <h2 style="margin-top:10px;font-size:24px">Você tem 18 anos ou mais?</h2>
-    <div class="decl">Ao continuar, declaro ser maior de 18 anos e que os dados informados (CPF, data de nascimento e nome) são meus. Os dados são conferidos com a Receita Federal e usados apenas para controle legal de venda de bebida alcoólica, conforme a LGPD.</div>
-  </div>
+  <div class="warn">⚠️ ATENÇÃO</div>
+  <div class="termos" id="termos">Para prosseguir com a compra de chope você deve concordar com os termos de uso e que tem mais de 18 anos.</div>
   <div style="display:grid;gap:10px">
-    <button class="btn pri" onclick="go('cpf')">Sim, tenho 18 anos ou mais</button>
-    <button class="btn sec" onclick="minor()">Não</button>
+    <button class="btn" onclick="ageYes()">✓ SIM, CONCORDO</button>
+    <button class="btn help" id="ajudaBtn" onclick="ajuda()">? PRECISO DE AJUDA</button>
+    <button class="btn" onclick="toIdle()">✕ CANCELAR</button>
   </div>
 </section>
 
@@ -208,20 +255,45 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
     <button onclick="openVincular()">💳 Cartão</button>
   </div>
   <div class="list grow" id="taps"></div>
-  <div class="cart">
-    <div class="t"><small id="cartInfo">Carrinho vazio</small><b id="cartTotal">R$ 0,00</b></div>
-    <button class="btn pri" id="cartBtn" disabled onclick="go('resumo');renderResumo()">Pagar</button>
-  </div>
 </section>
 
-<!-- RESUMO / PAGAMENTO -->
-<section class="scr" id="resumo">
-  <div class="top"><button class="back" onclick="go('menu')">‹</button><h2>Pagamento</h2></div>
-  <div id="resItens"></div>
-  <div class="tot"><span>Total</span><span id="resTotal"></span></div>
+<!-- TAMANHO -->
+<section class="scr" id="tamanho">
+  <div class="top"><button class="back" onclick="voltarTamanho()">‹</button><h2 id="tmTit">Comprar</h2></div>
+  <div class="opts grow" id="tmOpts"></div>
+  <button class="btn pri" id="tmOk" onclick="go('qtd');renderQtd()">✓ CONFIRMAR</button>
+</section>
+
+<!-- QUANTIDADE + CUPOM + RESUMO -->
+<section class="scr" id="qtd">
+  <div class="top"><button class="back" onclick="go('tamanho')">‹</button><h2>Comprar</h2></div>
+  <div class="box"><h4>Quantidade de copos</h4><div class="qtyc"><button onclick="mudaQtd(-1)">−</button><b id="qN">1</b><button onclick="mudaQtd(1)">+</button></div>
+    <p class="mut c" id="qInfo" style="font-size:13px;margin-top:8px"></p></div>
+  <div class="box" id="cupBox"><div class="cupom"><span style="font-size:22px">🏷️</span><div class="t"><b id="cupT">Cupom</b><small id="cupS">Digite um código</small></div><button id="cupBtn" onclick="abrirCupom()">ADICIONAR</button></div></div>
+  <div class="box"><h4>Resumo de valores</h4>
+    <div class="lin"><span>Subtotal</span><span id="rSub"></span></div>
+    <div class="lin"><span>Cupom</span><span class="dsc" id="rDesc">R$ 0,00</span></div>
+    <div class="lin tt"><span>Total</span><span id="rTot"></span></div></div>
   <div class="grow"></div>
-  <p class="mut" style="margin-bottom:10px;font-size:14px">Como você quer pagar?</p>
+  <button class="btn pri" onclick="confirmaQtd()">✓ CONFIRMAR</button>
+</section>
+
+<!-- FORMA DE PAGAMENTO -->
+<section class="scr" id="pagamento">
+  <div class="top"><button class="back" onclick="go('qtd')">‹</button><h2>Forma de pagamento</h2></div>
   <div class="pays" id="pays"></div>
+  <div class="grow"></div>
+  <div class="box"><div class="lin" style="color:var(--txt)"><span id="pgDesc"></span></div><div class="lin tt"><span>Total</span><span id="pgTot"></span></div></div>
+</section>
+
+<!-- CUPOM -->
+<section class="scr" id="cupomScr">
+  <div class="top"><button class="back" onclick="go('qtd')">‹</button><h2>Cupom de desconto</h2></div>
+  <div class="disp ph" id="cupDisp">CÓDIGO</div>
+  <div class="hint" id="cupHint"></div>
+  <div class="kb" id="cupKb"></div>
+  <div class="grow"></div>
+  <button class="btn pri" onclick="aplicarCupom()">Aplicar</button>
 </section>
 
 <!-- PIX -->
@@ -305,12 +377,6 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
   <button class="btn sec" onclick="toIdle()">Concluir</button>
 </section>
 
-<div class="sheet" id="sheet" onclick="if(event.target===this)closeSheet()"><div class="in">
-  <div style="display:flex;gap:14px;align-items:center"><div id="shCup"></div><div><h3 id="shNome" style="font-size:22px"></h3><p class="mut" id="shDesc" style="font-size:13px"></p></div></div>
-  <div class="sizes" id="shSizes"></div>
-  <div class="qty"><button onclick="qty(-1)">−</button><b id="shQty">1</b><button onclick="qty(1)">+</button></div>
-  <button class="btn pri" id="shAdd" onclick="addCart()">Adicionar</button>
-</div></div>
 
 <div class="modal" id="modal"><div class="in"><div class="ic" id="mIc"></div><h3 id="mT"></h3><p id="mP"></p><div id="mB"></div></div></div>
 <div class="toast" id="toast"></div>
@@ -319,7 +385,8 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
 /* ================= Ponte com o app Android ================= */
 const NATIVE = typeof window.BeerPOS !== 'undefined';
 const API = 'api.php';
-const S = {cfg:null, taps:[], token:null, cpf:'', nasc:'', nome:'', ver:null, cart:[], order:null, sel:null, pollT:null, idleT:null, pixT:null};
+const S = {cfg:null, taps:[], token:null, cpf:'', nasc:'', nome:'', ver:null, order:null, sel:null, pollT:null, idleT:null, pixT:null, cup:''};
+const home = () => (S.cfg && S.cfg.tap_id) ? 'tapHome' : 'idle';
 let TT = NATIVE ? (BeerPOS.getToken() || '') : (localStorage.getItem('be_tt') || '');
 
 const $ = id => document.getElementById(id);
@@ -346,29 +413,43 @@ function loading(t){ modal('<div class="spin"></div>', t||'Aguarde…', ''); }
 function unload(){ $('modal').classList.remove('on'); }
 
 /* Volta ao descanso após inatividade (nunca durante pagamento/serviço) */
-function armIdle(){ clearTimeout(S.idleT); if (['idle','pair','pix','serve'].includes(S.screen)) return;
+function armIdle(){ clearTimeout(S.idleT); if (['idle','tapHome','pair','pix','serve'].includes(S.screen)) return;
   S.idleT = setTimeout(() => { if (S.screen==='fim' || !S.order || S.order.status==='cancelado') toIdle(); }, S.screen==='fim' ? 12000 : 60000); }
 document.addEventListener('touchstart', armIdle, {passive:true}); document.addEventListener('mousedown', armIdle);
 
 /* ================= Inicialização ================= */
 async function boot(){
-  buildPads(); buildKb('pairKb', k => padPair(k), true); buildKb('nomeKb', k => padNome(k));
+  buildPads(); buildKb('pairKb', k => padPair(k), true); buildKb('nomeKb', k => padNome(k)); buildKb('cupKb', k => padCup(k), true);
   if (!TT) return go('pair');
   try { S.cfg = await api('pos/config'); applyBrand(); await loadMenu(); toIdle(); }
   catch(e){ if (TT) { modal('⚠️','Sem conexão', e.mensagem || 'Verificando…'); setTimeout(boot, 5000); } }
   setInterval(() => api('pos/heartbeat', {app_version: NATIVE ? BeerPOS.info() && JSON.parse(BeerPOS.info()).appVersion : 'web'}).catch(()=>{}), 60000);
-  setInterval(() => { if (S.screen === 'idle') loadMenu().catch(()=>{}); }, 30000);
+  setInterval(() => { if (S.screen === 'idle' || S.screen === 'tapHome') loadMenu().catch(()=>{}); }, 30000);
 }
 function applyBrand(){ const n=S.cfg.marca.nome.split(' '); $('brandName').innerHTML = n[0] + (n.length>1 ? ' <b>'+n.slice(1).join(' ')+'</b>' : '');
   $('brandSlogan').textContent = S.cfg.marca.slogan || ''; document.documentElement.style.setProperty('--amber', S.cfg.marca.cor || '#F5B301'); document.title = S.cfg.marca.nome; }
-async function loadMenu(){ S.taps = (await api('pos/menu')).torneiras; renderIdleChips(); }
+async function loadMenu(){ S.taps = (await api('pos/menu')).torneiras; renderIdleChips(); renderTapHome(); }
+/* Tela da torneira (igual BeerPass): número, nome, cervejaria, foto, tipo, ABV, IBU e valor por 100 ml */
+function renderTapHome(){ if (!S.cfg || !S.cfg.tap_id) return; const t = S.taps[0]; $('thOff').style.display = t && t.disponivel ? 'none' : 'flex'; if (!t) return;
+  $('thNum').textContent = String(t.canal).padStart(2,'0'); $('thNome').textContent = (t.produto||'').toUpperCase(); $('thCerv').textContent = (t.cervejaria||'').toUpperCase();
+  $('thImg').innerHTML = t.imagem_url ? `<img src="${esc(t.imagem_url)}" alt="">` : `<div class="bigcup" style="--c:${esc(t.cor)}"></div>`;
+  $('thInfoL').innerHTML = `Tipo<b>${esc(t.estilo||'—')}</b>Teor alcoólico<b>${t.abv!==null?String(t.abv).replace('.',',')+'% ABV':'—'}</b>${t.ibu!==null?`Amargor<b style="margin:0">${t.ibu} IBU</b>`:''}`;
+  $('thPv').textContent = t.preco_100ml!==null ? brl(t.preco_100ml) : '—'; $('thMarca').textContent = S.cfg.marca.nome; }
 function renderIdleChips(){ $('idleChips').innerHTML = S.taps.map(t => `<span class="chip"><span class="dot" style="background:${t.disponivel?t.cor:'#555'}"></span>${esc(t.produto)}</span>`).join(''); }
 function esc(s){ return String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
 function toIdle(){ clearInterval(S.pollT); clearInterval(S.pixT); if (S.ver && S.ver.token) api('pos/logout', {token:S.ver.token}).catch(()=>{});
-  Object.assign(S, {cpf:'', nasc:'', nome:'', ver:null, cart:[], order:null, wallet:null, vinc:'', rec:null}); $('vDisp') && ($('vDisp').textContent='____');
-  updCpf(); updNasc(); updNome(); closeSheet(); unload(); go('idle'); }
-function start(){ if (!S.taps.some(t => t.online)) return modal('😕','Chopeira indisponível','Estamos sem chopp disponível agora. Volte em instantes!',[['OK']]); go('age'); }
+  Object.assign(S, {cpf:'', nasc:'', nome:'', ver:null, order:null, wallet:null, vinc:'', rec:null, sel:null, cup:'', prev:null}); $('vDisp') && ($('vDisp').textContent='____');
+  updCpf(); updNasc(); updNome(); unload(); go(home()); }
+function start(){ if (!S.taps.some(t => t.disponivel)) return modal('😕','Chopeira indisponível','Estamos sem chopp disponível agora. Volte em instantes!',[['OK']]);
+  $('termos').textContent = S.cfg.termos; $('ajudaBtn').style.display = S.cfg.ajuda ? 'flex' : 'none'; go('age'); }
+function ajuda(){ modal('🙋','Precisa de ajuda?', S.cfg.ajuda, [['OK']]); }
+async function ageYes(){ if (S.cfg.verificacao !== 'declaracao') return go('cpf');
+  loading('Aguarde…'); try { S.ver = await api('pos/identify', {declara_maior:true}); unload(); await depoisIdentificar(); } catch(e){ unload(); modal('⚠️','Não foi possível continuar', e.mensagem, [['OK', toIdle]]); } }
+async function depoisIdentificar(){ await loadMenu(); await loadWallet();
+  if (S.cfg.tap_id) return abrirTamanho(S.taps[0]);
+  $('hello').innerHTML = S.ver.nome ? `👋 Olá, <b>${esc(S.ver.nome)}</b>! ${S.ver.novo ? 'Seja bem-vindo(a).' : 'Bom te ver de novo.'}` : '👋 Escolha seu chopp';
+  renderMenu(); go('menu'); }
 function minor(){ modal('🔞','Venda proibida','A venda de bebidas alcoólicas é proibida para menores de 18 anos.',[['Entendi', toIdle]]); }
 
 /* ================= Teclados ================= */
@@ -409,9 +490,7 @@ async function identify(comNome){
     const n = S.nasc; const j = await api('pos/identify', {cpf:S.cpf, nascimento: n.slice(0,2)+'/'+n.slice(2,4)+'/'+n.slice(4), declara_maior:true, nome: comNome ? S.nome.trim() : ''});
     unload();
     if (j.need_name) { S.nome=''; updNome(); go('nome'); return; }
-    S.ver = j; S.cart = [];
-    $('hello').innerHTML = `👋 Olá, <b>${esc(j.nome)}</b>! ${j.novo ? 'Seja bem-vindo(a).' : 'Bom te ver de novo.'}`;
-    await loadMenu(); renderMenu(); await loadWallet(); go('menu');
+    S.ver = j; await depoisIdentificar();
   } catch(e){
     unload();
     const map = {menor_idade:['🔞','Venda proibida'], terminal_bloqueado:['🔒','Aguarde'], dados_nao_conferem:['❌','Dados não conferem'], nome_nao_confere:['❌','Nome não confere'],
@@ -427,52 +506,56 @@ async function identify(comNome){
 function cupHtml(t, w){ return t.imagem_url ? `<img src="${esc(t.imagem_url)}" alt="">` : `<div class="cup" style="--c:${esc(t.cor)}${w?';width:'+w+'px;height:'+(w*1.2)+'px':''}"></div>`; }
 function renderMenu(){
   $('taps').innerHTML = S.taps.map((t,i) => { const min = t.ofertas.filter(o=>o.disponivel).sort((a,b)=>a.preco-b.preco)[0];
-    return `<button class="tap ${t.disponivel?'':'off'}" ${t.disponivel?`onclick="openSheet(${i})"`:''}>${cupHtml(t)}<div><h3>${esc(t.produto)}</h3>
-      <p>${esc([t.estilo, t.abv ? t.abv.toString().replace('.',',')+'% ABV' : ''].filter(Boolean).join(' • '))}</p>${t.descricao?`<p>${esc(t.descricao)}</p>`:''}
-      <div class="pr">${min ? 'a partir de ' + brl(min.preco) : ''}</div></div></button>`; }).join('') || '<p class="mut c">Nenhum chopp disponível.</p>';
-  renderCart();
-}
-function cartMl(){ return S.cart.reduce((s,c)=>s+c.volume_ml*c.qtd,0); }
-function cartCopos(){ return S.cart.reduce((s,c)=>s+c.qtd,0); }
-function renderCart(){ const tot=S.cart.reduce((s,c)=>s+c.preco*c.qtd,0), n=cartCopos();
-  $('cartTotal').textContent = brl(tot); $('cartInfo').textContent = n ? `${n} copo${n>1?'s':''} • ${mlf(cartMl())}` : 'Carrinho vazio'; $('cartBtn').disabled = !n; }
-function openSheet(i){ const t=S.taps[i]; S.sel={tap:t, offer:null, qtd:1};
-  $('shCup').innerHTML = cupHtml(t); $('shNome').textContent = t.produto; $('shDesc').textContent = [t.estilo, t.descricao].filter(Boolean).join(' — ');
-  $('shSizes').innerHTML = t.ofertas.map((o,j) => `<button class="size" ${o.disponivel?'':'disabled'} onclick="pickSize(${j})"><b>${o.volume_ml} ml</b><span>${brl(o.preco)}</span></button>`).join('');
-  let j = -1; t.ofertas.forEach((o,k) => { if (o.disponivel) j = k; }); pickSize(j);  // maior tamanho disponível
-  $('sheet').classList.add('on'); }
-function closeSheet(){ $('sheet').classList.remove('on'); }
-function pickSize(j){ S.sel.offer = S.sel.tap.ofertas[j]; [...$('shSizes').children].forEach((b,k)=>b.classList.toggle('sel', k===j)); S.sel.qtd=1; qty(0); }
-function qty(d){ const s=S.sel; if (!s.offer) return; const maxCopos=(S.cfg.limite_copos_pedido||4)-cartCopos(), maxMl=Math.floor(((S.ver?.restante_ml_dia ?? 99999)-cartMl())/s.offer.volume_ml);
-  const max=Math.max(0, Math.min(maxCopos, maxMl)); s.qtd = Math.max(1, Math.min(max||1, s.qtd+d)); $('shQty').textContent = s.qtd;
-  $('shAdd').disabled = max<1; $('shAdd').textContent = max<1 ? (maxCopos<1 ? 'Limite de copos por pedido' : 'Limite diário atingido') : 'Adicionar • ' + brl(s.offer.preco*s.qtd); }
-function addCart(){ const s=S.sel; const ex=S.cart.find(c=>c.offer_id===s.offer.id);
-  if (ex) ex.qtd+=s.qtd; else S.cart.push({offer_id:s.offer.id, produto:s.tap.produto, volume_ml:s.offer.volume_ml, preco:s.offer.preco, qtd:s.qtd});
-  closeSheet(); renderCart(); }
+    return `<button class="tap ${t.disponivel?'':'off'}" ${t.disponivel?`onclick="abrirTamanho(S.taps[${i}])"`:''}>${cupHtml(t)}<div><h3>${esc(t.produto)}</h3>
+      <p>${esc([t.estilo, t.abv ? t.abv.toString().replace('.',',')+'% ABV' : '', t.ibu ? t.ibu+' IBU' : ''].filter(Boolean).join(' • '))}</p>${t.cervejaria?`<p>${esc(t.cervejaria)}</p>`:''}
+      <div class="pr">${min ? 'a partir de ' + brl(min.preco) : ''}</div></div></button>`; }).join('') || '<p class="mut c">Nenhum chopp disponível.</p>'; }
 
-function renderResumo(){ const tot=S.cart.reduce((s,c)=>s+c.preco*c.qtd,0);
-  $('resItens').innerHTML = S.cart.map((c,i)=>`<div class="line"><span>${c.qtd}× ${esc(c.produto)} <span class="mut">${c.volume_ml} ml</span></span><span>${brl(c.preco*c.qtd)} <button onclick="rmItem(${i})">remover</button></span></div>`).join('');
-  $('resTotal').textContent = brl(tot);
-  const lbl = {credito:['💳','Crédito'], debito:['💳','Débito'], pix:['⚡','Pix']};
-  $('pays').innerHTML = S.cfg.metodos.map(m=>`<button class="pay" onclick="pagar('${m}')"><i>${lbl[m][0]}</i>${lbl[m][1]}</button>`).join(''); }
-function rmItem(i){ S.cart.splice(i,1); renderCart(); if (!S.cart.length) go('menu'); else renderResumo(); }
+/* Tamanho (300/350/400/1000 ml… definidos no painel) */
+function abrirTamanho(t){ if (!t) return; S.sel = {tap:t, offer:null, qtd:1}; S.cup=''; S.prev=null;
+  $('tmTit').textContent = 'Comprar • ' + t.produto; const maxV = Math.max(...t.ofertas.map(o=>o.volume_ml));
+  $('tmOpts').innerHTML = t.ofertas.map((o,j)=>`<button class="opt" ${o.disponivel?'':'disabled'} onclick="pickSize(${j})"><span class="mc"><i style="height:${Math.round(18+28*o.volume_ml/maxV)}px"></i></span>
+    <span><b>${o.volume_ml}</b> <small>ml</small></span><span class="pr">R$ <b>${o.preco.toFixed(2).replace('.',',')}</b></span></button>`).join('');
+  pickSize(t.ofertas.findIndex(o=>o.disponivel)); go('tamanho'); }
+function pickSize(j){ S.sel.offer = S.sel.tap.ofertas[j] || null; [...$('tmOpts').children].forEach((b,k)=>b.classList.toggle('sel', k===j)); $('tmOk').disabled = !S.sel.offer; }
+function voltarTamanho(){ S.cfg.tap_id ? toIdle() : go('menu'); }
+
+/* Quantidade + cupom + resumo */
+function maxCopos(){ const o=S.sel.offer; return Math.max(1, Math.min(S.cfg.limite_copos_pedido||4, Math.floor((S.ver?.restante_ml_dia ?? 99999)/o.volume_ml))); }
+function itens(){ return [{offer_id:S.sel.offer.id, qtd:S.sel.qtd}]; }
+function mudaQtd(d){ S.sel.qtd = Math.max(1, Math.min(maxCopos(), S.sel.qtd + d)); renderQtd(); if (S.cup) previaCupom(true); }
+function renderQtd(){ const o=S.sel.offer, sub=o.preco*S.sel.qtd, desc=S.prev ? S.prev.desconto : 0;
+  $('qN').textContent = S.sel.qtd; $('qInfo').textContent = `${S.sel.qtd} × ${S.sel.tap.produto} ${o.volume_ml} ml` + (S.sel.qtd>=maxCopos() && maxCopos()>1 ? ` • máximo ${maxCopos()} por compra` : '');
+  $('cupBox').style.display = S.cfg.cupons ? 'block' : 'none';
+  $('cupT').textContent = S.cup ? 'Cupom ' + S.cup : 'Cupom'; $('cupS').textContent = S.cup ? (S.prev?.descricao || 'Aplicado') : 'Digite um código'; $('cupBtn').textContent = S.cup ? 'REMOVER' : 'ADICIONAR';
+  $('rSub').textContent = brl(sub); $('rDesc').textContent = '− ' + brl(desc); $('rTot').textContent = brl(Math.max(0, sub-desc)); }
+function abrirCupom(){ if (S.cup){ S.cup=''; S.prev=null; return renderQtd(); } S.cupTxt=''; padCup(''); $('cupHint').textContent=''; go('cupomScr'); }
+function padCup(k){ if (k==='⌫') S.cupTxt=S.cupTxt.slice(0,-1); else if (k && S.cupTxt.length<20) S.cupTxt+=k; $('cupDisp').textContent = S.cupTxt || 'CÓDIGO'; $('cupDisp').classList.toggle('ph', !S.cupTxt); }
+async function aplicarCupom(){ if (!S.cupTxt) return; S.cup = S.cupTxt; if (await previaCupom(false)) go('qtd'); }
+async function previaCupom(silencioso){ try { S.prev = await api('pos/coupon', {token:S.ver.token, itens:itens(), codigo:S.cup}); renderQtd(); return true; }
+  catch(e){ const msg = e.mensagem || 'Cupom inválido'; S.cup=''; S.prev=null; renderQtd(); if (silencioso) toast(msg); else { $('cupHint').textContent = msg; $('cupHint').classList.add('err'); } return false; } }
+function confirmaQtd(){ const o=S.sel.offer, sub=o.preco*S.sel.qtd, tot=Math.max(0, sub-(S.prev?S.prev.desconto:0));
+  if (tot <= 0) return pagar('');
+  const lbl = {credito:['💳','CRÉDITO'], debito:['💳','DÉBITO'], pix:['⚡','PIX']};
+  $('pays').innerHTML = S.cfg.metodos.map(m=>`<button class="pay" onclick="pagar('${m}')"><i>${lbl[m][0]}</i>${lbl[m][1]}</button>`).join('');
+  $('pgDesc').textContent = `${S.sel.qtd} copo(s) de ${S.sel.tap.produto} ${o.volume_ml} ml`; $('pgTot').textContent = brl(tot); go('pagamento'); }
 
 /* ================= Pagamento ================= */
 async function pagar(metodo, recarga){
   loading(recarga ? 'Gerando recarga…' : 'Criando pedido…');
-  try { S.order = recarga ? await api('pos/recharge', {token:S.ver.token, metodo, valor:S.rec}) : await api('pos/order', {token:S.ver.token, metodo, itens:S.cart.map(c=>({offer_id:c.offer_id, qtd:c.qtd}))});
+  try { S.order = recarga ? await api('pos/recharge', {token:S.ver.token, metodo, valor:S.rec}) : await api('pos/order', {token:S.ver.token, metodo, itens:itens(), cupom:S.cup});
         S.order.recarga = !!recarga; }
-  catch(e){ unload(); if (e.erro==='sessao') return modal('⏱️','Sessão expirada', e.mensagem, [['OK', toIdle]]); return modal('⚠️','Não foi possível', e.mensagem, [['Voltar', ()=>{ loadMenu().then(renderMenu); go('menu'); }]]); }
+  catch(e){ unload(); if (e.erro==='sessao') return modal('⏱️','Sessão expirada', e.mensagem, [['OK', toIdle]]); return modal('⚠️','Não foi possível', e.mensagem, [['Voltar', ()=>{ loadMenu().then(()=>{ renderMenu(); S.cfg.tap_id ? toIdle() : go('menu'); }); }]]); }
   unload();
-  if (metodo === 'pix') return showPix();
-  if (NATIVE) { loading('Siga as instruções na maquininha'); BeerPOS.pay(JSON.stringify({ref:S.order.ref, centavos:S.order.total_centavos, metodo, descricao:S.order.descricao})); }
+  if (S.order.pago) return startServe();                       // cupom de 100%
+  if (metodo === 'pix' && !S.order.pix_nativo) return showPix();
+  if (NATIVE) { loading('AGUARDE'); BeerPOS.pay(JSON.stringify({ref:S.order.ref, centavos:S.order.total_centavos, metodo, descricao:S.order.descricao})); }
   else modal('🧪','Modo teste (navegador)', 'Simular resultado do cartão de ' + brl(S.order.total) + '?', [['Aprovado', ()=>window.__payResult(JSON.stringify({aprovado:true, bandeira:'TESTE', final_cartao:'0000', nsu:'SIM'}))], ['Recusado', ()=>window.__payResult(JSON.stringify({aprovado:false, motivo:'Recusado (simulado)'}))]]);
 }
 /* Chamado pelo app Android ao terminar a transação */
 window.__payResult = async function(json){
   const r = typeof json === 'string' ? JSON.parse(json) : json; unload();
   if (!r.aprovado) { api('pos/payment_failed', {ref:S.order.ref, motivo:r.motivo||''}).catch(()=>{}); S.order=null;
-    return modal('💳','Pagamento não aprovado', r.motivo || 'Tente novamente ou use outra forma de pagamento.', [['Tentar de novo', ()=>go(S.rec ? 'recarga' : 'resumo')], ['Cancelar', toIdle, 'sec']]); }
+    return modal('💳','Pagamento não aprovado', r.motivo || 'Tente novamente ou use outra forma de pagamento.', [['Tentar de novo', ()=>go(S.rec ? 'recarga' : 'pagamento')], ['Cancelar', toIdle, 'sec']]); }
   loading('Pagamento aprovado! Liberando…');
   for (let i=0;i<5;i++){ try { await api('pos/paid', {ref:S.order.ref, metodo:S.order.metodo, pagamento_id:r.pagamento_id||'', nsu:r.nsu||'', bandeira:r.bandeira||'', final_cartao:r.final_cartao||''}); unload(); return afterPaid(); }
     catch(e){ if (e.erro!=='rede') break; await new Promise(z=>setTimeout(z, 2000)); } }
@@ -535,7 +618,8 @@ async function pollServe(){
   if (cur.status==='pendente') { $('svSub').textContent = 'Preparando a chopeira…'; btn.style.display='none'; }
   else if (cur.status==='armado' && cur.start_mode==='pos') { $('svSub').textContent = 'Coloque o copo inclinado sob a torneira indicada e toque em SERVIR.'; btn.style.display='flex'; }
   else if (cur.status==='armado') { $('svSub').textContent = 'Coloque o copo inclinado sob a torneira e aperte o botão iluminado.'; btn.style.display='none'; }
-  else { $('svSub').textContent = cur.status==='liberado' ? 'Liberando…' : 'Servindo… mantenha o copo na torneira.'; btn.style.display='none'; }
+  else if (cur.start_mode==='auto' && cur.status!=='servindo') { $('svSub').textContent = '✅ Torneira liberada! Incline o copo e puxe a alavanca.'; btn.style.display='none'; }
+  else { $('svSub').textContent = cur.status==='liberado' ? 'Liberando…' : 'Servindo… a torneira para sozinha no volume certo.'; btn.style.display='none'; }
 }
 async function serveNow(){ const st = await api('pos/order_status&ref=' + S.order.ref).catch(()=>null); const cur = st && st.copos.find(c=>c.status==='armado');
   if (cur) { $('svBtn').style.display='none'; await api('pos/serve', {dispense_id:cur.id}).catch(e=>toast(e.mensagem)); } }

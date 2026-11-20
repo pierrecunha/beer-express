@@ -26,7 +26,11 @@ object ProviderFactory {
                         val act = plugPag.initializeAndActivatePinpad(PlugPagActivationData(BuildConfig.PAGBANK_ACTIVATION))
                         if (act.result != PlugPag.RET_OK) { done(PayResult(false, motivo = "Ativação PagBank: ${act.errorMessage}")); return@execute }
                     }
-                    val tipo = if (req.metodo == "debito") PlugPag.TYPE_DEBITO else PlugPag.TYPE_CREDITO
+                    val tipo = when (req.metodo) {
+                        "debito" -> PlugPag.TYPE_DEBITO
+                        "pix" -> PlugPag.TYPE_PIX          // Pix na própria Moderninha (painel → Configurações → Pix = "Na própria maquininha")
+                        else -> PlugPag.TYPE_CREDITO
+                    }
                     val data = PlugPagPaymentData(tipo, req.centavos.toInt(), PlugPag.INSTALLMENT_TYPE_A_VISTA, 1,
                         req.ref.filter { it.isLetterOrDigit() }.takeLast(10), false)
                     val r = plugPag.doPayment(data)
