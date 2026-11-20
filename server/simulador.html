@@ -2,54 +2,133 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0F0A06">
+<meta name="robots" content="noindex">
 <title>Beer Express • Simulador</title>
+<link rel="preload" href="fontes/bricolage.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fontes/figtree.woff2" as="font" type="font/woff2" crossorigin>
 <style>
-:root{--bg:#0F0D0A;--bg2:#16130E;--card:#1D1913;--line:#332B1F;--txt:#F7EFE2;--mut:#A9987E;--amber:#F5B301;--ok:#36C47A;--err:#F05252;--blue:#58A6FF}
-*{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--txt);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;min-height:100vh}
+@font-face{font-family:'Bricolage Grotesque';src:url(fontes/bricolage.woff2) format('woff2');font-weight:200 800;font-display:swap}
+@font-face{font-family:'Figtree';src:url(fontes/figtree.woff2) format('woff2');font-weight:300 900;font-display:swap}
+:root{--bg:#0F0A06;--bg2:#160F09;--card:#1D150D;--card2:#261B11;--line:rgba(255,226,170,.09);--line2:rgba(255,226,170,.16);--txt:#F6ECDA;--mut:#B19C7C;--dim:#7F6C52;
+  --amber:#F5B301;--amber2:#FFC93C;--ok:#3FCB88;--okbg:rgba(63,203,136,.13);--err:#F28379;--errbg:rgba(242,131,121,.12);--blue:#8EC5FF;--bluebg:rgba(142,197,255,.12);
+  --fh:'Bricolage Grotesque',system-ui,sans-serif;--fb:'Figtree',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{background:radial-gradient(80% 60% at 20% 0%,#2A1A0A 0%,transparent 60%),var(--bg);color:var(--txt);font:15px/1.45 var(--fb);min-height:100%;-webkit-font-smoothing:antialiased}
 button,input{font:inherit;color:inherit}
-header{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:14px 22px;border-bottom:1px solid var(--line);background:var(--bg2)}
-header h1{font-size:18px;margin-right:auto}header h1 b{color:var(--amber)}
-.btn{border:1px solid var(--line);background:var(--card);padding:8px 14px;border-radius:10px;cursor:pointer;font-weight:600;white-space:nowrap;text-decoration:none;color:var(--txt);display:inline-flex;align-items:center;gap:6px}
-.btn.pri{background:var(--amber);border-color:var(--amber);color:#1b1404}.btn.dan{border-color:#5a2424;color:#ff9b9b}.btn.on{border-color:var(--amber);color:var(--amber)}
-.btn:disabled{opacity:.4;cursor:default}
-main{display:grid;grid-template-columns:auto 1fr;gap:28px;padding:24px;align-items:start;max-width:1280px;margin:0 auto}
-.phone{width:384px;background:#000;border-radius:44px;padding:12px;box-shadow:0 30px 80px #000c,inset 0 0 0 2px #333}
-.phone .cap{text-align:center;color:var(--mut);font-size:12px;margin-bottom:8px}
-.phone iframe{width:360px;height:740px;border:0;border-radius:32px;display:block;background:#0E0B07}
-.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;margin-bottom:16px}
-h2{font-size:16px;margin-bottom:4px}.mut{color:var(--mut)}
-.taps{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:16px;margin-top:14px}
-.tap{background:var(--bg2);border:2px solid var(--line);border-radius:16px;padding:16px;text-align:center;transition:border-color .3s}
-.tap.lib{border-color:var(--ok);box-shadow:0 0 0 4px #36c47a22}
-.tap h3{font-size:16px}.tap .st{display:inline-block;margin:8px 0 12px;padding:3px 10px;border-radius:99px;font-size:12px;font-weight:800;background:#2b2519;color:var(--mut)}
-.st.ok{background:#163525;color:#6ee7a8}.st.go{background:#163525;color:#6ee7a8;animation:pl 1s infinite}.st.wait{background:#172a3a;color:#8ecbff}.st.err{background:#3a1717;color:#ff9b9b}
-@keyframes pl{50%{opacity:.6}}
-.glass{width:90px;height:130px;margin:0 auto 10px;border:4px solid #fff9;border-top:0;border-radius:0 0 18px 18px;position:relative;overflow:hidden}
-.glass .beer{position:absolute;left:0;right:0;bottom:0;height:0;background:linear-gradient(180deg,var(--c,#ffd75e),#b77600);transition:height .15s linear}
-.glass .foam{position:absolute;left:0;right:0;bottom:0;height:14px;background:#fffbe9;opacity:0;transition:bottom .15s linear}
-.ml{font-size:22px;font-weight:900}.ml small{font-size:13px;color:var(--mut);font-weight:600}
-.lever{margin-top:12px;width:100%;padding:14px;border-radius:12px;border:0;background:var(--amber);color:#1b1404;font-weight:900;font-size:15px;cursor:pointer;user-select:none;touch-action:none}
-.lever:disabled{background:#2b2519;color:var(--mut);cursor:default}
-.lever.hold{transform:scale(.97);background:#ffd24a}
-.row{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
-.log{max-height:260px;overflow:auto;font-size:12.5px;font-family:ui-monospace,Menlo,monospace}
-.log div{padding:4px 0;border-bottom:1px solid #2a2419}.log .t{color:var(--mut);margin-right:8px}
-input[type=range]{width:180px;accent-color:var(--amber)}
-.steps li{margin:6px 0 6px 18px}
-.login{max-width:360px;margin:12vh auto;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:26px}
-.login input{width:100%;background:var(--bg2);border:1px solid var(--line);border-radius:9px;padding:9px 11px;margin-top:6px}
-.login label{display:block;margin-top:12px;font-size:12px;color:var(--mut)}
-@media(max-width:900px){main{grid-template-columns:1fr;justify-items:center}.side{width:100%}}
+button{cursor:pointer;border:0;background:none}
+a{color:inherit}
+/* topo */
+header{position:sticky;top:0;z-index:20;background:rgba(15,10,6,.88);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+header .in{max-width:1240px;margin:0 auto;padding:12px 22px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.logo{display:flex;align-items:center;gap:10px;font-family:var(--fh);font-weight:800;font-size:19px;letter-spacing:-.03em;margin-right:auto}
+.logo b{color:var(--amber)}.logo svg{width:34px;height:34px}
+.logo small{font-family:var(--fb);font-weight:700;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--amber);background:rgba(245,179,1,.12);padding:3px 8px;border-radius:99px;margin-left:4px}
+.seg{display:flex;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:4px;gap:4px}
+.seg button{padding:8px 14px;border-radius:10px;font-weight:800;font-size:14px;color:var(--mut);white-space:nowrap}
+.seg button.on{background:var(--amber);color:#1B1206}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--line2);background:var(--card);padding:9px 14px;border-radius:12px;font-weight:700;font-size:14px;white-space:nowrap;text-decoration:none;color:var(--txt);transition:border-color .2s}
+.btn:hover{border-color:var(--amber)}
+.btn.dan{color:var(--err);border-color:rgba(242,131,121,.3)}
+.btn svg{width:16px;height:16px}
+/* layout */
+main{max-width:1240px;margin:0 auto;padding:26px 22px 40px;display:grid;grid-template-columns:400px 1fr;gap:30px;align-items:start}
+.lbl{font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--amber);display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.lbl::before{content:'';width:18px;height:2px;background:currentColor;border-radius:2px}
+/* maquininha (Moderninha) */
+.pos{position:sticky;top:90px}
+.machine{background:linear-gradient(160deg,#2E2F33,#141518 60%);border-radius:40px;padding:18px 16px 26px;box-shadow:0 40px 80px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08),inset 0 0 0 1px rgba(255,255,255,.04);position:relative}
+.machine::before{content:'';display:block;width:120px;height:8px;border-radius:4px;background:#08090b;margin:0 auto 14px;box-shadow:inset 0 1px 2px #000}
+.machine .screen{border-radius:24px;overflow:hidden;background:#0E0B07;box-shadow:0 0 0 3px #000}
+.machine iframe{width:100%;height:720px;border:0;display:block}
+.machine .nfc{display:flex;align-items:center;justify-content:center;gap:8px;color:#8b8d94;font-size:12px;font-weight:700;margin-top:14px;letter-spacing:.06em}
+.machine .nfc svg{width:18px;height:18px}
+/* chopeira */
+.panel{display:flex;flex-direction:column;gap:18px;min-width:0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:24px;padding:22px}
+.card h2{font-family:var(--fh);font-size:21px;font-weight:700;letter-spacing:-.02em;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.card p.s{color:var(--mut);margin-top:4px;font-size:14.5px}
+.conn{font-family:var(--fb);font-size:12.5px;font-weight:800;padding:4px 10px;border-radius:99px;background:var(--card2);color:var(--mut);display:inline-flex;align-items:center;gap:6px}
+.conn i{width:8px;height:8px;border-radius:50%;background:var(--dim)}
+.conn.ok{background:var(--okbg);color:var(--ok)}.conn.ok i{background:var(--ok);box-shadow:0 0 0 3px var(--okbg)}
+.conn.bad{background:var(--errbg);color:var(--err)}.conn.bad i{background:var(--err)}
+.taps{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px;margin-top:18px}
+.tap{background:var(--bg2);border:1.5px solid var(--line);border-radius:22px;padding:18px;text-align:center;transition:border-color .3s,box-shadow .3s;position:relative;overflow:hidden}
+.tap.lib{border-color:var(--ok);box-shadow:0 0 0 5px var(--okbg)}
+.tap .hd{display:flex;align-items:center;gap:10px;text-align:left}
+.tap .n{width:40px;height:40px;border-radius:12px;background:var(--amber);color:#1B1206;font-family:var(--fh);font-weight:800;font-size:18px;display:grid;place-items:center;flex:none}
+.tap h3{font-size:16px;line-height:1.2}.tap h3 small{display:block;color:var(--mut);font-weight:600;font-size:12.5px}
+.st{display:inline-flex;align-items:center;gap:6px;margin:14px 0 6px;padding:5px 12px;border-radius:99px;font-size:12.5px;font-weight:800;background:var(--card2);color:var(--mut)}
+.st.ok,.st.go{background:var(--okbg);color:var(--ok)}.st.go{animation:pl 1.1s infinite}.st.wait{background:var(--bluebg);color:var(--blue)}.st.err{background:var(--errbg);color:var(--err)}
+@keyframes pl{50%{opacity:.55}}
+.spout{width:26px;height:20px;margin:6px auto 0;border-radius:6px 6px 3px 3px;background:linear-gradient(90deg,#8d8579,#f1ece2,#8d8579)}
+.stream{width:6px;height:0;margin:0 auto;background:linear-gradient(180deg,#ffd75e,var(--c,#F5B301));border-radius:3px;transition:height .2s}
+.tap.pour .stream{height:26px}
+.glass{width:96px;height:132px;margin:0 auto 12px;border:3px solid rgba(255,246,227,.55);border-top:0;border-radius:4px 4px 20px 20px;position:relative;overflow:hidden;background:rgba(255,255,255,.03)}
+.glass .beer{position:absolute;left:0;right:0;bottom:0;height:0;background:linear-gradient(180deg,var(--c,#ffd75e),#9a5a00);transition:height .12s linear}
+.glass .foam{position:absolute;left:0;right:0;bottom:0;height:16px;background:#FFF6E3;opacity:0;transition:bottom .12s linear;border-radius:6px 6px 0 0}
+.ml{font-family:var(--fh);font-size:26px;font-weight:800;letter-spacing:-.02em}.ml small{font-family:var(--fb);font-size:13px;color:var(--mut);font-weight:700}
+.keg{font-size:12.5px;color:var(--mut);margin-top:2px}
+.lever{margin-top:14px;width:100%;min-height:54px;border-radius:16px;background:linear-gradient(180deg,var(--amber2),var(--amber));color:#1B1206;font-weight:900;font-size:15.5px;user-select:none;-webkit-user-select:none;touch-action:manipulation;box-shadow:0 10px 24px rgba(245,179,1,.28);transition:transform .1s}
+.lever:active{transform:scale(.98)}
+.lever:disabled{background:var(--card2);color:var(--dim);box-shadow:none;cursor:default}
+.lever.pausar{background:var(--card2);color:var(--txt);box-shadow:none;border:1.5px solid var(--amber)}
+.ctl{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px}
+.ctl .box{background:var(--bg2);border:1px solid var(--line);border-radius:18px;padding:14px 16px}
+.ctl b{font-size:14px}.ctl small{color:var(--mut);font-size:12.5px;display:block}
+.rng{display:flex;align-items:center;gap:12px;margin-top:8px}
+.rng input{flex:1;accent-color:var(--amber)}
+.rng output{font-family:var(--fh);font-weight:800;font-size:20px;min-width:66px;text-align:right}
+.tg{display:flex;align-items:center;gap:12px;width:100%;text-align:left}
+.tg .grow{flex:1}
+.tg i{width:46px;height:26px;border-radius:13px;background:var(--card2);position:relative;flex:none;transition:background .15s;border:1px solid var(--line2)}
+.tg i::after{content:'';position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:#d8c9ae;transition:left .15s,background .15s}
+.tg.on i{background:var(--err)}.tg.on i::after{left:22px;background:#fff}
+.steps{counter-reset:s;list-style:none;display:grid;gap:10px;margin-top:14px}
+.steps li{counter-increment:s;display:flex;gap:12px;color:var(--mut);font-size:14.5px}
+.steps li::before{content:counter(s);flex:none;width:26px;height:26px;border-radius:9px;background:var(--card2);color:var(--amber);font-weight:800;display:grid;place-items:center;font-size:13px}
+.steps b{color:var(--txt)}
+.log{max-height:240px;overflow:auto;margin-top:12px;display:flex;flex-direction:column;gap:6px}
+.log div{background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:9px 12px;font-size:13.5px}
+.log .t{color:var(--dim);font-weight:700;margin-right:8px;font-variant-numeric:tabular-nums}
+/* aviso flutuante + abas do celular */
+.toast{position:fixed;left:50%;bottom:calc(92px + env(safe-area-inset-bottom));transform:translate(-50%,20px);opacity:0;z-index:40;background:var(--ok);color:#06240f;font-weight:800;border-radius:16px;padding:13px 18px;box-shadow:0 14px 34px rgba(0,0,0,.4);transition:opacity .25s,transform .25s;pointer-events:none;max-width:calc(100vw - 32px);text-align:center}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+.mtabs{display:none}
+@media(max-width:980px){
+  header .in{padding:10px 14px;gap:10px}
+  .logo small{display:none}
+  header .acts{display:none}
+  .seg{order:3;width:100%}.seg button{flex:1;padding:9px 6px;font-size:13.5px}
+  main{grid-template-columns:1fr;padding:14px 12px calc(96px + env(safe-area-inset-bottom));gap:14px}
+  .pos{position:static}
+  .machine{border-radius:30px;padding:12px 10px 16px}.machine::before{margin-bottom:10px}
+  .machine iframe{height:calc(100svh - 230px);min-height:560px}
+  body[data-v=pos] .panel{display:none}body[data-v=tap] .pos{display:none}
+  .mtabs{display:grid;grid-template-columns:1fr 1fr;gap:6px;position:fixed;left:12px;right:12px;bottom:calc(10px + env(safe-area-inset-bottom));z-index:30;background:rgba(29,21,13,.94);backdrop-filter:blur(12px);border:1px solid var(--line2);border-radius:20px;padding:6px;box-shadow:0 14px 34px rgba(0,0,0,.45)}
+  .mtabs button{min-height:50px;border-radius:15px;font-weight:800;color:var(--mut);display:flex;align-items:center;justify-content:center;gap:8px;position:relative}
+  .mtabs button.on{background:var(--amber);color:#1B1206}
+  .mtabs .dot{position:absolute;top:8px;right:18px;width:10px;height:10px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 3px rgba(63,203,136,.3);display:none}
+  .mtabs .dot.on{display:block;animation:pl 1s infinite}
+  .ctl{grid-template-columns:1fr}
+  .card{padding:18px;border-radius:20px}
+}
+.loading{display:grid;place-items:center;min-height:70vh;text-align:center;color:var(--mut)}
+.spin{width:44px;height:44px;border:4px solid var(--card2);border-top-color:var(--amber);border-radius:50%;animation:sp 1s linear infinite;margin:0 auto 14px}
+@keyframes sp{to{transform:rotate(360deg)}}
 </style>
 </head>
-<body>
-<div id="root"></div>
+<body data-v="pos">
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+ <symbol id="logo" viewBox="0 0 64 64"><rect width="64" height="64" rx="18" fill="#F5B301"/><path d="M19 23h22v24a5 5 0 0 1-5 5H24a5 5 0 0 1-5-5z" fill="#140D07"/><path d="M17 21a7 7 0 0 1 11-5.5 7 7 0 0 1 12 2.5 5.5 5.5 0 0 1 2 7H17z" fill="#FFF6E3"/><path d="M41 28h4a5 5 0 0 1 5 5v6a5 5 0 0 1-5 5h-4" stroke="#140D07" stroke-width="4" fill="none"/><path d="M26 30v14M33 30v14" stroke="#F5B301" stroke-width="3" stroke-linecap="round"/></symbol>
+</svg>
+<div id="root"><div class="loading"><div><div class="spin"></div>Preparando a demonstração…</div></div></div>
+<div class="toast" id="toast" role="status"></div>
 <script>
 const API = 'api.php';
 let JWT = localStorage.getItem('be_jwt') || '', DEMO = null, ON = true, TEMP = 3.5, VAZIO = false, POLL = null;
-const ST = {};   // por canal: {id, volume, servido, go, start_mode, estado, ultimoReport}
+const ST = {};   // por canal: {id, volume, servido, go, start_mode, estado}
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 async function api(r, body, headers){
@@ -60,112 +139,132 @@ async function api(r, body, headers){
 }
 const dev = (r, body) => api(r + '&key=' + encodeURIComponent(DEMO.device_key), body, {'X-Device-Key': DEMO.device_key});
 let ERRO_POLL = 0;
-function log(m){ const l = $('#log'); if (!l) return; const d = document.createElement('div'); d.innerHTML = `<span class="t">${new Date().toLocaleTimeString('pt-BR')}</span>${esc(m)}`; l.prepend(d); }
-
-/* ---------- login (mesmo usuário do painel) ---------- */
-function login(){
-  $('#root').innerHTML = `<div class="login"><div style="font-size:40px">🍺</div><h2 style="font-size:20px;margin:6px 0">Simulador Beer Express</h2><p class="mut">Entre com o mesmo usuário do painel.</p>
-    <label>E-mail</label><input id="le" type="email"><label>Senha</label><input id="lp" type="password" onkeydown="if(event.key==='Enter')doLogin()">
-    <button class="btn pri" style="width:100%;margin-top:16px;justify-content:center" onclick="doLogin()">Entrar</button><p id="lerr" style="color:var(--err);margin-top:10px"></p></div>`;
-}
-async function doLogin(){ try { const j = await fetch(API+'?r=admin/login', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({email:$('#le').value, senha:$('#lp').value})}).then(r=>r.json());
-  if (!j.ok) throw j; JWT = j.token; localStorage.setItem('be_jwt', JWT); start(); } catch(e){ $('#lerr').textContent = e.mensagem || 'Falha'; } }
+function log(m){ const l = $('#log'); if (!l) return; const d = document.createElement('div'); d.innerHTML = `<span class="t">${new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}</span>${esc(m)}`; l.prepend(d); while (l.children.length > 40) l.lastChild.remove(); }
+function toast(m){ const t = $('#toast'); t.textContent = m; t.classList.add('on'); clearTimeout(t._t); t._t = setTimeout(() => t.classList.remove('on'), 3200); }
+function ver(v){ document.body.dataset.v = v; document.querySelectorAll('.mtabs button').forEach(b => b.classList.toggle('on', b.dataset.v === v)); if (v === 'tap') $('#tabDot').classList.remove('on'); window.scrollTo(0, 0); }
 
 /* ---------- montagem ---------- */
 async function start(){
-  $('#root').innerHTML = `<header><h1>🧪 Simulador <b>Beer Express</b></h1>
-     <span class="mut">Totem:</span><button class="btn" id="mTap" onclick="modo(true)">Maquininha da torneira (BeerPass)</button><button class="btn" id="mMenu" onclick="modo(false)">Cardápio com todas</button>
-     <a class="btn" href="painel.html" target="_blank">Abrir painel ↗</a><button class="btn" onclick="recarregar()">↻ Recomeçar totem</button>${JWT ? '<button class="btn dan" onclick="limpar()">Remover dados de demonstração</button>' : ''}</header>
-   <main><div class="phone"><div class="cap">Maquininha (simulada)</div><iframe id="pos" title="Maquininha"></iframe></div>
-   <div class="side">
-     <div class="card"><h2>🍺 Chopeira virtual <span class="mut" id="conn" style="font-size:13px;font-weight:600;margin-left:8px">⏳ conectando…</span></h2><p class="mut">Faz o papel do ESP32 na chopeira: recebe o copo pago, libera a torneira e mede os ml. Segure o botão para "puxar a alavanca".</p>
-       <div class="taps" id="taps"></div></div>
-     <div class="card"><h2>⚙️ Situações para testar</h2>
-       <div class="row" style="margin-top:10px"><label>🌡️ Temperatura do freezer: <b id="tv">3,5 °C</b></label><input type="range" min="-3" max="12" step="0.5" value="3.5" oninput="TEMP=+this.value;$('#tv').textContent=String(TEMP).replace('.',',')+' °C'"></div>
-       <div class="row" style="margin-top:10px"><button class="btn" id="bVazio" onclick="VAZIO=!VAZIO;this.classList.toggle('on',VAZIO);this.textContent=VAZIO?'🛢️ Barril VAZIO (ligado)':'🛢️ Simular barril vazio'">🛢️ Simular barril vazio</button>
-         <button class="btn" id="bOn" onclick="ligar()">🔌 Desligar chopeira</button></div>
-       <ol class="steps mut" style="margin-top:12px">
-         <li>Compre no totem (o pagamento é simulado: escolha "Aprovado" ou "Recusado").</li>
-         <li>Quando a torneira ficar verde, segure <b>Puxar alavanca</b> até encher.</li>
-         <li>Veja a venda no <a href="painel.html" target="_blank" style="color:var(--amber)">painel</a> (Visão geral, Vendas, funil) e no Telegram, se configurado.</li>
-         <li>Teste também: cupom (crie em Chopeiras e barris → Cupons), happy hour (Configurações), cartão recusado, barril vazio, temperatura alta (alerta após 10 min com o cron ligado) e chopeira desligada (offline após 3 min).</li></ol></div>
-     <div class="card"><h2>📜 O que a chopeira está fazendo</h2><div class="log" id="log"></div></div>
-   </div></main>`;
-  try { DEMO = await api('pub/demo', {}, {}); } catch(e){ log('⚠️ Falha ao criar a demonstração: ' + (e.mensagem || 'erro')); return; }
-  log('Ponto de demonstração pronto (Pilsen da Casa e IPA do Cerrado).');
-  $('#mTap').classList.toggle('on', DEMO.tap_id !== null); $('#mMenu').classList.toggle('on', DEMO.tap_id === null);
+  $('#root').innerHTML = `<header><div class="in">
+     <div class="logo"><svg><use href="#logo"/></svg><span>Beer <b>Express</b></span><small>Simulador</small></div>
+     <div class="seg" role="group" aria-label="Como a maquininha funciona"><button id="mTap" onclick="modo(true)">Presa à torneira</button><button id="mMenu" onclick="modo(false)">Cardápio com todas</button></div>
+     <div class="acts" style="display:flex;gap:8px"><button class="btn" onclick="recarregar()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 12a8 8 0 1 0 3-6.2M4 4v4h4"/></svg>Recomeçar</button>
+       <a class="btn" href="painel.html" target="_blank">Painel ↗</a>${JWT ? '<button class="btn dan" onclick="limpar()">Limpar vendas de teste</button>' : ''}</div></div></header>
+   <main>
+     <section class="pos"><div class="lbl">Maquininha na torneira</div>
+       <div class="machine"><div class="screen"><iframe id="pos" title="Tela da maquininha"></iframe></div><div class="nfc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8.5 7a7 7 0 0 1 0 10M12 4.5a11 11 0 0 1 0 15M5 9.5a3.5 3.5 0 0 1 0 5"/></svg>APROXIME O CARTÃO</div></div></section>
+     <section class="panel">
+       <div class="card"><h2>Chopeira <span class="conn" id="conn"><i></i>conectando…</span></h2><p class="s">Faz o papel da placa da chopeira: recebe o copo pago, abre a válvula e mede os ml.</p>
+         <div class="taps" id="taps"></div>
+         <div class="ctl">
+           <div class="box"><b>🌡️ Temperatura do freezer</b><small>Acima do limite, o dono recebe alerta.</small><div class="rng"><input type="range" min="-3" max="12" step="0.5" value="3.5" aria-label="Temperatura" oninput="TEMP=+this.value;$('#tv').textContent=String(TEMP).replace('.',',')+' °C'"><output id="tv">3,5 °C</output></div></div>
+           <div class="box" style="display:grid;gap:12px">
+             <button class="tg" id="bVazio" onclick="VAZIO=!VAZIO;this.classList.toggle('on',VAZIO)"><span class="grow"><b>🛢️ Barril vazio</b><small>A torneira abre, mas não sai chopp.</small></span><i></i></button>
+             <button class="tg" id="bOn" onclick="ligar()"><span class="grow"><b>🔌 Chopeira desligada</b><small>Some da maquininha após alguns minutos.</small></span><i></i></button></div>
+         </div></div>
+       <div class="card"><h2>Como testar</h2><ol class="steps">
+         <li><span>Na maquininha, escolha o chopp, informe <b>CPF e nascimento</b> (ex.: 529.982.247-25 e 10/05/1990) e pague com <b>"Aprovado"</b>.</span></li>
+         <li><span>Com a torneira liberada, toque em <b>Abrir a torneira</b> — aqui ou na própria tela da maquininha.</span></li>
+         <li><span>Veja a venda no <a href="painel.html" target="_blank" style="color:var(--amber)">painel</a> e, se configurado, no Telegram.</span></li>
+         <li><span>Teste também cartão recusado, cupom, barril vazio e chopeira desligada.</span></li></ol></div>
+       <div class="card"><h2>O que está acontecendo</h2><div class="log" id="log"></div></div>
+     </section>
+   </main>
+   <nav class="mtabs"><button data-v="pos" class="on" onclick="ver('pos')">📱 Maquininha</button><button data-v="tap" onclick="ver('tap')">🍺 Chopeira<span class="dot" id="tabDot"></span></button></nav>`;
+  try { DEMO = await api('pub/demo', {}, {}); }
+  catch(e){ $('#root').innerHTML = `<div class="loading"><div><div style="font-size:42px">⚠️</div><b style="color:var(--txt)">Não foi possível abrir a demonstração</b><p style="margin:8px 0 16px">${esc(e.mensagem || 'Sem conexão com o servidor')}</p><button class="btn" onclick="start()">Tentar de novo</button></div></div>`; return; }
+  log('Demonstração pronta: Pilsen da Casa e IPA do Cerrado.');
+  marcarModo();
   clearInterval(POLL); await poll(); POLL = setInterval(poll, 800);
   await recarregar();
 }
+function marcarModo(){ $('#mTap').classList.toggle('on', DEMO.tap_id !== null); $('#mMenu').classList.toggle('on', DEMO.tap_id === null); }
 async function recarregar(){
-  const p = await fetch(API + '?r=pos/pair', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({codigo: DEMO.codigo, serial:'SIMULADOR', app_version:'simulador'})}).then(r=>r.json());
-  if (!p.ok) return alert(p.mensagem || 'Falha ao parear a maquininha simulada');
-  localStorage.setItem('be_tt', p.token);
+  try {
+    const p = await api('pos/pair', {codigo: DEMO.codigo, serial:'SIMULADOR', app_version:'simulador'}, {});
+    localStorage.setItem('be_tt', p.token);
+  } catch(e){ return log('⚠️ Não foi possível ligar a maquininha simulada: ' + (e.mensagem || 'erro')); }
+  for (const c in ST) { ST[c] = {estado:'livre'}; pintar(+c); }
   $('#pos').src = 'pos.html?sim=' + Date.now();
 }
 async function modo(daTorneira){
   try { DEMO = await api('pub/demo_modo', {torneira: daTorneira ? 1 : 0}, {}); } catch(e){ return log('⚠️ ' + (e.mensagem || 'Não foi possível trocar o modo')); }
-  DEMO.tap_id = daTorneira ? DEMO.taps[0] : null; $('#mTap').classList.toggle('on', daTorneira); $('#mMenu').classList.toggle('on', !daTorneira);
-  log(daTorneira ? 'Totem preso à Torneira 1 (igual BeerPass).' : 'Totem mostrando o cardápio com todas as torneiras.'); recarregar();
+  marcarModo(); log(daTorneira ? 'Maquininha presa à Torneira 1 (uma maquininha por torneira).' : 'Maquininha com o cardápio de todas as torneiras.'); recarregar();
 }
 async function limpar(){
-  if (!confirm('Remover o ponto de demonstração e todas as vendas simuladas?')) return;
-  clearInterval(POLL); await api('admin/demo_clear', {}); localStorage.removeItem('be_tt');
-  $('#root').innerHTML = `<div class="login" style="text-align:center"><div style="font-size:40px">🧹</div><h2 style="margin:8px 0">Demonstração removida</h2><p class="mut">As vendas simuladas saíram do painel.</p>
-    <button class="btn pri" style="margin-top:16px" onclick="start()">Criar de novo</button> <a class="btn" href="painel.html">Ir para o painel</a></div>`;
+  if (!confirm('Apagar as vendas de teste do simulador?')) return;
+  clearInterval(POLL);
+  try { await api('admin/demo_clear', {}); } catch(e){ toast(e.mensagem || 'Entre no painel para limpar'); }
+  localStorage.removeItem('be_tt'); start();
 }
-function ligar(){ ON = !ON; $('#bOn').textContent = ON ? '🔌 Desligar chopeira' : '🔌 Ligar chopeira'; $('#bOn').classList.toggle('on', !ON);
-  log(ON ? 'Chopeira ligada.' : 'Chopeira desligada — o totem mostra indisponível em até 3 min (com o cron) e você recebe o alerta.'); }
+function ligar(){ ON = !ON; $('#bOn').classList.toggle('on', !ON); $('#conn').className = 'conn' + (ON ? '' : ' bad'); $('#conn').innerHTML = ON ? '<i></i>conectando…' : '<i></i>desligada';
+  log(ON ? 'Chopeira ligada.' : 'Chopeira desligada — a maquininha mostra indisponível em alguns minutos e o dono é avisado.'); }
 
-/* ---------- ESP32 simulado ---------- */
+/* ---------- placa da chopeira simulada ---------- */
 let TAPS = [];
 async function poll(){
   if (!ON || !DEMO) return;
   let r; try { r = await dev(`dev/poll&temp=${TEMP}&rssi=-58&fw=simulador&up=${Math.round(performance.now()/1000)}`); }
-  catch(e){ if (Date.now() - ERRO_POLL > 10000) { ERRO_POLL = Date.now(); log('⚠️ A chopeira não conseguiu falar com o servidor: ' + (e.mensagem || e.erro || e.message || 'sem resposta')); } $('#conn').textContent = '🔴 sem conexão'; return; }
-  $('#conn').textContent = '🟢 conectada ao servidor';
+  catch(e){ if (Date.now() - ERRO_POLL > 10000) { ERRO_POLL = Date.now(); log('⚠️ A chopeira não conseguiu falar com o servidor: ' + (e.mensagem || e.erro || e.message || 'sem resposta')); } $('#conn').className = 'conn bad'; $('#conn').innerHTML = '<i></i>sem conexão'; return; }
+  $('#conn').className = 'conn ok'; $('#conn').innerHTML = '<i></i>online';
   if (JSON.stringify(r.taps.map(t=>[t.canal,t.produto,t.restante_ml])) !== JSON.stringify(TAPS.map(t=>[t.canal,t.produto,t.restante_ml]))) { TAPS = r.taps; desenhar(); }
   const c = r.cmd;
   for (const t of TAPS) { const s = ST[t.canal] || (ST[t.canal] = {estado:'livre'});
     if (c && c.canal === t.canal) {
-      if (s.id !== c.id) { Object.assign(s, {id:c.id, volume:c.volume_ml, servido:0, estado:'armado', start_mode:c.start_mode});
+      if (s.id !== c.id) {   // copo novo: zera tudo (inclusive se o anterior ficou pela metade)
+        clearInterval(HOLD[t.canal]);
+        Object.assign(s, {id:c.id, volume:c.volume_ml, servido:0, estado:'armado', start_mode:c.start_mode, ultimo:0});
         log(`Copo #${c.id}: ${c.volume_ml} ml na torneira ${c.canal} — ${c.go ? 'liberado' : 'aguardando o cliente tocar SERVIR'}.`); }
-      s.go = c.go; if (c.go && s.estado === 'armado') s.estado = 'liberado';
-    } else if (s.estado === 'armado' || s.estado === 'liberado') { s.estado = 'livre'; s.id = null; }
+      s.go = c.go;
+      if (c.go && s.estado === 'armado') { s.estado = 'liberado'; avisarLiberada(t.canal); }
+    } else if (s.estado === 'armado' || s.estado === 'liberado') { clearInterval(HOLD[t.canal]); s.estado = 'livre'; s.id = null; }
     pintar(t.canal);
   }
 }
+function avisarLiberada(canal){ toast(`🍺 Torneira ${canal} liberada!`); if (document.body.dataset.v === 'pos') $('#tabDot').classList.add('on'); }
 function desenhar(){
-  $('#taps').innerHTML = TAPS.map(t => `<div class="tap" id="t${t.canal}"><h3>Torneira ${t.canal} • ${esc(t.produto)}</h3><span class="st" id="s${t.canal}">Livre</span>
-    <div class="glass" style="--c:${esc(t.cor)}"><div class="beer" id="b${t.canal}"></div><div class="foam" id="f${t.canal}"></div></div>
-    <div class="ml" id="m${t.canal}">0 <small>ml</small></div><div class="mut" style="font-size:12px">barril: ${(t.restante_ml/1000).toFixed(1).replace('.',',')} L</div>
-    <button class="lever" id="l${t.canal}" disabled>🍺 Puxar alavanca (segure)</button></div>`).join('');
-  for (const t of TAPS) { const b = $('#l' + t.canal);
-    const on = e => { e.preventDefault(); puxar(t.canal, true); }, off = () => puxar(t.canal, false);
-    b.addEventListener('pointerdown', on); b.addEventListener('pointerup', off); b.addEventListener('pointerleave', off); b.addEventListener('pointercancel', off); }
+  $('#taps').innerHTML = TAPS.map(t => `<div class="tap" id="t${t.canal}" style="--c:${esc(t.cor)}">
+    <div class="hd"><span class="n">${t.canal}</span><h3>${esc(t.produto || 'Sem bebida')}<small>${esc(t.estilo || '')}</small></h3></div>
+    <span class="st" id="s${t.canal}">Livre</span>
+    <div class="spout"></div><div class="stream"></div>
+    <div class="glass"><div class="beer" id="b${t.canal}"></div><div class="foam" id="f${t.canal}"></div></div>
+    <div class="ml" id="m${t.canal}">0 <small>ml</small></div><div class="keg">barril: ${(t.restante_ml/1000).toFixed(1).replace('.',',')} L</div>
+    <button class="lever" id="l${t.canal}" disabled onclick="puxarAuto(${t.canal})">Abrir a torneira</button></div>`).join('');
+  for (const t of TAPS) pintar(t.canal);
 }
 function pintar(canal){
   const s = ST[canal] || {estado:'livre'}, st = $('#s' + canal), lv = $('#l' + canal), card = $('#t' + canal); if (!st) return;
-  const txt = {livre:['Livre',''], armado:['Aguardando SERVIR no totem','wait'], liberado:['Liberada — puxe a alavanca!','go'], servindo:['Servindo…','ok'], concluido:['Copo cheio ✓','ok'], erro:['Erro: barril vazio','err']}[s.estado];
-  st.textContent = txt[0]; st.className = 'st ' + txt[1]; card.classList.toggle('lib', s.estado === 'liberado' || s.estado === 'servindo');
+  const txt = {livre:['Livre',''], armado:['Aguardando SERVIR na maquininha','wait'], liberado:['Liberada — pode servir','go'], servindo:['Servindo…','ok'], concluido:['Copo cheio ✓','ok'], erro:['Sem chopp saindo','err']}[s.estado] || ['Livre',''];
+  st.textContent = txt[0]; st.className = 'st ' + txt[1];
+  card.classList.toggle('lib', s.estado === 'liberado' || s.estado === 'servindo');
+  card.classList.toggle('pour', s.estado === 'servindo' && !!HOLD[canal]);
   lv.disabled = !(s.estado === 'liberado' || s.estado === 'servindo');
-  const pct = s.volume ? Math.min(100, 100 * (s.servido || 0) / s.volume) : (s.estado === 'concluido' ? 100 : 0);
+  lv.textContent = s.estado === 'servindo' && HOLD[canal] ? 'Pausar' : s.estado === 'servindo' ? 'Continuar servindo' : s.estado === 'concluido' ? 'Copo cheio' : 'Abrir a torneira';
+  lv.classList.toggle('pausar', s.estado === 'servindo' && !!HOLD[canal]);
+  const pct = s.volume ? Math.min(100, 100 * (s.servido || 0) / s.volume) : 0;
   $('#b' + canal).style.height = pct + '%'; $('#f' + canal).style.bottom = `calc(${pct}% - 6px)`; $('#f' + canal).style.opacity = pct > 2 ? 1 : 0;
   $('#m' + canal).innerHTML = `${s.servido || 0} <small>/ ${s.volume || 0} ml</small>`;
 }
+/* Toque para abrir (enche sozinho até o volume pago) e toque de novo para pausar — funciona igual no celular e no computador.
+   Também é chamado pela própria tela da maquininha (botão "Abrir a torneira" do simulador). */
 const HOLD = {};
-function puxar(canal, segurando){
-  const s = ST[canal]; clearInterval(HOLD[canal]); $('#l' + canal)?.classList.toggle('hold', segurando);
-  if (!segurando || !s || !(s.estado === 'liberado' || s.estado === 'servindo')) return;
+function puxarAuto(canal){
+  canal = +canal; const s = ST[canal];
+  if (!s || !(s.estado === 'liberado' || s.estado === 'servindo')) return false;
+  if (HOLD[canal]) { clearInterval(HOLD[canal]); HOLD[canal] = null; pintar(canal); report(s, 'servindo'); return true; }   // pausa
   if (VAZIO) { s.estado = 'erro'; pintar(canal); report(s, 'erro', 'sem_fluxo (barril vazio — simulado)'); log(`Copo #${s.id}: sem chopp saindo — erro enviado (o painel e o Telegram avisam).`);
-    setTimeout(() => { if (ST[canal] === s && s.estado === 'erro') { s.estado = 'livre'; s.volume = 0; s.servido = 0; s.id = null; pintar(canal); } }, 3000); return; }
+    setTimeout(() => { if (ST[canal] === s && s.estado === 'erro') { s.estado = 'livre'; s.volume = 0; s.servido = 0; s.id = null; pintar(canal); } }, 3000); return true; }
+  const passo = Math.max(10, Math.round(s.volume / 45));   // ~3,5 s por copo
   HOLD[canal] = setInterval(() => {
-    s.estado = 'servindo'; s.servido = Math.min(s.volume, s.servido + 20); pintar(canal);
-    if (s.servido >= s.volume) { clearInterval(HOLD[canal]); s.estado = 'concluido'; pintar(canal); report(s, 'concluido'); log(`Copo #${s.id}: ${s.volume} ml servidos — válvula fechada no volume certo.`);
-      setTimeout(() => { if (ST[canal] === s && s.estado === 'concluido') { s.estado = 'livre'; s.volume = 0; s.servido = 0; s.id = null; pintar(canal); } }, 2500); }
+    s.estado = 'servindo'; s.servido = Math.min(s.volume, s.servido + passo); pintar(canal);
+    if (s.servido >= s.volume) { clearInterval(HOLD[canal]); HOLD[canal] = null; s.estado = 'concluido'; pintar(canal); report(s, 'concluido'); log(`Copo #${s.id}: ${s.volume} ml servidos — válvula fechada no volume certo.`);
+      setTimeout(() => { if (ST[canal] === s && s.estado === 'concluido') { Object.assign(s, {estado:'livre', volume:0, servido:0, id:null}); pintar(canal); } }, 4000); }
     else if (!s.ultimo || Date.now() - s.ultimo > 600) { s.ultimo = Date.now(); report(s, 'servindo'); }
   }, 80);
+  pintar(canal); return true;
 }
+/* para a tela da maquininha saber se pode mostrar o botão de simulação */
+function torneiraLiberada(canal){ const s = ST[+canal]; return !!s && (s.estado === 'liberado' || s.estado === 'servindo'); }
 function report(s, status, erro){ dev('dev/report', {id:s.id, status, servido_ml:s.servido || 0, pulsos:Math.round((s.servido || 0) * 1.925), erro}).catch(()=>{}); }
 
 start();   // simulador aberto: não precisa de senha (o painel continua com login)

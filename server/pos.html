@@ -195,6 +195,118 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
 @keyframes sp{to{transform:rotate(360deg)}}
 .toast{position:absolute;left:18px;right:18px;bottom:90px;background:#2a1414;border:1px solid var(--err);color:#ffd6d3;border-radius:14px;padding:12px 14px;font-size:14px;z-index:20;display:none}
 .offbar{position:absolute;top:0;left:0;right:0;background:var(--err);color:#fff;font-size:12px;text-align:center;padding:3px;z-index:30;display:none}
+
+/* ═══════════ Pele Beer Express (tipografia, cores e componentes) ═══════════ */
+@font-face{font-family:'Bricolage Grotesque';src:url(fontes/bricolage.woff2) format('woff2');font-weight:200 800;font-display:swap}
+@font-face{font-family:'Figtree';src:url(fontes/figtree.woff2) format('woff2');font-weight:300 900;font-display:swap}
+:root{--bg:#0F0A06;--bg2:#160F09;--card:#1E160E;--card2:#2A1F14;--line:rgba(255,226,170,.1);--line2:rgba(255,226,170,.18);--txt:#FBF1DF;--mut:#B8A383;--fh:'Bricolage Grotesque',system-ui,sans-serif;--fb:'Figtree',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;--r:20px}
+html,body{font-family:var(--fb);-webkit-font-smoothing:antialiased}
+body{background:radial-gradient(120% 55% at 50% -10%,#3A250C 0%,transparent 60%),var(--bg)}
+.scr{padding:20px 18px 16px;background:radial-gradient(120% 45% at 50% -8%,rgba(245,179,1,.10) 0%,transparent 60%)}
+.scr.on{animation:in .3s cubic-bezier(.2,.8,.2,1)}
+h1,h2,h3,.brand,.disp,.ml,.tp,.timer{font-family:var(--fh);letter-spacing:-.02em}
+svg.ic{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+/* botões */
+.btn{min-height:60px;border-radius:18px;font-size:17px;font-weight:800;letter-spacing:0;text-transform:none;transition:transform .12s,opacity .2s}
+.btn.pri{background:linear-gradient(180deg,#FFCB45,#F5B301 70%,#E9A400);color:#1B1206;box-shadow:0 10px 28px rgba(245,179,1,.28),inset 0 1px 0 rgba(255,255,255,.45)}
+.btn.sec{background:var(--card);border:1.5px solid var(--line2)}
+.btn:disabled{opacity:.3;box-shadow:none}
+/* topo das telas */
+.top{margin-bottom:18px;min-height:46px;gap:12px}
+.back{width:46px;height:46px;border-radius:14px;background:var(--card);border:1px solid var(--line2);font-size:0;flex:none}
+.back::before{content:'';width:10px;height:10px;border-left:2.6px solid var(--txt);border-bottom:2.6px solid var(--txt);transform:rotate(45deg);margin-left:4px;border-radius:1px}
+.top h2{font-size:22px;font-weight:700;line-height:1.15}
+.step{background:var(--card);border:1px solid var(--line);border-radius:99px;padding:4px 10px;font-weight:800;font-size:12px}
+#prog{padding:10px 18px 0;gap:6px}
+#prog i{height:5px;background:rgba(255,226,170,.12)}
+#prog i.d{background:linear-gradient(90deg,#FFCB45,#F5B301)}
+.scr.hasprog{padding-top:28px}
+/* descanso */
+#idle{background:radial-gradient(110% 60% at 50% 0%,#4A2E0E 0%,transparent 62%),var(--bg)}
+.logo{font-size:0;width:76px;height:76px;margin:0 auto;filter:drop-shadow(0 14px 30px rgba(245,179,1,.35))}
+.logo svg{width:100%;height:100%}
+.brand{font-size:36px;font-weight:800;letter-spacing:-.04em;margin-top:14px}
+#idle.menuOn .logo{width:52px;height:52px}#idle.menuOn .brand{font-size:28px;margin-top:8px}
+.slog{font-size:15px;margin-top:2px}
+.cta{min-height:68px;font-size:20px;border-radius:20px}
+.legal{display:flex;gap:10px;align-items:center;text-align:left;font-size:11.5px;margin-top:12px;color:#9C8768}
+.b18{flex:none;width:30px;height:30px;font-size:10.5px;margin:0;border-width:2.5px}
+.mc{border-radius:18px;padding:8px;background:linear-gradient(180deg,#22180F,#1A120B);border-color:var(--line2)}
+.mc .ph{height:118px;border-radius:13px;background:radial-gradient(circle at 50% 75%,#3B2814,#120C07)}
+.mc b{font-family:var(--fh);font-size:16px;font-weight:700;padding:0 4px}.mc small,.mc .pr{padding:0 4px}
+.mc .pr{font-size:14.5px}
+/* tela da torneira */
+.tapHome{background:var(--bg)!important}
+.th{border-radius:22px;background:#140E08;border:1px solid var(--line)}
+.thHead{background:linear-gradient(180deg,#FFCB45,#F5B301);padding:12px 16px}
+.thHead .num{font-family:var(--fh);font-weight:800;letter-spacing:-.04em}
+.thHead h1{font-family:var(--fh);font-weight:800;letter-spacing:-.02em;font-size:22px}
+.thBuy{background:rgba(63,203,136,.14);color:#6CE3A4;border:1px solid rgba(63,203,136,.35);animation:none;font-size:14.5px;padding:10px}
+.thInfo{border-top:0;background:#1A130B}
+.thInfo .r .pv{font-family:var(--fh);border-radius:12px;background:linear-gradient(180deg,#FFCB45,#F5B301)}
+/* idade */
+#age{background:radial-gradient(120% 55% at 50% 0%,#5A3A0A 0%,transparent 65%),var(--bg);color:var(--txt)}
+#age .warn{flex-direction:column;gap:14px;margin-top:22px;font-family:var(--fh);font-size:26px;font-weight:800;letter-spacing:-.02em}
+#age .warn .b{width:104px;height:104px;border-radius:50%;display:grid;place-items:center;font-family:var(--fh);font-size:38px;font-weight:800;color:#1B1206;background:linear-gradient(180deg,#FFCB45,#F5B301);box-shadow:0 0 0 10px rgba(245,179,1,.14),0 0 0 22px rgba(245,179,1,.06),0 18px 40px rgba(245,179,1,.3)}
+#age .termos{font-family:var(--fb);font-size:18px;font-weight:600;line-height:1.45;color:#E9D9BD;background:var(--card);border:1px solid var(--line2);border-radius:20px;padding:18px;margin:auto 0}
+#age .btn{background:var(--card);color:var(--txt);border:1.5px solid var(--line2);font-size:16.5px}
+#age .btn.yes{background:linear-gradient(180deg,#FFCB45,#F5B301 70%,#E9A400);color:#1B1206;border:0;box-shadow:0 10px 28px rgba(245,179,1,.28)}
+#age .btn.help{background:transparent;border:0;color:var(--mut);min-height:46px}
+/* teclado numérico e visor */
+.disp{background:var(--card);border:1.5px solid var(--line2);border-radius:18px;height:78px;font-size:34px;font-weight:700;box-shadow:inset 0 2px 10px rgba(0,0,0,.25)}
+.disp:not(.ph){border-color:rgba(245,179,1,.55)}
+.disp.ph{color:#5E4C33}
+.hint{font-size:13.5px;margin:9px 4px 0}
+.pad{gap:10px}
+.pad button{height:64px;border-radius:18px;background:linear-gradient(180deg,#261C12,#1C140C);border:1px solid var(--line);font-family:var(--fh);font-size:30px;font-weight:600;box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}
+.pad button:active{background:#3A2A16;transform:scale(.97)}
+.kb button{background:linear-gradient(180deg,#261C12,#1C140C);border:1px solid var(--line);border-radius:11px}
+/* cardápio */
+.hello{background:linear-gradient(90deg,rgba(245,179,1,.14),rgba(245,179,1,.04));border:1px solid rgba(245,179,1,.25);border-radius:16px;padding:12px 14px}
+.tap{border-radius:20px;padding:12px;gap:14px;background:linear-gradient(180deg,#22180F,#1A120B);border-color:var(--line2)}
+.tap img,.tap .cup{width:70px;height:84px;border-radius:14px}
+.tap h3{font-family:var(--fh);font-size:20px;font-weight:700}
+/* tamanhos */
+.opts{gap:10px}
+.opt{border-radius:18px;padding:14px 16px;background:linear-gradient(180deg,#22180F,#1A120B);border:1.5px solid var(--line2);min-height:76px}
+.opt.sel{border-color:#F5B301;background:linear-gradient(180deg,#3A2809,#241708);box-shadow:0 0 0 4px rgba(245,179,1,.12)}
+.opt b{font-family:var(--fh);font-weight:800}
+.opt .pr b{font-family:var(--fh)}
+/* caixas, resumo, pagamento */
+.box{background:var(--card);border:1px solid var(--line2);border-radius:20px;padding:16px}
+.box h4{font-size:12px;font-weight:800;letter-spacing:.1em}
+.qtyc button{width:60px;height:60px;background:var(--card2);border:1px solid var(--line2);font-family:var(--fh)}
+.qtyc b{font-family:var(--fh);font-size:44px}
+.lin.tt{font-family:var(--fh);font-size:26px;font-weight:800}
+.pays{gap:12px}
+.pay{border-radius:20px;padding:16px;min-height:72px;background:linear-gradient(180deg,#22180F,#1A120B);border:1.5px solid var(--line2);font-size:18px;font-weight:800}
+.pay:active{border-color:#F5B301}
+.pay i{width:46px;height:46px;border-radius:14px;background:rgba(245,179,1,.12);color:#F5B301;display:grid;place-items:center;font-size:0}
+.pay i svg{width:24px;height:24px}
+.pay .sub{display:block;font-size:12.5px;color:var(--mut);font-weight:600;margin-top:2px}
+.tag.fast{background:rgba(63,203,136,.16);color:#6CE3A4;border:1px solid rgba(63,203,136,.35)}
+/* servindo */
+.serve{justify-content:flex-start}
+.serve h3{font-size:22px;font-weight:700;margin-top:6px}
+.serve .tp{font-size:15px;font-family:var(--fb);font-weight:800;color:#1B1206;background:linear-gradient(180deg,#FFCB45,#F5B301);border-radius:99px;padding:6px 16px;display:inline-block;margin:0 auto;letter-spacing:.02em}
+.glass{width:132px;height:184px;border:4px solid rgba(255,246,227,.55);border-top:0;border-radius:6px 6px 30px 30px;margin:16px auto 16px;background:rgba(255,255,255,.03)}
+.glass .beer{background:linear-gradient(180deg,#FFD75E,#E39B00 60%,#B87400)}
+.glass .beer::after{content:'';position:absolute;inset:0;background:radial-gradient(circle,rgba(255,255,255,.55) 1.4px,transparent 2px) 0 0/18px 22px;animation:bub 2.2s linear infinite;opacity:.5}
+@keyframes bub{to{background-position:0 -44px}}
+.bar{height:10px;background:var(--card2)}
+.svSim{margin-top:10px}
+/* fim */
+.okic{width:118px;height:118px;background:rgba(63,203,136,.14);box-shadow:0 0 0 12px rgba(63,203,136,.06);font-size:0;animation:pop .45s cubic-bezier(.2,.8,.2,1)}
+.okic svg{width:58px;height:58px;stroke:#3FCB88;stroke-width:3}
+@keyframes pop{from{transform:scale(.5);opacity:0}}
+#fim h2{font-family:var(--fh);font-size:34px!important;font-weight:800}
+.rate button{width:62px;height:62px;font-size:34px;background:var(--card)}
+/* janelas */
+.modal{background:rgba(8,5,2,.72);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.modal .in{border-radius:26px;background:linear-gradient(180deg,#22180F,#170F09);border:1px solid var(--line2);padding:26px 20px 20px;box-shadow:0 30px 60px rgba(0,0,0,.5)}
+.modal h3{font-family:var(--fh);font-size:23px;font-weight:700}
+.modal .ic{font-size:44px}
+.toast{border-radius:16px}
 </style>
 </head>
 <body>
@@ -204,7 +316,7 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
 <!-- PAREAMENTO -->
 <section class="scr" id="pair">
   <div class="grow c" style="display:flex;flex-direction:column;justify-content:center">
-    <div class="logo">🍺</div><div class="brand">Parear maquininha</div>
+    <div class="logo"><svg viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="18" fill="#F5B301"/><path d="M19 23h22v24a5 5 0 0 1-5 5H24a5 5 0 0 1-5-5z" fill="#140D07"/><path d="M17 21a7 7 0 0 1 11-5.5 7 7 0 0 1 12 2.5 5.5 5.5 0 0 1 2 7H17z" fill="#FFF6E3"/><path d="M41 28h4a5 5 0 0 1 5 5v6a5 5 0 0 1-5 5h-4" stroke="#140D07" stroke-width="4" fill="none"/><path d="M26 30v14M33 30v14" stroke="#F5B301" stroke-width="3" stroke-linecap="round"/></svg></div><div class="brand">Parear maquininha</div>
     <p class="mut" style="margin:10px 0 18px">Digite o código gerado no painel → Pontos e equipamentos → Maquininhas.</p>
     <div class="disp ph" id="pairDisp">______</div>
     <div class="hint" id="pairHint"></div>
@@ -216,7 +328,7 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
 <!-- DESCANSO -->
 <section class="scr" id="idle" onclick="start()">
   <div class="c" style="margin-top:30px">
-    <div class="logo">🍺</div>
+    <div class="logo"><svg viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="18" fill="#F5B301"/><path d="M19 23h22v24a5 5 0 0 1-5 5H24a5 5 0 0 1-5-5z" fill="#140D07"/><path d="M17 21a7 7 0 0 1 11-5.5 7 7 0 0 1 12 2.5 5.5 5.5 0 0 1 2 7H17z" fill="#FFF6E3"/><path d="M41 28h4a5 5 0 0 1 5 5v6a5 5 0 0 1-5 5h-4" stroke="#140D07" stroke-width="4" fill="none"/><path d="M26 30v14M33 30v14" stroke="#F5B301" stroke-width="3" stroke-linecap="round"/></svg></div>
     <div class="brand" id="brandName">Beer <b>Express</b></div>
     <div class="slog" id="brandSlogan">Chopp gelado, do seu jeito</div>
     <div class="chips" id="idleChips"></div>
@@ -246,12 +358,12 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
 
 <!-- IDADE -->
 <section class="scr" id="age">
-  <div class="warn">⚠️ ATENÇÃO</div>
+  <div class="warn"><span class="b">18+</span>Só para maiores de idade</div>
   <div class="termos" id="termos">Para prosseguir com a compra de chope você deve concordar com os termos de uso e que tem mais de 18 anos.</div>
   <div style="display:grid;gap:10px">
-    <button class="btn" onclick="ageYes()">✓ SIM, CONCORDO</button>
-    <button class="btn help" id="ajudaBtn" onclick="ajuda()">? PRECISO DE AJUDA</button>
-    <button class="btn" onclick="toIdle()">✕ CANCELAR</button>
+    <button class="btn yes" onclick="ageYes()">Sim, concordo</button>
+    <button class="btn" onclick="toIdle()">Cancelar</button>
+    <button class="btn help" id="ajudaBtn" onclick="ajuda()">Preciso de ajuda</button>
   </div>
 </section>
 
@@ -301,7 +413,7 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
 <section class="scr" id="tamanho">
   <div class="top"><button class="back" onclick="voltarTamanho()">‹</button><h2 id="tmTit">Comprar</h2></div>
   <div class="opts grow" id="tmOpts"></div>
-  <button class="btn pri" id="tmOk" onclick="track('quantidade');go('qtd');renderQtd()">✓ CONFIRMAR</button>
+  <button class="btn pri" id="tmOk" onclick="track('quantidade');go('qtd');renderQtd()">Confirmar</button>
 </section>
 
 <!-- QUANTIDADE + CUPOM + RESUMO -->
@@ -316,7 +428,7 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
     <div class="lin"><span>Cupom</span><span class="dsc" id="rDesc">R$ 0,00</span></div>
     <div class="lin tt"><span>Total</span><span id="rTot"></span></div></div>
   <div class="grow"></div>
-  <button class="btn pri" onclick="confirmaQtd()">✓ CONFIRMAR</button>
+  <button class="btn pri" onclick="confirmaQtd()">Confirmar</button>
 </section>
 
 <!-- FORMA DE PAGAMENTO -->
@@ -348,7 +460,7 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
     <p class="mut" style="margin-top:14px;font-size:13px">Aguardando confirmação do pagamento…</p>
     <div class="spin" style="width:32px;height:32px;border-width:4px"></div>
   </div>
-  <button class="btn sec" id="pixSim" style="display:none" onclick="simPixOk()">[Teste] Simular Pix pago</button>
+  <button class="btn sec" id="pixSim" style="display:none" onclick="simPixOk()">🧪 Simulação: Pix pago</button>
 </section>
 
 <!-- SERVINDO -->
@@ -361,7 +473,8 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
   <div class="bar"><i id="svBar"></i></div>
   <p class="mut c" id="svMl"></p>
   <div class="grow"></div>
-  <button class="btn pri" id="svBtn" style="display:none" onclick="serveNow()">🍺 Servir agora</button>
+  <button class="btn pri" id="svBtn" style="display:none" onclick="serveNow()">Servir agora</button>
+  <button class="btn sec svSim" id="svSim" style="display:none" onclick="simPuxar()">🧪 Simulação: abrir a torneira</button>
 </section>
 
 <!-- RECARGA -->
@@ -411,7 +524,7 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
 <!-- FIM -->
 <section class="scr" id="fim">
   <div class="grow c" style="display:flex;flex-direction:column;justify-content:center">
-    <div class="okic" style="margin:6px auto 10px">✓</div>
+    <div class="okic" style="margin:6px auto 14px"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
     <h2 style="font-size:28px">Saúde! 🍻</h2>
     <p class="mut" id="fimMsg" style="margin-top:6px;font-size:15px;line-height:1.4"></p>
     <div id="rateBox">
@@ -421,7 +534,7 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
       <p class="mut" id="rateOk" style="display:none;margin-top:8px">Obrigado pela avaliação! 💛</p>
     </div>
   </div>
-  <button class="btn pri" id="maisUm" onclick="maisUm()">🍺 Pedir mais um</button>
+  <button class="btn pri" id="maisUm" onclick="maisUm()">Pedir mais um</button>
   <button class="btn sec" style="margin-top:8px" onclick="toIdle()">Concluir</button>
 </section>
 
@@ -595,9 +708,11 @@ function pickSize(j){ S.sel.offer = S.sel.tap.ofertas[j] || null; [...$('tmOpts'
 function voltarTamanho(){ if (S.cfg.tap_id) return toIdle();
   $('hello').innerHTML = S.ver && S.ver.nome ? `👋 Olá, <b>${esc(S.ver.nome)}</b>!` : '👋 Escolha seu chopp'; renderMenu(); go('menu'); }
 
-function botoesPagamento(ms, excluir){ const lbl = {credito:['💳','CRÉDITO'], debito:['💳','DÉBITO'], pix:['⚡','PIX']};
+const ICP = {cartao:'<svg class="ic" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M3 10h18M7 15h4"/></svg>',
+  pix:'<svg class="ic" viewBox="0 0 24 24"><path d="M12 3l4.5 4.5L12 12 7.5 7.5zM12 12l4.5 4.5L12 21l-4.5-4.5zM3 12l4.5-4.5L12 12l-4.5 4.5zM12 12l4.5-4.5L21 12l-4.5 4.5z"/></svg>'};
+function botoesPagamento(ms, excluir){ const lbl = {credito:[ICP.cartao,'Crédito','Aproxime ou insira o cartão'], debito:[ICP.cartao,'Débito','Aproxime ou insira o cartão'], pix:[ICP.pix,'Pix','Pague pelo app do banco']};
   return [...ms].filter(m=>m!==excluir).sort((a,b)=>(b==='pix')-(a==='pix'))   // Pix primeiro: mais rápido e taxa menor
-    .map(m=>`<button class="pay" onclick="pagar('${m}')"><i>${lbl[m][0]}</i>${lbl[m][1]}${m==='pix'?'<span class="tag fast">MAIS RÁPIDO</span>':''}</button>`).join(''); }
+    .map(m=>`<button class="pay" onclick="pagar('${m}')"><i>${lbl[m][0]}</i><span style="text-align:left">${lbl[m][1]}<span class="sub">${lbl[m][2]}</span></span>${m==='pix'?'<span class="tag fast">MAIS RÁPIDO</span>':''}</button>`).join(''); }
 
 /* Quantidade + cupom + resumo */
 function maxCopos(){ const o=S.sel.offer; return Math.max(1, Math.min(S.cfg.limite_copos_pedido||4, Math.floor((S.ver?.restante_ml_dia ?? 99999)/o.volume_ml))); }
@@ -648,7 +763,8 @@ window.__payResult = async function(json){
 };
 function showPix(){ const p=S.order.pix;
   if (p.qr_base64) { $('pixImg').style.display='block'; $('pixImg').src = 'data:image/png;base64,'+p.qr_base64; $('pixTxt').style.display='none'; }
-  else { $('pixImg').style.display='none'; $('pixTxt').style.display='block'; $('pixTxt').textContent = p.simulado ? 'QR Code de teste (modo simulado)' : p.copia_cola; }
+  else if (p.simulado) { $('pixTxt').style.display='none'; $('pixImg').style.display='block'; $('pixImg').src = qrFalso(); }
+  else { $('pixImg').style.display='none'; $('pixTxt').style.display='block'; $('pixTxt').textContent = p.copia_cola; }
   $('pixValor').textContent = brl(S.order.total); $('pixSim').style.display = p.simulado ? 'flex' : 'none'; go('pix');
   let fim = Date.now() + (p.expira_min||5)*60000; clearInterval(S.pixT);
   S.pixT = setInterval(async () => { const s=Math.max(0,Math.round((fim-Date.now())/1000)); $('pixTimer').textContent = String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
@@ -703,9 +819,18 @@ async function pollServe(){
   if (cur.status==='pendente') { $('svSub').textContent = 'Preparando a chopeira…'; btn.style.display='none'; }
   else if (cur.status==='armado' && cur.start_mode==='pos') { $('svSub').textContent = 'Coloque o copo inclinado sob a torneira indicada e toque em SERVIR.'; btn.style.display='flex'; }
   else if (cur.status==='armado') { $('svSub').textContent = 'Coloque o copo inclinado sob a torneira e aperte o botão iluminado.'; btn.style.display='none'; }
-  else if (cur.start_mode==='auto' && cur.status!=='servindo') { $('svSub').innerHTML = '<span class="tilt">🍺</span><br>✅ Torneira liberada! Incline o copo a 45° e puxe a alavanca.'; btn.style.display='none'; }
+  else if (cur.start_mode==='auto' && cur.status!=='servindo') { $('svSub').innerHTML = '<b style="color:#6CE3A4">Torneira liberada!</b><br>Incline o copo a 45° e puxe a alavanca.'; btn.style.display='none'; }
   else { $('svSub').textContent = cur.status==='liberado' ? 'Liberando…' : 'Servindo… a torneira para sozinha no volume certo.'; btn.style.display='none'; }
+  // Dentro do simulador: atalho para "puxar a alavanca" sem sair desta tela (no celular a chopeira fica em outra aba)
+  S.simCanal = cur.canal; let sim = false; try { sim = window.parent !== window && typeof parent.torneiraLiberada === 'function' && parent.torneiraLiberada(cur.canal); } catch(e){}
+  $('svSim').style.display = sim ? 'flex' : 'none';
 }
+/* QR de mentira para o modo simulado (só ilustra; não é um Pix de verdade) */
+function qrFalso(){ const n=25, c=[]; let x=7; const r=()=>(x=(x*16807)%2147483647)/2147483647;
+  const fin=(a,b)=>`<rect x="${a}" y="${b}" width="7" height="7" fill="#111"/><rect x="${a+1}" y="${b+1}" width="5" height="5" fill="#fff"/><rect x="${a+2}" y="${b+2}" width="3" height="3" fill="#111"/>`;
+  for (let i=0;i<n;i++) for (let j=0;j<n;j++){ if ((i<8&&j<8)||(i<8&&j>n-9)||(i>n-9&&j<8)) continue; if (r()>.52) c.push(`<rect x="${j}" y="${i}" width="1" height="1" fill="#111"/>`); }
+  return 'data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="-1 -1 27 27" shape-rendering="crispEdges"><rect x="-1" y="-1" width="27" height="27" fill="#fff"/>${c.join('')}${fin(0,0)}${fin(n-7,0)}${fin(0,n-7)}</svg>`); }
+function simPuxar(){ try { parent.puxarAuto(S.simCanal); } catch(e){} }
 async function serveNow(){ const st = await api('pos/order_status&ref=' + S.order.ref).catch(()=>null); const cur = st && st.copos.find(c=>c.status==='armado');
   if (cur) { $('svBtn').style.display='none'; await api('pos/serve', {dispense_id:cur.id}).catch(e=>toast(e.mensagem)); } }
 function finish(st){
