@@ -62,7 +62,7 @@ if [ -n "${BE_DB_NAME:-}" ] || [ -n "${BE_DB_PASS:-}" ] || [ -n "${BE_URL:-}" ];
 fi
 echo "→ banco: cria tabelas na 1ª vez e aplica migrations/ pendentes"
 if ! $SSH "$HOSTINGER_SSH" "cd '$HOSTINGER_PATH' && php api.php migrate"; then
-  echo "::error::Falha ao preparar o banco — confira BE_DB_NAME/BE_DB_USER/BE_DB_PASS (o banco precisa existir no hPanel)"
+  echo "::error::Banco não preparado — veja a linha 'ERRO no banco' acima. Os arquivos já foram enviados; ao corrigir, rode o deploy de novo."
   exit 1
 fi
 $SSH "$HOSTINGER_SSH" "echo '$(git rev-parse --short HEAD 2>/dev/null || echo manual) $(date -Iseconds)' > '$HOSTINGER_PATH/.be_versao'"

@@ -1096,7 +1096,13 @@ if (PHP_SAPI === 'cli') {
     $cmd = $argv[1] ?? '';
     if ($cmd === 'migrate') {
         try { $f = be_migrate(); echo $f ? 'aplicado: ' . implode(', ', $f) . "\n" : "banco em dia\n"; exit(0); }
-        catch (Throwable $e) { fwrite(STDERR, 'ERRO migrate: ' . $e->getMessage() . "\n"); exit(1); }
+        catch (Throwable $e) {
+            $m = $e->getMessage();
+            $dica = str_contains($m, '1049') || stripos($m, 'Unknown database') !== false ? "o banco '" . BE_DB_NAME . "' não existe — crie no hPanel → Bancos de dados MySQL"
+                : (str_contains($m, '1045') || stripos($m, 'Access denied') !== false ? "usuário/senha do banco recusados — confira BE_DB_USER e BE_DB_PASS (e se o usuário foi ligado ao banco no hPanel)"
+                : (BE_DB_NAME === '' ? 'BE_DB_NAME vazio — cadastre os segredos BE_DB_* no GitHub' : $m));
+            fwrite(STDERR, "ERRO no banco: $dica\n"); exit(1);
+        }
     }
     if ($cmd === 'health') {
         $h = be_health();
