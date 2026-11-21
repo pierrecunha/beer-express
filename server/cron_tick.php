@@ -42,6 +42,18 @@ foreach (rows("SELECT d.*, l.nome loc FROM be_devices d JOIN be_locations l ON l
         ($d['porta_aberta'] ? ' Porta ABERTA.' : ''), ['device_id' => $d['id'], 'location_id' => $d['location_id']], true);
 }
 
+/* 3b) Limpeza da linha vencida e chopp aberto além da validade (avisa 1x por dia por torneira) */
+foreach (rows("SELECT t.*, d.location_id, l.nome loc, p.nome produto FROM be_taps t JOIN be_devices d ON d.id = t.device_id JOIN be_locations l ON l.id = d.location_id
+               LEFT JOIN be_products p ON p.id = t.product_id WHERE t.ativo = 1 AND d.ativo = 1") as $t) {
+    $c = cuidados_tap($t); $nome = $t['produto'] ?: $t['nome'];
+    foreach ([['limpeza', $c['limpeza_restam'], "🧽 Hora de limpar a linha de {$nome} ({$t['nome']}, {$t['loc']}): a última limpeza foi há mais de {$t['limpeza_dias']} dias. Depois de limpar, toque em \"Limpeza feita\" no painel."],
+              ['validade_barril', $c['validade_restam'], "📅 O barril de {$nome} ({$t['nome']}, {$t['loc']}) está aberto há mais de {$t['validade_dias']} dias. Confira a qualidade ou troque o barril."]] as [$tipo, $restam, $msg]) {
+        if ($restam === null || $restam > 0) continue;
+        $ja = val("SELECT id FROM be_events WHERE tipo = ? AND msg LIKE ? AND created_at >= NOW() - INTERVAL 24 HOUR", [$tipo, '%' . $t['nome'] . '%' . $t['loc'] . '%']);
+        if (!$ja) log_event('aviso', $tipo, $msg, ['device_id' => $t['device_id'], 'location_id' => $t['location_id']], true);
+    }
+}
+
 /* 4) Copos armados sem retirada (ESP32 travou/reiniciou sem reportar) */
 foreach (rows("SELECT ds.*, d.arm_timeout_s FROM be_dispenses ds JOIN be_devices d ON d.id = ds.device_id
                WHERE ds.status IN ('armado','liberado') AND ds.armado_em < NOW() - INTERVAL (d.arm_timeout_s + 90) SECOND") as $ds) {

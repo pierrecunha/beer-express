@@ -138,6 +138,11 @@ CREATE TABLE IF NOT EXISTS be_taps (
   alerta_pct TINYINT NOT NULL DEFAULT 15,
   alerta_enviado TINYINT(1) NOT NULL DEFAULT 0,
   ativo TINYINT(1) NOT NULL DEFAULT 1,
+  custo_barril DECIMAL(10,2) NULL,         -- quanto custou o barril (dá a margem por copo)
+  barril_aberto_em DATETIME NULL,          -- quando o barril atual foi colocado
+  validade_dias SMALLINT NOT NULL DEFAULT 30,   -- dias que o chopp dura depois de aberto
+  limpeza_em DATETIME NULL,                -- última limpeza da linha
+  limpeza_dias SMALLINT NOT NULL DEFAULT 14,    -- de quantos em quantos dias limpar
   UNIQUE KEY uq_dev_canal (device_id, canal)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 

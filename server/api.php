@@ -16,7 +16,7 @@
  *     admin/needs_setup  admin/setup  admin/login  admin/me  admin/dashboard
  *     admin/orders  admin/order  admin/order_refund  admin/dispense_retry
  *     admin/manual_release  admin/customers  admin/customer_block
- *     admin/catalog  admin/save  admin/keg_change  admin/calibrate
+ *     admin/catalog  admin/save  admin/keg_change  admin/limpeza_feita  admin/relatorio  admin/calibrate
  *     admin/events  admin/settings  admin/settings_save  admin/telegram_test
  *     admin/telemetry  admin/password  admin/bebidas  admin/bebida_salvar  admin/bebida_trocar
  *     admin/torneira_remover  admin/usuarios  admin/usuario_salvar
@@ -1200,8 +1200,10 @@ function r_admin_dashboard(): array {
     foreach ($devices as &$d) $d['online'] = device_online($d);
     $terms = rows('SELECT t.id, t.nome, t.last_seen, t.provider, t.bloqueado_ate, l.nome loc FROM be_terminals t JOIN be_locations l ON l.id = t.location_id WHERE t.ativo = 1' . $Lt);
     foreach ($terms as &$t) $t['online'] = device_online($t);
-    $barris = rows('SELECT t.id, t.nome, t.restante_ml, t.barril_ml, t.alerta_pct, p.nome produto, l.nome loc FROM be_taps t JOIN be_devices d ON d.id = t.device_id
+    $barris = rows('SELECT t.id, t.nome, t.restante_ml, t.barril_ml, t.alerta_pct, t.limpeza_em, t.limpeza_dias, t.barril_aberto_em, t.validade_dias, p.nome produto, l.nome loc FROM be_taps t JOIN be_devices d ON d.id = t.device_id
         JOIN be_locations l ON l.id = d.location_id LEFT JOIN be_products p ON p.id = t.product_id WHERE t.ativo = 1' . $Ld . ' ORDER BY l.id, t.canal');
+    foreach ($barris as &$b) { $b += cuidados_tap($b); $b['previsao_dias'] = previsao_barril((int)$b['id'], (int)$b['restante_ml']); }
+    unset($b);
     $alertas = rows("SELECT id, nivel, tipo, msg, created_at FROM be_events WHERE nivel <> 'info'" . so_meus_eventos() . " ORDER BY id DESC LIMIT 8");
     $problemas = rows("SELECT id, ref, status, total, created_at FROM be_orders WHERE status IN ('parcial','falhou')$L AND created_at >= CURDATE() - INTERVAL 7 DAY ORDER BY id DESC LIMIT 10");
     $menores = (int)val("SELECT COUNT(*) FROM be_verifications WHERE motivo = 'menor_idade'$Lterm AND created_at >= CURDATE()");
@@ -1399,7 +1401,7 @@ function r_admin_save(array $u): array {
     } else {
         if ($ent === 'devices') $vals['device_key'] = rand_token(16);
         if ($ent === 'terminais') $vals['codigo'] = strtoupper(substr(bin2hex(random_bytes(4)), 0, 6));
-        if ($ent === 'torneiras') $vals['restante_ml'] = (int)($vals['barril_ml'] ?? 50000);
+        if ($ent === 'torneiras') { $vals['restante_ml'] = (int)($vals['barril_ml'] ?? 50000); $vals['barril_aberto_em'] = date('Y-m-d H:i:s'); $vals['limpeza_em'] = date('Y-m-d H:i:s'); }
         q("INSERT INTO $tab (" . implode(', ', array_keys($vals)) . ") VALUES (" . implode(', ', array_fill(0, count($vals), '?')) . ")", array_values($vals));
         $id = (int)db()->lastInsertId();
     }
@@ -1410,7 +1412,7 @@ function r_admin_keg_change(array $u): array {
     if (!$t) fail('tap', 'Torneira não encontrada');
     exige_ponto(ponto_da_torneira((int)$t['id']));
     $ml = (int)arg('barril_ml', $t['barril_ml']);
-    q('UPDATE be_taps SET barril_ml = ?, restante_ml = ?, alerta_enviado = 0, product_id = COALESCE(?, product_id) WHERE id = ?', [$ml, $ml, arg('product_id') ?: null, $t['id']]);
+    q('UPDATE be_taps SET barril_ml = ?, restante_ml = ?, alerta_enviado = 0, barril_aberto_em = NOW(), product_id = COALESCE(?, product_id) WHERE id = ?', [$ml, $ml, arg('product_id') ?: null, $t['id']]);
     log_event('info', 'troca_barril', "🛢️ Barril trocado em {$t['nome']}: " . ml_fmt($ml) . " por {$u['nome']}", ['device_id' => $t['device_id']], true);
     return ['ok' => true];
 }
@@ -1593,6 +1595,7 @@ function r_admin_bebidas(array $u): array {
         $out[] = ['id' => (int)$t['id'], 'nome' => $t['nome'], 'canal' => (int)$t['canal'], 'ativo' => (int)$t['ativo'], 'location_id' => (int)$t['location_id'], 'loc' => $t['loc'],
             'device_id' => (int)$t['device_id'], 'device_nome' => $t['device_nome'], 'online' => $t['dev_ativo'] && device_online($t),
             'barril_ml' => (int)$t['barril_ml'], 'restante_ml' => (int)$t['restante_ml'], 'alerta_pct' => (int)$t['alerta_pct'], 'produto' => $p,
+            'custo_barril' => $t['custo_barril'] === null ? null : (float)$t['custo_barril'], 'cuidados' => cuidados_tap($t),
             'ofertas' => array_map(fn($o) => ['id' => (int)$o['id'], 'volume_ml' => (int)$o['volume_ml'], 'preco' => (float)$o['preco'], 'ativo' => (int)$o['ativo'], 'vendas' => (int)$o['vendas']], $ofs),
             'vendidos_hoje' => (int)val("SELECT COALESCE(SUM(i.qtd),0) FROM be_order_items i JOIN be_orders o ON o.id = i.order_id WHERE i.tap_id = ? AND o.status IN ('pago','servindo','concluido','parcial') AND o.created_at >= CURDATE()", [$t['id']])];
     }
@@ -1603,6 +1606,58 @@ function r_admin_bebidas(array $u): array {
         'pontos' => rows('SELECT id, nome FROM be_locations WHERE ativo = 1' . so_meus('id') . ' ORDER BY nome'),
         'biblioteca' => rows('SELECT id, nome, cervejaria, estilo, descricao, abv, ibu, imagem_url, cor, ativo FROM be_products WHERE 1=1' . produtos_visiveis() . ' ORDER BY ativo DESC, nome'),
         'happy_hour' => happy_hour()];
+}
+
+
+/** Situação de limpeza da linha e validade do barril aberto (dias restantes; negativo = vencido). */
+function cuidados_tap(array $t): array {
+    $dia = 86400; $agora = time();
+    $lim = $t['limpeza_em'] ? (int)ceil((strtotime((string)$t['limpeza_em']) + (int)$t['limpeza_dias'] * $dia - $agora) / $dia) : null;
+    $val = $t['barril_aberto_em'] ? (int)ceil((strtotime((string)$t['barril_aberto_em']) + (int)$t['validade_dias'] * $dia - $agora) / $dia) : null;
+    return ['limpeza_dias' => (int)$t['limpeza_dias'], 'limpeza_em' => $t['limpeza_em'], 'limpeza_restam' => $lim,
+            'validade_dias' => (int)$t['validade_dias'], 'barril_aberto_em' => $t['barril_aberto_em'], 'validade_restam' => $val];
+}
+/** Quantos dias o barril aguenta no ritmo dos últimos 7 dias (null = sem consumo para estimar). */
+function previsao_barril(int $tapId, int $restante): ?float {
+    $ml = (int)val("SELECT COALESCE(SUM(servido_ml),0) FROM be_dispenses WHERE tap_id = ? AND servido_ml > 0 AND COALESCE(inicio_em, created_at) >= NOW() - INTERVAL 7 DAY", [$tapId])
+        + (int)val("SELECT COALESCE(SUM(servido_ml),0) FROM be_pours WHERE tap_id = ? AND servido_ml > 0 AND inicio_em >= NOW() - INTERVAL 7 DAY", [$tapId]);
+    return $ml > 0 ? round($restante / ($ml / 7), 1) : null;
+}
+/** "Limpei a linha": zera o contador de limpeza da torneira. */
+function r_admin_limpeza_feita(array $u): array {
+    $t = row('SELECT * FROM be_taps WHERE id = ?', [(int)arg('tap_id')]);
+    if (!$t) fail('tap', 'Torneira não encontrada', 404);
+    exige_ponto(ponto_da_torneira((int)$t['id']));
+    q('UPDATE be_taps SET limpeza_em = NOW() WHERE id = ?', [$t['id']]);
+    log_event('info', 'limpeza', "🧽 Limpeza da linha registrada em {$t['nome']} por {$u['nome']}", ['device_id' => $t['device_id'], 'location_id' => ponto_da_torneira((int)$t['id'])]);
+    return ['ok' => true];
+}
+/** Relatório do período: por bebida (com custo e margem), por dia da semana e por hora, por ponto. */
+function r_admin_relatorio(array $u): array {
+    $de = preg_match('/^\d{4}-\d\d-\d\d$/', (string)arg('de')) ? arg('de') : date('Y-m-d', strtotime('-29 days'));
+    $ate = preg_match('/^\d{4}-\d\d-\d\d$/', (string)arg('ate')) ? arg('ate') : date('Y-m-d');
+    if ($f = (int)arg('location_id')) { exige_ponto($f); $GLOBALS['BE_FILTRO'] = $f; }
+    $Lo = so_meus('o.location_id'); $pagos = "o.status IN ('pago','servindo','concluido','parcial') AND o.tipo = 'copo'";
+    $per = "o.created_at >= ? AND o.created_at <= ?"; $pp = [$de . ' 00:00:00', $ate . ' 23:59:59'];
+    $prods = rows("SELECT i.produto, SUM(i.qtd) copos, SUM(i.qtd * i.volume_ml) ml, SUM(i.qtd * i.preco_unit * CASE WHEN o.subtotal > 0 THEN o.total / o.subtotal ELSE 1 END) receita,   -- já com o desconto do cupom
+            SUM(i.qtd * i.volume_ml * COALESCE(t.custo_barril / NULLIF(t.barril_ml, 0), 0)) custo, SUM(t.custo_barril IS NULL) sem_custo
+        FROM be_order_items i JOIN be_orders o ON o.id = i.order_id LEFT JOIN be_taps t ON t.id = i.tap_id
+        WHERE $pagos$Lo AND $per GROUP BY i.produto ORDER BY receita DESC", $pp);
+    foreach ($prods as &$p) { $p['copos'] = (int)$p['copos']; $p['ml'] = (int)$p['ml']; $p['receita'] = round((float)$p['receita'], 2);
+        $p['custo'] = $p['sem_custo'] ? null : round((float)$p['custo'], 2); $p['margem'] = $p['custo'] === null ? null : round($p['receita'] - $p['custo'], 2); unset($p['sem_custo']); }
+    unset($p);
+    $tot = row("SELECT COUNT(*) pedidos, COALESCE(SUM(o.total),0) receita, COALESCE(SUM(o.total_ml),0) ml FROM be_orders o WHERE $pagos$Lo AND $per", $pp);
+    $sem = rows("SELECT WEEKDAY(o.created_at) d, COUNT(*) n, SUM(o.total) s FROM be_orders o WHERE $pagos$Lo AND $per GROUP BY WEEKDAY(o.created_at) ORDER BY d", $pp);
+    $hor = rows("SELECT HOUR(o.created_at) h, COUNT(*) n, SUM(o.total) s FROM be_orders o WHERE $pagos$Lo AND $per GROUP BY HOUR(o.created_at) ORDER BY h", $pp);
+    $pts = rows("SELECT l.nome ponto, COUNT(*) pedidos, SUM(o.total) receita FROM be_orders o JOIN be_locations l ON l.id = o.location_id WHERE $pagos$Lo AND $per GROUP BY l.id ORDER BY receita DESC", $pp);
+    $pagto = rows("SELECT COALESCE(o.metodo,'—') metodo, COUNT(*) n, SUM(o.total) s FROM be_orders o WHERE $pagos$Lo AND $per GROUP BY o.metodo ORDER BY s DESC", $pp);
+    $receita = (float)$tot['receita']; $pedidos = (int)$tot['pedidos'];
+    $custoTot = array_sum(array_map(fn($p) => (float)($p['custo'] ?? 0), $prods));
+    $comCusto = array_sum(array_map(fn($p) => $p['custo'] === null ? 0 : $p['receita'], $prods));
+    return ['ok' => true, 'de' => $de, 'ate' => $ate, 'pedidos' => $pedidos, 'receita' => round($receita, 2), 'ml' => (int)$tot['ml'],
+        'ticket' => $pedidos ? round($receita / $pedidos, 2) : 0, 'custo' => round($custoTot, 2), 'margem' => round($comCusto - $custoTot, 2),
+        'custo_completo' => !array_filter($prods, fn($p) => $p['custo'] === null),
+        'produtos' => $prods, 'semana' => $sem, 'horas' => $hor, 'pontos' => $pts, 'pagamentos' => $pagto];
 }
 
 /** Salva de uma vez a torneira, a bebida dela (nome, foto, tipo, teor…), os tamanhos/preços e o barril. */
@@ -1643,6 +1698,10 @@ function r_admin_bebida_salvar(array $u): array {
     usort($lista, fn($a, $b) => $a['volume_ml'] <=> $b['volume_ml']);
     $barril = arg('barril_ml') !== null ? max(1000, min(100000, (int)arg('barril_ml'))) : null;
     $foto = (string)arg('foto', '');
+    $cuidados = [];   // custo, validade e limpeza (só entram se vierem na chamada)
+    if (arg('custo_barril') !== null) $cuidados['custo_barril'] = trim((string)arg('custo_barril')) === '' ? null : max(0, min(99999, round((float)str_replace(',', '.', (string)arg('custo_barril')), 2)));
+    if (arg('validade_dias') !== null) $cuidados['validade_dias'] = max(1, min(365, (int)arg('validade_dias')));
+    if (arg('limpeza_dias') !== null) $cuidados['limpeza_dias'] = max(1, min(90, (int)arg('limpeza_dias')));
 
     db()->beginTransaction();
     try {
@@ -1662,13 +1721,15 @@ function r_admin_bebida_salvar(array $u): array {
         if ($tap) {
             $set = ['product_id' => $pid, 'ativo' => arg('ativo') === null ? (int)$tap['ativo'] : (int)!empty(arg('ativo'))];
             if (trim((string)arg('nome_torneira', '')) !== '') $set['nome'] = trim(mb_substr((string)arg('nome_torneira'), 0, 60));
-            if ($barril) { $set['barril_ml'] = $barril; if (arg('trocou_barril')) { $set['restante_ml'] = $barril; $set['alerta_enviado'] = 0; } }
+            if ($barril) { $set['barril_ml'] = $barril; if (arg('trocou_barril')) { $set['restante_ml'] = $barril; $set['alerta_enviado'] = 0; $set['barril_aberto_em'] = date('Y-m-d H:i:s'); } }
+            $set += $cuidados;
             q('UPDATE be_taps SET ' . implode(', ', array_map(fn($c) => "$c = ?", array_keys($set))) . ' WHERE id = ?', [...array_values($set), $tapId]);
         } else {
             $b = $barril ?: 30000;
-            q('INSERT INTO be_taps (device_id, canal, nome, product_id, barril_ml, restante_ml, ativo) VALUES (?,?,?,?,?,?,?)',
+            q('INSERT INTO be_taps (device_id, canal, nome, product_id, barril_ml, restante_ml, ativo, barril_aberto_em, limpeza_em) VALUES (?,?,?,?,?,?,?,NOW(),NOW())',
                 [(int)arg('device_id'), (int)arg('canal'), trim(mb_substr((string)arg('nome_torneira', ''), 0, 60)) ?: 'Torneira ' . (int)arg('canal'), $pid, $b, $b, arg('ativo') === null ? 1 : (int)!empty(arg('ativo'))]);
             $tapId = (int)db()->lastInsertId();
+            if ($cuidados) q('UPDATE be_taps SET ' . implode(', ', array_map(fn($c) => "$c = ?", array_keys($cuidados))) . ' WHERE id = ?', [...array_values($cuidados), $tapId]);
         }
         // Tamanhos: atualiza, cria, e o que saiu é apagado (ou só desativado, se já teve venda)
         $exist = array_column(rows('SELECT id FROM be_offers WHERE tap_id = ?', [$tapId]), 'id');

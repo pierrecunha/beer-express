@@ -367,6 +367,10 @@ PG.bebidas=async function(){
    ${podeCriar?`<button class="fab" onclick="editar(0)">${ic('plus')} Nova torneira</button>`:''}`;
 };
 function fotoHtml(p,w){return p&&p.imagem_url?`<img src="${esc(p.imagem_url)}" alt="" loading="lazy">`:`<div class="cup" style="--c:${esc(p?.cor||'#F5B301')}${w?`;width:${w}px;height:${Math.round(w*1.28)}px`:''}"></div>`}
+function cuidadoChip(t){const c=t.cuidados||{},o=[];
+  if(c.limpeza_restam!==null&&c.limpeza_restam!==undefined&&c.limpeza_restam<=2)o.push(c.limpeza_restam<=0?'🧽 Limpeza atrasada':'🧽 Limpar em '+c.limpeza_restam+' d');
+  if(c.validade_restam!==null&&c.validade_restam!==undefined&&c.validade_restam<=3)o.push(c.validade_restam<=0?'📅 Barril vencido':'📅 Vence em '+c.validade_restam+' d');
+  return o.length?`<div class="s" style="margin-top:6px;color:var(--warn);font-weight:700">${o.join(' • ')}</div>`:''}
 function tapCard(t){const p=t.produto, pct=t.barril_ml?Math.round(100*t.restante_ml/t.barril_ml):0, ofs=t.ofertas.filter(o=>+o.ativo);
   return `<button class="tapc ${+t.ativo&&p&&+p.ativo?'':'off'}" onclick="editar(${t.id})">
    <div class="ft">${fotoHtml(p)}<span class="num">${String(t.canal).padStart(2,'0')}</span></div>
@@ -374,6 +378,7 @@ function tapCard(t){const p=t.produto, pct=t.barril_ml?Math.round(100*t.restante
     <div class="s">${esc(t.nome)} • ${p?esc([p.estilo,p.abv!==null&&p.abv!==undefined?num(+p.abv)+'%':''].filter(Boolean).join(' • ')||'complete os dados'):'toque para escolher'}</div>
     <div class="szs">${ofs.map(o=>`<span>${mlf(o.volume_ml)} • ${brl(o.preco)}</span>`).join('')||'<span style="color:var(--bad)">sem preço</span>'}</div>
     <div class="kg"><span class="dot ${t.online?'':'off'}"></span><div class="meter"><i class="${pct<=t.alerta_pct?'low':pct<35?'mid':''}" style="width:${pct}%"></i></div>${mlf(t.restante_ml)}</div>
+    ${cuidadoChip(t)}
     ${!+t.ativo?'<div class="s" style="margin-top:6px;color:var(--warn);font-weight:700">Escondida da maquininha</div>':t.vendidos_hoje?`<div class="s" style="margin-top:6px">🔥 ${t.vendidos_hoje} copo${t.vendidos_hoje>1?'s':''} hoje</div>`:''}
    </div><span class="ed">${ic('edit')}</span></button>`}
 
@@ -383,11 +388,14 @@ function editar(tapId){
   const devs=BEB.controladores.filter(d=>(!PONTO||d.location_id==PONTO)&&d.canais_usados.length<(d.tipo==='torneira'?1:4));
   const p=t&&t.produto?t.produto:{id:0,nome:'',cervejaria:'',estilo:'',descricao:'',abv:'',ibu:'',cor:'#F2B705',imagem_url:'',ativo:1};
   E={tap:t, prod:{...p, abv:p.abv??'', ibu:p.ibu??''}, ofertas:t?t.ofertas.filter(o=>+o.ativo).map(o=>({...o})):[{id:0,volume_ml:300,preco:''},{id:0,volume_ml:500,preco:''}],
-     foto:null, remover:false, ativo:t?+t.ativo:1, barril:t?t.barril_ml:30000, trocou:false, device_id:devs[0]?.id||0, canal:0};
+     foto:null, remover:false, ativo:t?+t.ativo:1, barril:t?t.barril_ml:30000, trocou:false, custo:t&&t.custo_barril!==null?String(t.custo_barril).replace('.',','):'', validade:t?t.cuidados.validade_dias:30, limpeza:t?t.cuidados.limpeza_dias:14, device_id:devs[0]?.id||0, canal:0};
   if(!t&&!devs.length)return toast('Todas as chopeiras deste ponto já têm torneiras cadastradas',true);
   if(!t)E.canal=canalLivre(E.device_id);
   renderEditor();
 }
+function cuidadoTxt(t){const c=t.cuidados,f=(n,a,b)=>n===null||n===undefined?'':n<=0?`${a}: <b style="color:var(--bad)">vencido</b>`:`${a}: faltam ${n} dia${n>1?'s':''}`;
+  return [f(c.limpeza_restam,'Limpeza'),f(c.validade_restam,'Validade do barril')].filter(Boolean).join(' • ')}
+async function limpezaFeita(id){try{await api('admin/limpeza_feita',{tap_id:id});closeM();toast('🧽 Limpeza registrada');PG.bebidas()}catch(e){toast(e.mensagem,true)}}
 function canalLivre(did){const d=BEB.controladores.find(x=>x.id==did);if(!d)return 1;for(let c=1;c<=(d.tipo==='torneira'?1:4);c++)if(!d.canais_usados.includes(c))return c;return 1}
 function renderEditor(){
   const t=E.tap, p=E.prod, devs=BEB.controladores.filter(d=>(!PONTO||d.location_id==PONTO)&&(t||d.canais_usados.length<(d.tipo==='torneira'?1:4)));
@@ -423,6 +431,11 @@ function renderEditor(){
    <div class="field"><span>Tamanho do barril</span><div class="opts" id="barris">${[10000,20000,30000,50000].map(v=>`<button type="button" aria-pressed="${E.barril===v}" onclick="E.barril=${v};renderBarril()">${mlf(v)}</button>`).join('')}
      <button type="button" aria-pressed="${![10000,20000,30000,50000].includes(E.barril)}" onclick="const v=prompt('Tamanho do barril em litros:',E.barril/1000);if(v){E.barril=Math.round(parseFloat(v.replace(',','.'))*1000)||E.barril;renderBarril()}">Outro</button></div></div>
    ${t?`<label class="tg"><span class="grow"><b>Coloquei um barril cheio agora</b><small>Zera o contador: o painel volta a contar a partir do barril cheio.</small></span><input type="checkbox" ${E.trocou?'checked':''} onchange="E.trocou=this.checked"><i></i></label>`:''}
+   <details class="adv"><summary>💰 Custo e cuidados <small class="mut">(margem, limpeza, validade)</small></summary>
+     <label class="field"><span>Quanto custou este barril <small>(R$ — opcional, calcula sua margem)</small></span><input inputmode="decimal" value="${esc(E.custo)}" placeholder="Ex.: 480,00" oninput="E.custo=this.value"></label>
+     <div class="fgrid"><label class="field"><span>Limpar a linha a cada (dias)</span><div class="step"><button type="button" onclick="E.limpeza=Math.max(1,E.limpeza-1);$('#fLimp').value=E.limpeza">−</button><input id="fLimp" inputmode="numeric" value="${E.limpeza}" oninput="E.limpeza=+this.value||14"><button type="button" onclick="E.limpeza++;$('#fLimp').value=E.limpeza">+</button></div></label>
+      <label class="field"><span>Chopp dura aberto (dias)</span><div class="step"><button type="button" onclick="E.validade=Math.max(1,E.validade-1);$('#fVal').value=E.validade">−</button><input id="fVal" inputmode="numeric" value="${E.validade}" oninput="E.validade=+this.value||30"><button type="button" onclick="E.validade++;$('#fVal').value=E.validade">+</button></div></label></div>
+     ${t?`<div class="help mut" style="margin-bottom:8px">${cuidadoTxt(t)}</div><div class="acts" style="margin-bottom:14px"><button class="btn o sm" onclick="limpezaFeita(${t.id})">🧽 Limpeza feita agora</button></div>`:''}</details>
    <label class="tg"><span class="grow"><b>Mostrar na maquininha</b><small>Desligue para esconder esta torneira (ex.: barril acabou).</small></span><input type="checkbox" ${E.ativo?'checked':''} onchange="E.ativo=this.checked?1:0"><i></i></label>
    ${t?`<details class="adv"><summary>Mais opções</summary><label class="field"><span>Nome da torneira</span><input id="fTn" maxlength="60" value="${esc(t.nome)}"></label>
      <div class="acts" style="margin-bottom:14px"><button class="btn o sm" onclick="testar(${t.id})">🔓 Liberar teste (R$ 0)</button><button class="btn d sm" onclick="removerTorneira(${t.id})">${ic('trash')} Remover torneira</button></div></details>`:''}
@@ -474,7 +487,7 @@ async function salvarBebida(){const p=E.prod;
   for(const o of ofs){if(!(+o.volume_ml>=50))return toast('Confira o volume (ml) dos tamanhos',true);if(!(+String(o.preco).replace(',','.')>0))return toast(`Coloque o preço do copo de ${mlf(o.volume_ml)}`,true)}
   if(!ofs.length)return toast('Cadastre pelo menos um tamanho com preço',true);
   const b=$('#bSalvar');b.disabled=true;b.textContent='Salvando…';
-  try{const body={tap_id:E.tap?E.tap.id:0,device_id:E.device_id,canal:E.canal,ativo:E.ativo,barril_ml:E.barril,trocou_barril:E.trocou?1:0,
+  try{const body={tap_id:E.tap?E.tap.id:0,device_id:E.device_id,canal:E.canal,ativo:E.ativo,barril_ml:E.barril,trocou_barril:E.trocou?1:0,custo_barril:E.custo,validade_dias:E.validade,limpeza_dias:E.limpeza,
       produto:{id:p.id||0,nome:p.nome,cervejaria:p.cervejaria,estilo:(p.estilo||'').trim(),descricao:p.descricao,abv:p.abv,ibu:p.ibu,cor:p.cor,ativo:1},
       ofertas:ofs.map(o=>({id:o.id||0,volume_ml:+o.volume_ml,preco:String(o.preco).replace(',','.')})),foto:E.foto||'',remover_foto:E.remover?1:0};
     if($('#fTn'))body.nome_torneira=$('#fTn').value;
@@ -491,6 +504,8 @@ PG.dash=async function(){
   const maxH=Math.max(1,...d.horas.map(x=>+x.n));
   const off=d.devices.filter(x=>!x.online), baixos=d.barris.filter(b=>b.barril_ml&&100*b.restante_ml/b.barril_ml<=b.alerta_pct);
   const att=[...off.map(x=>`<div class="lrow"><span><span class="dot off"></span> &nbsp;<b>${esc(x.nome)}</b> offline</span><span class="mut nw">${ago(x.last_seen)}</span></div>`),
+    ...d.barris.filter(b=>b.limpeza_restam!==null&&b.limpeza_restam<=0).map(b=>`<div class="lrow"><span>🧽 Limpar a linha de <b>${esc(b.produto||b.nome)}</b></span><button class="btn o sm" onclick="limpezaFeita(${b.id}).then(()=>PG.dash())">Limpeza feita</button></div>`),
+    ...d.barris.filter(b=>b.validade_restam!==null&&b.validade_restam<=0).map(b=>`<div class="lrow"><span>📅 Barril de <b>${esc(b.produto||b.nome)}</b> passou da validade</span><span class="badc nw">${-b.validade_restam+0} d</span></div>`),
     ...baixos.map(b=>`<div class="lrow"><span>🛢️ <b>${esc(b.produto||b.nome)}</b> acabando</span><span class="badc nw">${mlf(b.restante_ml)}</span></div>`),
     ...d.problemas.map(o=>`<div class="lrow" style="cursor:pointer" onclick="pedido(${o.id})"><span>${pill(o.status)} ${o.ref}</span><span class="nw">${brl(o.total)}</span></div>`),
     ...d.alertas.filter(a=>a.nivel==='critico').slice(0,3).map(a=>`<div class="lrow"><span style="font-size:14px">${esc(a.msg)}</span><span class="mut nw">${ago(a.created_at)}</span></div>`)];
@@ -510,7 +525,7 @@ PG.dash=async function(){
   <div class="box"><div class="bars">${dias.map(x=>`<div style="height:${Math.max(1.5,100*x.s/maxD)}%" title="${x.d.slice(8)}/${x.d.slice(5,7)}: ${brl(x.s)} (${x.n})"></div>`).join('')}</div>
    <div class="row mut" style="justify-content:space-between;font-size:12px;margin-top:6px"><span>${dias[0].d.slice(8)}/${dias[0].d.slice(5,7)}</span><span>hoje</span></div></div>
   <div class="cols2" style="margin-top:12px">
-   <div class="box"><h2>🛢️ Barris</h2>${d.barris.map(b=>{const p=b.barril_ml?Math.round(100*b.restante_ml/b.barril_ml):0;return `<div style="margin-bottom:12px"><div class="row" style="justify-content:space-between;font-size:14.5px"><span><b style="color:var(--h)">${esc(b.produto||'—')}</b> <span class="mut">${esc(b.nome)}${PONTO?'':' • '+esc(b.loc)}</span></span><span class="nw ${p<=b.alerta_pct?'badc':''}">${mlf(b.restante_ml)}</span></div><div class="meter" style="margin-top:6px"><i class="${p<=b.alerta_pct?'low':p<35?'mid':''}" style="width:${p}%"></i></div></div>`}).join('')||'<p class="mut">Nenhuma torneira.</p>'}</div>
+   <div class="box"><h2>🛢️ Barris</h2>${d.barris.map(b=>{const p=b.barril_ml?Math.round(100*b.restante_ml/b.barril_ml):0;return `<div style="margin-bottom:12px"><div class="row" style="justify-content:space-between;font-size:14.5px"><span><b style="color:var(--h)">${esc(b.produto||'—')}</b> <span class="mut">${esc(b.nome)}${PONTO?'':' • '+esc(b.loc)}</span></span><span class="nw ${p<=b.alerta_pct?'badc':''}">${mlf(b.restante_ml)}</span></div>${b.previsao_dias!==null&&b.previsao_dias!==undefined?`<div class="mut" style="font-size:12.5px;margin-top:2px">dura cerca de ${b.previsao_dias<1?'menos de 1 dia':num(Math.round(b.previsao_dias))+' dia'+(Math.round(b.previsao_dias)>1?'s':'')} no ritmo da última semana</div>`:''}<div class="meter" style="margin-top:6px"><i class="${p<=b.alerta_pct?'low':p<35?'mid':''}" style="width:${p}%"></i></div></div>`}).join('')||'<p class="mut">Nenhuma torneira.</p>'}</div>
    <div class="box"><h2>🏆 Mais vendidos no mês</h2>${d.produtos.map(p=>`<div class="lrow"><span><b>${esc(p.produto)}</b><br><small class="mut">${p.copos} copos • ${mlf(p.ml)}</small></span><b class="money">${brl(p.s)}</b></div>`).join('')||'<p class="mut">Sem vendas no mês ainda.</p>'}</div>
   </div>
   <div class="cols2" style="margin-top:12px">
@@ -540,6 +555,7 @@ PG.vendas=async function(){
     $('#main').innerHTML=`<div class="ph1"><h1>Vendas</h1></div>${vtabs()}${segP}
      <div class="kpis" style="margin-bottom:12px"><div class="kpi"><div class="l">Consumo</div><div class="v">${brl(d.soma)}</div><div class="s">${d.total} servidas</div></div><div class="kpi"><div class="l">Volume</div><div class="v">${mlf(d.ml)}</div></div></div>
      ${d.servidas.map(x=>`<div class="it"><span class="ic">🎫</span><span class="grow"><span class="t">${esc(x.cliente)}</span><div class="s">${esc(x.produto||'')} • ${mlf(x.servido_ml)} • ${dt(x.inicio_em)}</div></span><span class="pr">${brl(x.valor)}</span></div>`).join('')||'<div class="empty">Nenhuma servida no período.</div>'}`;return}
+  if(VT==='rel')return relatorio(segP);
   const p=new URLSearchParams({de:VF.de,ate:VF.ate,status:VF.status,q:VF.q,page:VF.page,location_id:PONTO}).toString(), d=await api('admin/orders&'+p);
   window._ped=d.pedidos;
   $('#main').innerHTML=`<div class="ph1"><h1>Vendas</h1><button class="btn o sm" onclick="exportCsv()">⬇️ CSV</button></div>${vtabs()}${segP}
@@ -549,8 +565,25 @@ PG.vendas=async function(){
    ${d.pedidos.map(o=>`<button class="it" onclick="pedido(${o.id})"><span class="ic">${o.tipo==='recarga'?'🎫':o.metodo==='pix'?'⚡':'💳'}</span><span class="grow"><span class="t">${esc(o.cliente||'Cliente')}</span>
      <div class="s">${dt(o.created_at)} • ${mlf(o.total_ml)}${PONTO?'':' • '+esc(o.loc)}</div><div style="margin-top:4px">${pill(o.status)}</div></span><span class="pr">${brl(o.total)}</span></button>`).join('')||'<div class="box empty"><div class="e">🧾</div>Nenhuma venda no período.</div>'}
    ${d.paginas>1?`<div class="row" style="justify-content:center;margin:14px 0"><button class="btn o sm" ${VF.page<=1?'disabled':''} onclick="VF.page--;PG.vendas()">‹ Anterior</button><span class="mut">${VF.page} de ${d.paginas}</span><button class="btn o sm" ${VF.page>=d.paginas?'disabled':''} onclick="VF.page++;PG.vendas()">Próxima ›</button></div>`:''}`};
+const DSEM=['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'];
+async function relatorio(segP){const d=await api('admin/relatorio&'+new URLSearchParams({de:VF.de,ate:VF.ate,location_id:PONTO}));window._rel=d;
+  const mx=(a,k)=>Math.max(1,...a.map(x=>+x[k])), bar=(v,m)=>`<div class="meter" style="margin-top:4px"><i style="width:${Math.round(100*v/m)}%"></i></div>`;
+  const semana=DSEM.map((n,i)=>{const x=d.semana.find(s=>+s.d===i);return {n,s:x?+x.s:0,q:x?+x.n:0}}), ms=mx(semana,'s');
+  const hs=d.horas.map(x=>({h:+x.h,n:+x.n})), mh=mx(hs,'n');
+  $('#main').innerHTML=`<div class="ph1"><h1>Vendas</h1><button class="btn o sm" onclick="exportRel()">⬇️ CSV</button></div>${vtabs()}${segP}
+   <div class="kpis" style="margin-bottom:12px"><div class="kpi"><div class="l">Faturado</div><div class="v">${brl(d.receita)}</div><div class="s">${d.pedidos} pedidos • ${mlf(d.ml)}</div></div>
+    <div class="kpi"><div class="l">Ticket médio</div><div class="v">${brl(d.ticket)}</div></div>
+    <div class="kpi"><div class="l">Margem</div><div class="v">${d.custo>0?brl(d.margem):'—'}</div><div class="s">${d.custo_completo?'custo informado':'informe o custo dos barris'}</div></div></div>
+   <div class="box"><h2>🍺 Por bebida</h2>${d.produtos.map(p=>`<div class="lrow"><span><b style="color:var(--h)">${esc(p.produto)}</b><br><small class="mut">${p.copos} copo${p.copos>1?'s':''} • ${mlf(p.ml)}${p.margem!==null?' • margem '+brl(p.margem):''}</small></span><b>${brl(p.receita)}</b></div>`).join('')||'<p class="mut">Nenhuma venda no período.</p>'}</div>
+   <div class="box" style="margin-top:12px"><h2>📅 Dia da semana</h2>${semana.map(x=>`<div style="margin-bottom:8px"><div class="row" style="justify-content:space-between;font-size:14px"><span>${x.n}</span><span class="mut">${brl(x.s)} • ${x.q}</span></div>${bar(x.s,ms)}</div>`).join('')}</div>
+   <div class="box" style="margin-top:12px"><h2>🕒 Horário</h2>${hs.map(x=>`<div style="margin-bottom:8px"><div class="row" style="justify-content:space-between;font-size:14px"><span>${String(x.h).padStart(2,'0')}h</span><span class="mut">${x.n} pedido${x.n>1?'s':''}</span></div>${bar(x.n,mh)}</div>`).join('')||'<p class="mut">Sem dados.</p>'}</div>
+   ${d.pontos.length>1?`<div class="box" style="margin-top:12px"><h2>📍 Por ponto</h2>${d.pontos.map(p=>`<div class="lrow"><span>${esc(p.ponto)}</span><b>${brl(p.receita)}</b></div>`).join('')}</div>`:''}
+   <div class="box" style="margin-top:12px"><h2>💳 Pagamento</h2>${d.pagamentos.map(p=>`<div class="lrow"><span>${esc(({pix:'Pix',credito:'Crédito',debito:'Débito'})[p.metodo]||p.metodo)}</span><span class="mut">${p.n} • <b style="color:var(--h)">${brl(p.s)}</b></span></div>`).join('')||'<p class="mut">Sem dados.</p>'}</div>`}
+function baixarCsv(nome,l){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['﻿'+l.map(r=>r.map(c=>'"'+String(c??'').replace(/"/g,'""')+'"').join(';')).join('\n')],{type:'text/csv'}));a.download=nome;a.click()}
+function exportRel(){const d=window._rel;if(!d)return;const v=x=>String(x??'').replace('.',',');
+  baixarCsv(`relatorio-${d.de}-a-${d.ate}.csv`,[['bebida','copos','ml','receita','custo','margem'],...d.produtos.map(p=>[p.produto,p.copos,p.ml,v(p.receita),v(p.custo),v(p.margem)])])}
 function periodo(k){VF.per=k;VF.page=1;if(k!=='x'){VF.de=hoje(+k-1);VF.ate=hoje()}PG.vendas()}
-function vtabs(){return SETPASS?`<div class="seg"><button aria-pressed="${VT==='pedidos'}" onclick="VT='pedidos';PG.vendas()">Copos e recargas</button><button aria-pressed="${VT==='pass'}" onclick="VT='pass';PG.vendas()">🎫 Beer Pass</button></div>`:''}
+function vtabs(){return `<div class="seg"><button aria-pressed="${VT==='pedidos'}" onclick="VT='pedidos';PG.vendas()">Pedidos</button><button aria-pressed="${VT==='rel'}" onclick="VT='rel';PG.vendas()">📊 Relatório</button>${SETPASS?`<button aria-pressed="${VT==='pass'}" onclick="VT='pass';PG.vendas()">🎫 Beer Pass</button>`:''}</div>`}
 let SETPASS=false;
 function exportCsv(){const l=[['data','pedido','ponto','cliente','cpf','metodo','ml','total','status'],...(window._ped||[]).map(o=>[o.created_at,o.ref,o.loc,o.cliente,o.cpf,o.metodo,o.total_ml,String(o.total).replace('.',','),o.status])];
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['﻿'+l.map(r=>r.map(c=>'"'+String(c??'').replace(/"/g,'""')+'"').join(';')).join('\n')],{type:'text/csv'}));a.download='vendas.csv';a.click()}

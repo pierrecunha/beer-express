@@ -22,8 +22,10 @@ PID=$!; trap 'kill $PID 2>/dev/null || true' EXIT
 for i in $(seq 1 30); do curl -s -o /dev/null http://127.0.0.1:8765/api.php?r=health && break; sleep 0.2; done
 
 python3 tests/fluxo.py http://127.0.0.1:8765/api.php
-echo "→ cron"
+echo "→ cron (limpeza vencida e barril vencido geram aviso)"
+$ADMIN "$BE_DB_NAME" -e "UPDATE be_taps SET limpeza_em = NOW() - INTERVAL 40 DAY, barril_aberto_em = NOW() - INTERVAL 60 DAY WHERE id = (SELECT id FROM (SELECT MIN(id) id FROM be_taps) x)"
 php server/cron_tick.php
+$ADMIN "$BE_DB_NAME" -N -e "SELECT tipo FROM be_events WHERE tipo IN ('limpeza','validade_barril')" | sort | tr '\n' ' ' | grep -q "limpeza validade_barril" && echo "avisos de limpeza e validade: ok"
 php server/api.php health | grep -q '"cron_min":0' && echo "cron: ok"
 if grep -E "PHP (Fatal|Warning|Deprecated)" tests/.run/php.log; then echo "avisos do PHP acima"; exit 1; fi
 echo "testes: ok"

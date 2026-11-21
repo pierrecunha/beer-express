@@ -359,6 +359,27 @@ ok(r2.get("tap_id") == r["taps"][0], "volta para maquininha da torneira", r2)
 ok(not any(p["nome"].startswith("Demonstração") for p in call("pub/site")[1]["pontos"]), "demonstração continua fora do portal")
 call("admin/demo_clear", {}, AD)
 
+print("── operação: custo, limpeza, validade, relatório")
+t1 = next(t for t in call("admin/bebidas", h=AD)[1]["torneiras"] if t["id"] == tap)
+ok(t1["cuidados"]["limpeza_restam"] in (13, 14) and t1["cuidados"]["validade_restam"] in (29, 30), "torneira nova começa com limpeza e validade em dia", t1["cuidados"])
+pr = {"id": t1["produto"]["id"], "nome": t1["produto"]["nome"]}
+ofs = [{"id": o["id"], "volume_ml": o["volume_ml"], "preco": o["preco"]} for o in t1["ofertas"] if o["ativo"]]
+st, r = call("admin/bebida_salvar", {"tap_id": tap, "produto": pr, "ofertas": ofs, "custo_barril": "800,00", "validade_dias": 20, "limpeza_dias": 7}, AD)
+ok(r.get("ok"), "salva custo do barril, validade e limpeza", r)
+t1 = next(t for t in call("admin/bebidas", h=AD)[1]["torneiras"] if t["id"] == tap)
+ok(t1["custo_barril"] == 800.0 and t1["cuidados"]["validade_dias"] == 20 and t1["cuidados"]["limpeza_dias"] == 7, "custo e prazos guardados", t1["cuidados"])
+st, r = call("admin/limpeza_feita", {"tap_id": tap}, AD); ok(r.get("ok"), "registra limpeza feita", r)
+rel = call("admin/relatorio", h=AD)[1]
+pil = next((p for p in rel["produtos"] if p["produto"].startswith("Pilsen")), None)
+ok(rel.get("ok") and pil and pil["custo"] is not None and abs(pil["margem"] - (pil["receita"] - pil["custo"])) < 0.02, "relatório calcula custo e margem por bebida", pil)
+ok(abs(rel["receita"] - sum(p["receita"] for p in rel["produtos"])) < 0.02, "total do relatório bate com a soma das bebidas (já com desconto de cupom)", (rel["receita"], rel["produtos"]))
+ok(isinstance(rel["semana"], list) and isinstance(rel["horas"], list) and rel["ticket"] >= 0, "relatório traz dia da semana, hora e ticket médio")
+d = call("admin/dashboard", h=AD)[1]
+ok(all("limpeza_restam" in b and "previsao_dias" in b for b in d["barris"]), "início traz limpeza, validade e previsão do barril")
+st, r = call("admin/relatorio&location_id=" + str(loc), h=AD); ok(r.get("ok"), "relatório filtra por ponto", r)
+
+st, r = call("admin/limpeza_feita", {"tap_id": tap}, DN); ok(st == 403, "dono não registra limpeza em torneira de outro ponto", r)
+st, r = call("admin/relatorio&location_id=" + str(loc), h=DN); ok(st == 403, "dono não abre relatório de outro ponto", r)
 print("── segurança")
 for i in range(6): st, r = call("pos/identify", {"cpf": "123.456.789-00", "nascimento": "01/01/1990", "declara_maior": True}, T)
 ok(r.get("erro") == "terminal_bloqueado", "força bruta bloqueia a maquininha", r)
