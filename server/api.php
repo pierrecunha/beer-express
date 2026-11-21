@@ -16,7 +16,7 @@
  *     admin/needs_setup  admin/setup  admin/login  admin/me  admin/dashboard
  *     admin/orders  admin/order  admin/order_refund  admin/dispense_retry
  *     admin/manual_release  admin/customers  admin/customer_block
- *     admin/catalog  admin/save  admin/keg_change  admin/limpeza_feita  admin/relatorio  admin/calibrate
+ *     admin/catalog  admin/save  admin/keg_change  admin/terminal_comando  admin/cpf_teste  admin/limpeza_feita  admin/relatorio  admin/calibrate
  *     admin/events  admin/settings  admin/settings_save  admin/telegram_test
  *     admin/telemetry  admin/password  admin/bebidas  admin/bebida_salvar  admin/bebida_trocar
  *     admin/torneira_remover  admin/usuarios  admin/usuario_salvar
@@ -194,7 +194,7 @@ function exige_ponto($location_id): void {
 function ponto_da_torneira(int $tap_id): int { return (int)val('SELECT d.location_id FROM be_taps t JOIN be_devices d ON d.id = t.device_id WHERE t.id = ?', [$tap_id]); }
 /** Rotas que só o administrador da plataforma usa (configurações gerais, carteiras, usuários, demonstração). */
 const ROTAS_SO_ADMIN = ['admin/settings', 'admin/settings_save', 'admin/telegram_test', 'admin/demo_seed', 'admin/demo_clear', 'admin/customer_block',
-    'admin/wallet_adjust', 'admin/card_update', 'admin/usuarios', 'admin/usuario_salvar', 'admin/leads'];
+    'admin/wallet_adjust', 'admin/card_update', 'admin/usuarios', 'admin/usuario_salvar', 'admin/leads', 'admin/cpf_teste'];
 
 /* ============================ CPF / IDADE ============================ */
 
@@ -512,7 +512,7 @@ function r_pos_pair(): array {
     q('UPDATE be_terminals SET token = ?, serial = ?, app_version = ?, last_seen = NOW(), online = 1 WHERE id = ?',
         [$tok, substr((string)arg('serial', ''), 0, 64), substr((string)arg('app_version', ''), 0, 20), $t['id']]);
     log_event('info', 'terminal_pareado', "Maquininha {$t['nome']} pareada (serial " . arg('serial', '-') . ")", ['terminal_id' => $t['id'], 'location_id' => $t['location_id']], true);
-    return ['ok' => true, 'token' => $tok, 'provider' => $t['provider'], 'nome' => $t['nome']];
+    return ['ok' => true, 'token' => $tok, 'provider' => $t['provider'], 'nome' => $t['nome'], 'stone_code' => $t['stone_code'] ?? null];
 }
 
 function r_pos_config(array $t): array {
@@ -523,13 +523,13 @@ function r_pos_config(array $t): array {
     return [
         'ok' => true,
         'marca' => ['nome' => setting('marca_nome', 'Beer Express'), 'slogan' => setting('marca_slogan'), 'cor' => setting('marca_cor', '#F5B301')],
-        'terminal' => ['id' => (int)$t['id'], 'nome' => $t['nome'], 'provider' => $t['provider'], 'local' => $t['location_nome']],
+        'terminal' => ['id' => (int)$t['id'], 'nome' => $t['nome'], 'provider' => $t['provider'], 'local' => $t['location_nome'], 'stone_code' => $t['stone_code'] ?? null],
         'metodos' => $metodos,
         'idade_minima' => (int)setting('idade_minima', 18),
         'nome_regra' => setting('nome_regra', 'primeiro_e_sobrenome'),
         'limite_copos_pedido' => (int)setting('limite_copos_pedido', 4),
         'msg_final' => setting('msg_final'),
-        'verificacao' => setting('verificacao_idade', 'cpf') === 'declaracao' ? 'declaracao' : 'cpf',
+        'verificacao' => 'cpf',   // CPF + nascimento conferidos na Receita são obrigatórios (não existe mais venda só com "Sim, concordo")
         'termos' => setting('termos_texto', 'Para prosseguir com a compra de chope você deve concordar com os termos de uso e que tem mais de 18 anos.'),
         'ajuda' => setting('ajuda_texto'),
         'cupons' => setting('cupons_ativo', '1') === '1' && (int)val('SELECT COUNT(*) FROM be_coupons WHERE ativo = 1') > 0,
@@ -620,11 +620,7 @@ function r_pos_identify(array $t): array {
     };
 
     if (!filter_var(arg('declara_maior', false), FILTER_VALIDATE_BOOLEAN)) $falha('sem_declaracao', 'É preciso declarar ter 18 anos ou mais.');
-    if (setting('verificacao_idade', 'cpf') === 'declaracao' && $cpf === '') {   // modo BeerPass: só o "Sim, concordo"
-        $token = rand_token(16);
-        q('INSERT INTO be_verifications (terminal_id, ok, motivo, token, expira_em) VALUES (?,1,"declaracao",?, NOW() + INTERVAL 10 MINUTE)', [$t['id'], $token]);
-        return ['ok' => true, 'token' => $token, 'nome' => null, 'novo' => false, 'compras' => 0, 'restante_ml_dia' => 999999, 'declaracao' => true];
-    }
+    if ($cpf === '') $falha('cpf_invalido', 'Informe o CPF e a data de nascimento.');
     if (!cpf_valido($cpf)) $falha('cpf_invalido', 'CPF inválido. Confira os números.');
     $nasc = parse_nasc($nascRaw);
     if (!$nasc) $falha('nascimento_invalido', 'Data de nascimento inválida.');
@@ -640,7 +636,14 @@ function r_pos_identify(array $t): array {
     if ($cust && $cust['nascimento'] !== $nasc) $falha('dados_nao_conferem', 'CPF e data de nascimento não conferem.');
 
     $validoAte = $cust ? strtotime($cust['verificado_em'] . ' +' . (int)setting('reverificar_dias', 365) . ' days') : 0;
-    $precisaVerificar = !$cust || $validoAte < db_agora() || (setting('cpf_provider', 'local') !== 'local' && $cust['verificado_por'] === 'local');
+    // A Receita é obrigatória (a lei proíbe vender a menores): sem NFE.io/Serpro configurado, a venda não abre. Só o ponto de simulação fica de fora.
+    $exigeReceita = setting('cpf_exigir_receita', '1') === '1' && $t['provider'] !== 'simulado';
+    if ($exigeReceita && setting('cpf_provider', 'local') === 'local') {
+        if (!val("SELECT id FROM be_events WHERE tipo = 'receita_off' AND created_at >= NOW() - INTERVAL 60 MINUTE"))
+            log_event('critico', 'receita_off', "🚫 Vendas BLOQUEADAS: a consulta de CPF na Receita não está configurada. Painel → Mais → Configurações → Verificação de idade (NFE.io ou Serpro).", $ctx, true);
+        $falha('receita_off', 'Venda indisponível: a verificação de idade ainda não foi configurada. Chame o responsável.');
+    }
+    $precisaVerificar = !$cust || $validoAte < db_agora() || ((setting('cpf_provider', 'local') !== 'local' || $exigeReceita) && $cust['verificado_por'] === 'local');
 
     if ($precisaVerificar) {
         // Só o CPF + data de nascimento + declaração 18+ valem: o nome é opcional (se vier, é conferido; se a consulta à Receita trouxer, é guardado).
@@ -1218,6 +1221,7 @@ function r_admin_dashboard(): array {
     unset($a);
     return ['ok' => true, 'hoje' => $hoje, 'ontem' => $ontem, 'mes' => $mes, 'dias' => $dias, 'horas' => $horas, 'produtos' => $prods, 'devices' => $devices,
         'terminais' => $terms, 'barris' => $barris, 'alertas' => $alertas, 'problemas' => $problemas, 'menores_hoje' => $menores, 'clientes' => $clientes, 'pass' => $pass, 'pass_ativo' => setting('pass_ativo', '0') === '1',
+        'receita_ok' => !(setting('cpf_exigir_receita', '1') === '1' && setting('cpf_provider', 'local') === 'local' && (int)val("SELECT COUNT(*) FROM be_terminals WHERE ativo = 1 AND provider <> 'simulado'") > 0),
         'funil' => $funil, 'nps' => $nps, 'nps_motivos' => $motivos, 'happy_hour' => happy_hour()];
 }
 
@@ -1323,7 +1327,7 @@ function r_admin_catalog(): array {
     $devices = rows('SELECT * FROM be_devices WHERE 1=1' . so_meus('location_id') . ' ORDER BY id');
     foreach ($devices as &$d) { $d['online'] = device_online($d); if ($dono) unset($d['device_key']); }
     unset($d);
-    $terms = rows('SELECT id, location_id, tap_id, nome, codigo, provider, serial, app_version, last_seen, aceita_pix, aceita_credito, aceita_debito, bloqueado_ate, ativo, (token IS NOT NULL) pareado FROM be_terminals WHERE 1=1' . so_meus('location_id') . ' ORDER BY id');
+    $terms = rows('SELECT id, location_id, tap_id, nome, codigo, provider, stone_code, serial, app_version, last_seen, aceita_pix, aceita_credito, aceita_debito, bloqueado_ate, ativo, (token IS NOT NULL) pareado FROM be_terminals WHERE 1=1' . so_meus('location_id') . ' ORDER BY id');
     foreach ($terms as &$t) $t['online'] = device_online($t);
     $tapW = $dono ? ' WHERE t.device_id IN (SELECT id FROM be_devices WHERE 1=1' . so_meus('location_id') . ')' : '';
     return ['ok' => true,
@@ -1355,7 +1359,7 @@ function r_admin_save(array $u): array {
     $map = [
         'locations' => ['be_locations', ['nome', 'endereco', 'lat', 'lng', 'horario', 'publico', 'ativo']],
         'devices' => ['be_devices', ['location_id', 'nome', 'tipo', 'start_mode', 'arm_timeout_s', 'temp_min', 'temp_max', 'ativo']],
-        'terminais' => ['be_terminals', ['location_id', 'tap_id', 'nome', 'provider', 'aceita_pix', 'aceita_credito', 'aceita_debito', 'ativo']],
+        'terminais' => ['be_terminals', ['location_id', 'tap_id', 'nome', 'provider', 'stone_code', 'aceita_pix', 'aceita_credito', 'aceita_debito', 'ativo']],
         'produtos' => ['be_products', ['nome', 'cervejaria', 'estilo', 'descricao', 'abv', 'ibu', 'imagem_url', 'cor', 'ativo']],
         'cupons' => ['be_coupons', ['codigo', 'descricao', 'tipo', 'valor', 'minimo', 'validade', 'usos_max', 'ativo']],
         'torneiras' => ['be_taps', ['device_id', 'canal', 'nome', 'product_id', 'modo', 'pulsos_por_litro', 'ml_por_pulso', 'preco_litro', 'max_ml_servida', 'barril_ml', 'alerta_pct', 'ativo']],
@@ -1606,6 +1610,27 @@ function r_admin_bebidas(array $u): array {
 }
 
 
+/** Comando remoto para a maquininha (executa no próximo sinal, em até 1 min). */
+function r_admin_terminal_comando(array $u): array {
+    $t = row('SELECT * FROM be_terminals WHERE id = ?', [(int)arg('terminal_id')]);
+    if (!$t) fail('terminal', 'Maquininha não encontrada', 404);
+    exige_ponto($t['location_id']);
+    $cmd = (string)arg('comando');
+    if (!in_array($cmd, ['recarregar', 'reiniciar'], true)) fail('dados', 'Comando inválido');
+    q('UPDATE be_terminals SET comando = ? WHERE id = ?', [$cmd, $t['id']]);
+    log_event('info', 'comando', "📲 Comando \"$cmd\" enviado para {$t['nome']} por {$u['nome']}", ['terminal_id' => $t['id'], 'location_id' => $t['location_id']]);
+    return ['ok' => true];
+}
+/** Testa a consulta de CPF na Receita com o provedor configurado (só administrador). */
+function r_admin_cpf_teste(array $u): array {
+    $cpf = preg_replace('/\D/', '', (string)arg('cpf')); $nasc = parse_nasc((string)arg('nascimento'));
+    if (!cpf_valido($cpf) || !$nasc) fail('dados', 'Informe um CPF válido e a data de nascimento (dd/mm/aaaa)');
+    if (setting('cpf_provider', 'local') === 'local') fail('config', 'Escolha NFE.io ou Serpro e salve antes de testar');
+    $r = cpf_consulta($cpf, $nasc);
+    $nome = $r['nome'] ?? null;
+    return ['ok' => true, 'consulta_ok' => (bool)$r['ok'], 'motivo' => $r['motivo'] ?? null, 'situacao' => $r['situacao'] ?? null, 'detalhe' => $r['detalhe'] ?? null,
+        'nome' => $nome ? mb_substr($nome, 0, 1) . str_repeat('•', max(2, mb_strlen($nome) - 2)) . mb_substr($nome, -1) : null];
+}
 /** Situação de limpeza da linha e validade do barril aberto (dias restantes; negativo = vencido). */
 function cuidados_tap(array $t): array {
     $dia = 86400; $agora = time();
@@ -2067,7 +2092,7 @@ try {
                 'pos/paid' => 'r_pos_paid', 'pos/payment_failed' => 'r_pos_payment_failed', 'pos/order_status' => 'r_pos_order_status',
                 'pos/serve' => 'r_pos_serve', 'pos/cancel' => 'r_pos_cancel', 'pos/wallet' => 'r_pos_wallet', 'pos/recharge' => 'r_pos_recharge',
                 'pos/link_card' => 'r_pos_link_card', 'pos/coupon' => 'r_pos_coupon', 'pos/track' => 'r_pos_track', 'pos/rate' => 'r_pos_rate', 'pos/card_block' => 'r_pos_card_block', 'pos/logout' => 'r_pos_logout'][$r] ?? null;
-            if ($r === 'pos/heartbeat') { q('UPDATE be_terminals SET app_version = COALESCE(?, app_version) WHERE id = ?', [arg('app_version'), $t['id']]); out(['ok' => true]); }
+            if ($r === 'pos/heartbeat') { q('UPDATE be_terminals SET app_version = COALESCE(?, app_version), comando = NULL WHERE id = ?', [arg('app_version'), $t['id']]); out(['ok' => true, 'comando' => $t['comando'] ?: null]); }
             if (!$fn) fail('rota', 'Rota inexistente', 404);
             out($fn($t));
         case str_starts_with($r, 'dev/'):

@@ -18,4 +18,6 @@ interface PaymentProvider {
     val name: String
     /** Deve chamar [done] exatamente uma vez (em qualquer thread). */
     fun pay(req: PayRequest, done: (PayResult) -> Unit)
+    /** Ativa a maquininha na adquirente (ex.: Stone Code). Quem não precisa de ativação já devolve sucesso. */
+    fun activate(code: String, done: (Boolean, String) -> Unit) = done(true, "ok")
 }

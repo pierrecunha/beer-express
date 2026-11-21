@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Beer Express — instalar na maquininha</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0E0B07;color:#F4ECDD;font-family:-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.5;padding:20px;max-width:640px;margin:0 auto}
+h1{font-size:28px;margin:6px 0 4px}h2{font-size:18px;color:#F5B301;margin:26px 0 10px}
+p,li{color:#C9BBA4}li{margin:0 0 8px 20px}
+.card{background:#1A1510;border:1px solid #2E261C;border-radius:16px;padding:16px;margin:12px 0}
+.btn{display:block;text-align:center;text-decoration:none;border:0;border-radius:14px;padding:16px;font-size:18px;font-weight:800;background:#F5B301;color:#1a1200;margin:10px 0;width:100%;cursor:pointer}
+.btn.sec{background:transparent;border:2px solid #2E261C;color:#F4ECDD;font-weight:700}
+.qr{display:block;margin:10px auto;background:#fff;padding:10px;border-radius:12px;width:210px}
+.tag{display:inline-block;font-size:12px;font-weight:800;background:#2E261C;border-radius:20px;padding:3px 10px;margin-left:6px;color:#F5B301}
+.off{opacity:.5;pointer-events:none}small{color:#A99B84}
+</style>
+</head>
+<body>
+<div style="color:#F5B301;font-weight:800;letter-spacing:.5px">🍺 BEER EXPRESS</div>
+<h1>Instalar na maquininha</h1>
+<p>Funciona na <b>Sunmi P2 (Stone)</b> e em outras maquininhas Android. Dá para fazer à distância: basta mandar esta página para quem está no ponto.</p>
+
+<h2>1. Baixar o aplicativo</h2>
+<div class="card">
+  <a class="btn off" id="bStone" href="apk/beerexpress-stone.apk">⬇ Sunmi P2 / Stone (cartão real)</a>
+  <a class="btn sec off" id="bSim" href="apk/beerexpress-simulado.apk">⬇ Versão de teste (pagamento simulado)</a>
+  <small id="ver">Verificando a versão mais recente…</small>
+</div>
+<div class="card">
+  <p><b>Mandar para quem está no ponto</b></p>
+  <img class="qr" src="instalar-qr.png" alt="QR code desta página">
+  <button class="btn sec" onclick="copiar()">📋 Copiar o link desta página</button>
+  <a class="btn sec" id="zap" href="#">💬 Enviar por WhatsApp</a>
+</div>
+
+<h2>2. Instalar (na maquininha)</h2>
+<ol>
+  <li>Abra o link (ou leia o QR) no navegador da maquininha e toque em <b>Baixar</b>.</li>
+  <li>Abra o arquivo baixado. Se o Android pedir, toque em <b>Configurações → permitir desta fonte</b> e volte.</li>
+  <li>Toque em <b>Instalar</b> e depois em <b>Abrir</b>.</li>
+</ol>
+
+<h2>3. Configurar (o próprio app guia)</h2>
+<ol>
+  <li><b>Wi-Fi:</b> digite o nome e a senha da rede do ponto.</li>
+  <li><b>Código de pareamento:</b> no painel, em Mais → Equipamentos → Maquininhas, abra a maquininha e copie o código de 6 caracteres.</li>
+  <li><b>Stone Code:</b> se já estiver cadastrado no painel, o app ativa sozinho; senão, digite.</li>
+  <li><b>PIN do técnico:</b> crie um PIN de 4 a 6 números (ou use o padrão).</li>
+</ol>
+<div class="card"><p>✅ Pronto: a maquininha abre a tela de vendas e fica sempre ligada neste app. Depois, o painel pode <b>recarregar</b> ou <b>reiniciar</b> a maquininha à distância.</p></div>
+
+<h2>Precisa refazer?</h2>
+<p>Toque 5 vezes rápido no canto superior esquerdo da tela, digite o PIN e escolha <b>Refazer instalação</b>.</p>
+
+<script>
+const link = location.href.split('#')[0];
+document.getElementById('zap').href = 'https://wa.me/?text=' + encodeURIComponent('Instale o Beer Express na maquininha: ' + link);
+function copiar(){ (navigator.clipboard ? navigator.clipboard.writeText(link) : Promise.reject()).then(() => alert('Link copiado!')).catch(() => prompt('Copie o link:', link)); }
+async function existe(u){ try { const r = await fetch(u, {method:'HEAD', cache:'no-store'}); return r.ok; } catch(e){ return false; } }
+(async () => {
+  const [s, m] = await Promise.all([existe('apk/beerexpress-stone.apk'), existe('apk/beerexpress-simulado.apk')]);
+  if (s) document.getElementById('bStone').classList.remove('off');
+  if (m) document.getElementById('bSim').classList.remove('off');
+  let v = ''; try { v = (await (await fetch('apk/versao.txt', {cache:'no-store'})).text()).trim(); } catch(e){}
+  document.getElementById('ver').textContent = !s && !m ? 'O aplicativo ainda está sendo preparado. Tente de novo em alguns minutos.'
+    : (v ? 'Versão ' + v + '. ' : '') + (s ? '' : 'A versão com cartão real da Stone ainda não foi gerada — use a de teste por enquanto.');
+})();
+</script>
+</body>
+</html>

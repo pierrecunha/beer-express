@@ -130,21 +130,22 @@ O mesmo projeto gera 3 APKs (*flavors*):
 
 Também dá para testar só a tela: abra `pos.html` no navegador do PC (com a maquininha "Simulado" pareada) — o pagamento é simulado por botões.
 
+**Instalação remota:** os APKs são gerados pelo GitHub (workflow `apk`) e ficam em `/apk/`; a página `instalar.html` (com QR e botão de WhatsApp) guia quem estiver no ponto. Passo a passo: `docs/INSTALAR-MAQUININHA.md`.
+
 ## 8. Verificação de idade — como funciona
 
-1. Cliente declara ter 18+ (com aceite de LGPD na tela).
-2. Digita **CPF** (dígitos verificadores conferidos na hora) e **data de nascimento** (idade calculada; menor de 18 é barrado e você é avisado).
-3. **Primeiro acesso:** digita o **nome completo**. O servidor consulta a Receita (CPF + nascimento → nome oficial) e confere primeiro nome + um sobrenome.
-4. **Próximas compras:** basta CPF + nascimento (que precisam bater com o cadastro). A Receita é reconsultada a cada 365 dias (configurável).
-5. 5 tentativas inválidas em 10 min → maquininha bloqueada por 10 min + alerta.
-6. Limite de consumo por CPF por dia (padrão 3 L) e de copos por pedido (padrão 4).
+1. Cliente confirma ter 18+ (aceite de LGPD na tela), digita **CPF** (dígitos conferidos na hora) e **data de nascimento** (menor de 18 é barrado e você é avisado). Não pede nome.
+2. O servidor **consulta a Receita** (CPF + nascimento) e só libera se bater. Resultado vale por 365 dias (configurável); depois reconsulta.
+3. **Sem consulta configurada, a venda fica bloqueada** nas maquininhas reais (provedor `local` + `cpf_exigir_receita`=1) e o painel mostra alerta. Maquininhas em modo *simulado* ficam livres para teste.
+4. 5 tentativas inválidas em 10 min → maquininha bloqueada por 10 min + alerta.
+5. Limite de consumo por CPF por dia (padrão 3 L) e de copos por pedido (padrão 4).
 
 **Provedor de consulta** (Painel → Configurações):
 - `local` — só dígitos + idade declarada. Grátis, mas não comprova que a data de nascimento é verdadeira. Use apenas para testes.
 - `nfeio` — **recomendado para começar**: a NFE.io revende a Consulta CPF do Serpro, envia CPF + nascimento e devolve o nome. É preciso habilitar a modalidade "Irrestrita" com o comercial deles.
 - `serpro` — contrato direto com o Serpro (precisa de e-CNPJ). Confirme no manual do Serpro a URL da versão 3 e ajuste em *URL Serpro*.
 
-**Limitação honesta:** nenhum sistema só com CPF impede que um menor use os dados de um adulto. As camadas que reduzem esse risco já estão no sistema (conferência na Receita, nome no 1º acesso, bloqueio por tentativas, limite diário, alertas). Para ir além: câmera apontada para a chopeira (como no Barista Express), avisos 18+ visíveis no ponto e, numa fase 2, biometria facial (Serpro Datavalid).
+**Limitação honesta:** nenhum sistema só com CPF impede que um menor use os dados de um adulto. As camadas que reduzem esse risco já estão no sistema (conferência na Receita, bloqueio por tentativas, limite diário, alertas). Para ir além: câmera apontada para a chopeira (como no Barista Express), avisos 18+ visíveis no ponto e, numa fase 2, biometria facial (Serpro Datavalid).
 
 ## 9. Antes de abrir o ponto
 

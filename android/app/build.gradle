@@ -3,16 +3,21 @@ plugins {
     id 'org.jetbrains.kotlin.android'
 }
 
+def stoneSdkVersion = '4.13.0'
+
 android {
     namespace 'br.com.beerexpress.pos'
     compileSdk 34
 
     defaultConfig {
         applicationId "br.com.beerexpress.pos"
-        minSdk 22
+        minSdk 23   // Stone SDK 4.x pede 23+ (a Sunmi P2 roda Android 11)
         targetSdk 34
-        versionCode 1
-        versionName "1.0.0"
+        // O GitHub numera cada build: o APK novo sempre instala por cima do anterior
+        versionCode (System.getenv("GITHUB_RUN_NUMBER") ?: "1").toInteger()
+        versionName "1.1.${System.getenv("GITHUB_RUN_NUMBER") ?: "0"}"
+        // Endereço do servidor (o assistente de instalação já vem preenchido com ele)
+        buildConfigField "String", "SERVER_URL", '"https://lavafacilexpress.com/beerexpress"'
         // URL da tela da maquininha (pos.html no seu servidor)
         buildConfigField "String", "POS_URL", '"https://lavafacilexpress.com/beerexpress/pos.html"'
         // PIN para abrir o menu técnico (toque 5x no canto superior esquerdo)
@@ -24,6 +29,7 @@ android {
     // Um APK por adquirente — gere só o da maquininha escolhida
     flavorDimensions = ["adquirente"]
     productFlavors {
+        stone       { dimension "adquirente"; buildConfigField "String", "PROVIDER", '"stone"' }   // Sunmi P2 / Stone (precisa do token do PackageCloud da Stone no CI)
         simulado    { dimension "adquirente"; applicationIdSuffix ".sim"; buildConfigField "String", "PROVIDER", '"simulado"' }
         mercadopago { dimension "adquirente"; buildConfigField "String", "PROVIDER", '"mercadopago"'
                       manifestPlaceholders = [mpClientId: "SEU_CLIENT_ID_MERCADO_PAGO"] }
@@ -42,11 +48,12 @@ android {
     buildTypes {
         release {
             minifyEnabled false
-            signingConfig signingConfigs.release
+            // Assina com a chave guardada no servidor (CI); sem ela (build local) usa a chave de teste
+            signingConfig file(System.getenv("BE_KEYSTORE") ?: "../beerexpress.jks").exists() ? signingConfigs.release : signingConfigs.debug
         }
     }
     buildFeatures { buildConfig true }
-    compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+    compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17; coreLibraryDesugaringEnabled true }
     kotlinOptions { jvmTarget = '17' }
 }
 
@@ -54,6 +61,12 @@ dependencies {
     implementation 'androidx.core:core-ktx:1.13.1'
     implementation 'androidx.appcompat:appcompat:1.7.0'
     implementation 'androidx.webkit:webkit:1.11.0'
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.5'
+
+    // Stone (Sunmi P2): SDK de pagamento. Vem do repositório privado da Stone (token no segredo PACKAGECLOUD_READ_TOKEN)
+    stoneImplementation "br.com.stone:stone-sdk:$stoneSdkVersion"
+    stoneImplementation "br.com.stone:stone-sdk-posandroid:$stoneSdkVersion"
+    stoneImplementation "br.com.stone:stone-sdk-posandroid-sunmi:$stoneSdkVersion"
 
     // PagBank Moderninha Smart / Smart 2 (confira a versão mais recente no GitHub do PagSeguro)
     pagbankImplementation 'br.com.uol.pagseguro.plugpagservice.wrapper:wrapper:1.27.6'

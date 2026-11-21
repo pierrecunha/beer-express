@@ -610,7 +610,12 @@ async function boot(){
   if (!TT) return go('pair');
   try { S.cfg = await api('pos/config'); applyBrand(); await loadMenu(); toIdle(); }
   catch(e){ if (TT) { modal('⚠️','Sem conexão', e.mensagem || 'Verificando…'); setTimeout(boot, 5000); } }
-  setInterval(() => api('pos/heartbeat', {app_version: NATIVE ? BeerPOS.info() && JSON.parse(BeerPOS.info()).appVersion : 'web'}).catch(()=>{}), 60000);
+  const hb = () => api('pos/heartbeat', {app_version: NATIVE ? BeerPOS.info() && JSON.parse(BeerPOS.info()).appVersion : 'web'}).then(r => {
+    // comando remoto do painel (Equipamentos → Maquininhas)
+    if (r && r.comando === 'reiniciar' && NATIVE && BeerPOS.restart) BeerPOS.restart();
+    else if (r && (r.comando === 'recarregar' || r.comando === 'reiniciar')) location.reload();
+  }).catch(()=>{});
+  setInterval(hb, 60000); hb();
   setInterval(() => { if (S.screen === 'idle' || S.screen === 'tapHome') loadMenu().catch(()=>{}); }, 30000);
 }
 function applyBrand(){ const n=S.cfg.marca.nome.split(' '); $('brandName').innerHTML = n[0] + (n.length>1 ? ' <b>'+n.slice(1).join(' ')+'</b>' : '');

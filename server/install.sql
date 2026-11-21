@@ -91,7 +91,7 @@ CREATE TABLE IF NOT EXISTS be_terminals (
   nome VARCHAR(80) NOT NULL,
   codigo VARCHAR(12) NOT NULL UNIQUE,      -- código de pareamento digitado no app
   token VARCHAR(64) NULL UNIQUE,           -- gerado no pareamento
-  provider ENUM('mercadopago','pagbank','simulado') NOT NULL DEFAULT 'simulado',
+  provider ENUM('mercadopago','pagbank','stone','simulado') NOT NULL DEFAULT 'simulado',
   serial VARCHAR(64) NULL,
   app_version VARCHAR(20) NULL,
   last_seen DATETIME NULL,
@@ -100,6 +100,8 @@ CREATE TABLE IF NOT EXISTS be_terminals (
   aceita_credito TINYINT(1) NOT NULL DEFAULT 1,
   aceita_debito TINYINT(1) NOT NULL DEFAULT 1,
   bloqueado_ate DATETIME NULL,             -- trava após muitas tentativas inválidas
+  stone_code VARCHAR(20) NULL,             -- Stone Code da maquininha Stone (o app busca aqui, sem digitar)
+  comando VARCHAR(20) NULL,                -- comando remoto pendente (ex.: recarregar) — o app executa no próximo sinal
   ativo TINYINT(1) NOT NULL DEFAULT 1,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   KEY (location_id)
@@ -368,6 +370,7 @@ INSERT IGNORE INTO be_settings (k, v) VALUES
  ('marca_slogan','Chopp gelado, do seu jeito'),
  ('marca_cor','#F5B301'),
  ('idade_minima','18'),
+ ('cpf_exigir_receita','1'),       -- 1 = só vende se o CPF + nascimento forem conferidos na Receita (nfeio/serpro)
  ('cpf_provider','local'),            -- local | nfeio | serpro
  ('nfeio_api_key',''),
  ('serpro_consumer_key',''),

@@ -8,6 +8,10 @@ dependencyResolutionManagement {
         mavenCentral()
         // SDK PlugPag (PagBank Smart) — repositório oficial do PagSeguro
         maven { url 'https://github.com/pagseguro/PlugPagServiceWrapper/raw/master' }
+        // SDK da Stone (Sunmi P2): repositório privado — só entra se o token existir (segredo PACKAGECLOUD_READ_TOKEN no GitHub)
+        if (System.getenv('PACKAGECLOUD_READ_TOKEN')) {
+            maven { url "https://packagecloud.io/priv/${System.getenv('PACKAGECLOUD_READ_TOKEN')}/stone/pos-android/maven2" }
+        }
         // SDK Mercado Pago (Point Smart): vem como .aar no "kit de integração" → coloque em app/libs
         flatDir { dirs 'app/libs' }
     }

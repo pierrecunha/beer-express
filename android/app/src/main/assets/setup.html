@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Beer Express — instalação</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{--bg:#0E0B07;--card:#1A1510;--line:#2E261C;--tx:#F4ECDD;--mut:#A99B84;--am:#F5B301;--ok:#3FCB88;--bad:#FF6B5E}
+html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-system,"Segoe UI",Roboto,sans-serif;font-size:17px}
+body{display:flex;flex-direction:column;padding:18px 18px 22px;max-width:520px;margin:0 auto}
+.dots{display:flex;gap:6px;margin-bottom:18px}.dots i{flex:1;height:5px;border-radius:3px;background:var(--line)}.dots i.on{background:var(--am)}
+.logo{font-size:15px;font-weight:800;letter-spacing:.5px;color:var(--am);margin-bottom:6px}
+h1{font-size:27px;line-height:1.15;margin-bottom:8px}
+p{color:var(--mut);line-height:1.45;margin-bottom:14px}
+.step{display:none;flex:1;flex-direction:column}.step.on{display:flex}
+.grow{flex:1}
+label{display:block;font-size:13px;font-weight:700;color:var(--mut);margin:0 0 6px;text-transform:uppercase;letter-spacing:.6px}
+input{width:100%;background:var(--card);border:2px solid var(--line);border-radius:14px;color:var(--tx);font-size:21px;padding:15px 16px;outline:none;margin-bottom:14px}
+input:focus{border-color:var(--am)}
+input.code{font-size:34px;text-align:center;letter-spacing:7px;text-transform:uppercase;font-weight:800}
+.btn{display:block;width:100%;border:0;border-radius:16px;padding:18px;font-size:19px;font-weight:800;background:var(--am);color:#1a1200;margin-top:10px}
+.btn.sec{background:transparent;border:2px solid var(--line);color:var(--tx);font-weight:700}
+.btn:disabled{opacity:.45}
+.box{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px 16px;margin-bottom:12px;line-height:1.4}
+.ok{color:var(--ok);font-weight:700}.bad{color:var(--bad);font-weight:700}
+.spin{width:38px;height:38px;border:5px solid var(--line);border-top-color:var(--am);border-radius:50%;animation:s 1s linear infinite;margin:6px auto 12px}
+@keyframes s{to{transform:rotate(360deg)}}
+.big{font-size:56px;text-align:center;margin:8px 0}
+details{margin:6px 0 12px}summary{color:var(--mut);font-size:15px;padding:8px 0}
+.row{display:flex;gap:10px}.row>*{flex:1}
+.eye{width:64px!important;flex:none!important;margin-top:0!important;padding:0;font-size:22px}
+small{color:var(--mut);display:block;margin:-6px 0 12px;font-size:14px}
+</style>
+</head>
+<body>
+<div class="logo">🍺 BEER EXPRESS</div>
+<div class="dots" id="dots"><i></i><i></i><i></i><i></i><i></i></div>
+
+<!-- 0 Boas-vindas -->
+<section class="step on" id="s0">
+  <div class="big">📲</div>
+  <h1>Vamos instalar esta maquininha</h1>
+  <p>São poucos passos e leva uns 3 minutos. Deixe à mão: o <b>Wi-Fi do ponto</b> (nome e senha) e o <b>código de pareamento</b> que aparece no painel, em <i>Mais → Equipamentos → Maquininhas</i>.</p>
+  <div class="grow"></div>
+  <button class="btn" onclick="go(1)">Começar</button>
+</section>
+
+<!-- 1 Wi-Fi -->
+<section class="step" id="s1">
+  <h1>1. Conectar no Wi-Fi</h1>
+  <div id="wOnline" class="box" style="display:none"><span class="ok">✅ Já está conectada à internet.</span><br><span style="color:var(--mut);font-size:15px">Se for trocar de rede, preencha abaixo.</span></div>
+  <label>Nome do Wi-Fi</label>
+  <input id="ssid" autocapitalize="none" autocomplete="off" placeholder="Ex.: Quiosque_Wifi">
+  <label>Senha do Wi-Fi</label>
+  <div class="row"><input id="wpass" type="password" autocapitalize="none" autocomplete="off" placeholder="Senha"><button class="btn sec eye" onclick="olho()" aria-label="Mostrar senha">👁</button></div>
+  <small>Rede sem senha? Deixe o campo da senha vazio.</small>
+  <div id="wMsg"></div>
+  <div class="grow"></div>
+  <button class="btn" id="wBtn" onclick="conectar()">Conectar</button>
+  <button class="btn sec" id="wNext" style="display:none" onclick="go(2)">Continuar</button>
+  <button class="btn sec" onclick="BeerPOS.openWifiSettings()">Abrir as configurações de Wi-Fi do aparelho</button>
+</section>
+
+<!-- 2 Servidor + código -->
+<section class="step" id="s2">
+  <h1>2. Código de pareamento</h1>
+  <div id="srvMsg" class="box">Procurando o servidor…</div>
+  <label>Código (6 letras/números)</label>
+  <input id="cod" class="code" maxlength="6" autocapitalize="characters" autocomplete="off" placeholder="______" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')">
+  <small>Está no painel: Mais → Equipamentos → Maquininhas.</small>
+  <details><summary>Avançado: endereço do servidor</summary>
+    <input id="srv" autocapitalize="none" autocomplete="off" oninput="srvMudou()">
+  </details>
+  <div id="pMsg"></div>
+  <div class="grow"></div>
+  <button class="btn" id="pBtn" onclick="parear()">Parear</button>
+</section>
+
+<!-- 3 Stone -->
+<section class="step" id="s3">
+  <h1>3. Ativar na Stone</h1>
+  <div id="stBusy" style="display:none"><div class="spin"></div><p style="text-align:center">Ativando a maquininha na Stone…</p></div>
+  <div id="stAsk" style="display:none">
+    <p>Digite o <b>Stone Code</b> desta maquininha (está no app/portal da Stone). Dica: se você cadastrar o código no painel, esta etapa passa sozinha nas próximas instalações.</p>
+    <label>Stone Code</label>
+    <input id="stone" inputmode="numeric" autocomplete="off" placeholder="Ex.: 123456789">
+  </div>
+  <div id="stMsg"></div>
+  <div class="grow"></div>
+  <button class="btn" id="stBtn" style="display:none" onclick="ativarStone($('stone').value)">Ativar</button>
+</section>
+
+<!-- 4 PIN -->
+<section class="step" id="s4">
+  <h1>4. PIN do técnico</h1>
+  <p>Para abrir o menu escondido da maquininha (toque 5 vezes rápido no canto superior esquerdo) é preciso um PIN. Crie um com 4 a 6 números.</p>
+  <label>PIN</label>
+  <input id="pin" type="password" inputmode="numeric" maxlength="6" autocomplete="off" placeholder="••••">
+  <div id="pinMsg"></div>
+  <div class="grow"></div>
+  <button class="btn" onclick="salvarPin()">Salvar PIN</button>
+  <button class="btn sec" onclick="pular()">Usar o PIN padrão (2580)</button>
+</section>
+
+<!-- 5 Pronto -->
+<section class="step" id="s5">
+  <div class="big">✅</div>
+  <h1>Tudo pronto!</h1>
+  <div class="box" id="resumo"></div>
+  <p>A maquininha vai abrir a tela de vendas. Se precisar refazer algo, use o menu do técnico: 5 toques no canto superior esquerdo.</p>
+  <div class="grow"></div>
+  <button class="btn" onclick="abrir()">Abrir a maquininha</button>
+</section>
+
+<script>
+/* Pré-visualização no navegador (?demo=1): finge a ponte do app */
+if (!window.BeerPOS) {
+  window.BeerPOS = {online:()=>true, openWifiSettings(){}, wifiConnect:()=>'ok', info:()=>JSON.stringify({serial:'DEMO',provider:'stone',appVersion:'demo',serverUrl:location.origin+'/beerexpress',model:'Navegador'}),
+    http(id,m,u,b){ (window.__py ? window.__py(m,u,b) : fetch(u,{method:m,body:b||undefined,headers:{'Content-Type':'application/json'}}).then(async r=>[r.status,await r.text()])).then(([st,t])=>window.__http(id,st,t)).catch(e=>window.__http(id,0,String(e))); },
+    stoneActivate(c){ setTimeout(()=>window.__stone(c==='000000000'?false:true, c==='000000000'?'Stone Code inválido':'Maquininha ativada na Stone'),600); },
+    saveSetup(j){ window.__saved=j; }, finishSetup(){ window.__done=true; } };
+}
+const $ = id => document.getElementById(id);
+const info = (()=>{ try { return JSON.parse(BeerPOS.info()); } catch(e){ return {}; } })();
+const S = {url:(info.serverUrl||'https://lavafacilexpress.com/beerexpress').replace(/\/+$/,''), token:'', provider:'', stoneCode:'', nome:'', pin:'', wifi:''};
+let step = 0, pend = {};
+window.__http = (id, st, body) => { const f = pend[id]; delete pend[id]; f && f(st, body); };
+function http(method, url, body){ return new Promise(res => { const id = Math.random().toString(36).slice(2); pend[id] = (st, t) => { let j = null; try { j = JSON.parse(t); } catch(e){} res({st, j, t}); }; BeerPOS.http(id, method, url, body ? JSON.stringify(body) : ''); }); }
+function go(n){ step = n; document.querySelectorAll('.step').forEach((s,i)=>s.classList.toggle('on', i===n));
+  [...$('dots').children].forEach((d,i)=>d.classList.toggle('on', i < Math.max(n,1) && n>0)); window.scrollTo(0,0);
+  if (n === 1) entrarWifi(); if (n === 2) entrarServidor(); if (n === 3) entrarStone(); if (n === 5) resumo(); }
+function msg(id, cls, t){ $(id).innerHTML = t ? `<div class="box ${cls||''}">${t}</div>` : ''; }
+function olho(){ const i = $('wpass'); i.type = i.type === 'password' ? 'text' : 'password'; }
+const esperar = ms => new Promise(r => setTimeout(r, ms));
+
+/* 1 — Wi-Fi */
+function entrarWifi(){ const on = BeerPOS.online(); $('wOnline').style.display = on ? 'block' : 'none'; $('wNext').style.display = on ? 'block' : 'none'; $('wBtn').textContent = on ? 'Trocar de rede' : 'Conectar'; msg('wMsg'); }
+async function conectar(){ const ssid = $('ssid').value.trim(), pass = $('wpass').value;
+  if (!ssid) { msg('wMsg','bad','Digite o nome do Wi-Fi.'); return $('ssid').focus(); }
+  $('wBtn').disabled = true; msg('wMsg','','<div class="spin"></div><div style="text-align:center">Conectando em <b>'+esc(ssid)+'</b>…<br><span style="color:var(--mut);font-size:15px">Se o aparelho pedir para permitir a rede, toque em Permitir.</span></div>');
+  const r = String(BeerPOS.wifiConnect(ssid, pass));
+  if (r !== 'ok') { $('wBtn').disabled = false; return msg('wMsg','bad','Não consegui configurar o Wi-Fi ('+esc(r.replace('erro:',''))+'). Toque em “Abrir as configurações de Wi-Fi” e escolha a rede por lá.'); }
+  for (let i = 0; i < 30; i++) { await esperar(1000); if (BeerPOS.online()) { S.wifi = ssid; $('wBtn').disabled = false; msg('wMsg','ok','✅ Conectado!'); await esperar(700); return go(2); } }
+  $('wBtn').disabled = false; msg('wMsg','bad','Não conectou. Confira o nome e a senha. Também dá para escolher a rede em “Abrir as configurações de Wi-Fi”.'); }
+function esc(s){ return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+/* 2 — Servidor e pareamento */
+let srvT;
+function srvMudou(){ clearTimeout(srvT); srvT = setTimeout(() => { S.url = $('srv').value.trim().replace(/\/+$/,''); testarServidor(); }, 600); }
+async function testarServidor(){ $('srvMsg').className = 'box'; $('srvMsg').textContent = 'Procurando o servidor…';
+  const r = await http('GET', S.url + '/api.php?r=health');
+  if (r.st === 200 && r.j && (r.j.ok || r.j.status === 'OK')) { $('srvMsg').className = 'box ok'; $('srvMsg').textContent = '✅ Servidor encontrado'; return true; }
+  $('srvMsg').className = 'box bad'; $('srvMsg').textContent = r.st ? 'O servidor respondeu com erro ('+r.st+'). Confira o endereço em “Avançado”.' : 'Não consegui falar com o servidor. Confira a internet e o endereço em “Avançado”.'; return false; }
+function entrarServidor(){ $('srv').value = S.url; msg('pMsg'); testarServidor(); setTimeout(() => $('cod').focus(), 300); }
+async function parear(){ const cod = $('cod').value.trim();
+  if (cod.length < 4) { msg('pMsg','bad','Digite o código de pareamento.'); return $('cod').focus(); }
+  $('pBtn').disabled = true; msg('pMsg','','<div class="spin"></div>');
+  const r = await http('POST', S.url + '/api.php?r=pos/pair', {codigo: cod, serial: info.serial || '', app_version: info.appVersion || ''});
+  $('pBtn').disabled = false;
+  if (r.j && r.j.ok) { S.token = r.j.token; S.provider = r.j.provider; S.stoneCode = r.j.stone_code || ''; S.nome = r.j.nome || ''; msg('pMsg','ok','✅ Pareada como <b>'+esc(S.nome)+'</b>'); await esperar(900); return go(S.provider === 'stone' ? 3 : 4); }
+  if (r.j && r.j.erro === 'codigo') return msg('pMsg','bad','Código inválido. Confira no painel (Mais → Equipamentos → Maquininhas).');
+  msg('pMsg','bad', r.st ? esc((r.j && r.j.mensagem) || 'Erro '+r.st) : 'Sem conexão com o servidor. Confira o Wi-Fi.'); }
+
+/* 3 — Stone */
+function entrarStone(){ msg('stMsg'); if (S.stoneCode) { $('stAsk').style.display = 'none'; $('stBtn').style.display = 'none'; return ativarStone(S.stoneCode, true); }
+  $('stBusy').style.display = 'none'; $('stAsk').style.display = 'block'; $('stBtn').style.display = 'block'; setTimeout(() => $('stone').focus(), 300); }
+window.__stone = (ok, m) => { stoneRes && stoneRes(ok, m); };
+let stoneRes = null;
+function ativarStone(code, auto){ code = String(code||'').replace(/\D/g,''); if (code.length < 6) return msg('stMsg','bad','Digite o Stone Code (só números).');
+  $('stBusy').style.display = 'block'; $('stAsk').style.display = 'none'; $('stBtn').style.display = 'none'; msg('stMsg');
+  stoneRes = async (ok, m) => { $('stBusy').style.display = 'none';
+    if (ok) { S.stoneCode = code; msg('stMsg','ok','✅ '+esc(m)); await esperar(900); return go(4); }
+    $('stAsk').style.display = 'block'; $('stBtn').style.display = 'block'; $('stone').value = code; msg('stMsg','bad', esc(m) + (auto ? '<br>O código que veio do painel não funcionou. Confira-o ou digite outro.' : '')); };
+  BeerPOS.stoneActivate(code); }
+
+/* 4 — PIN */
+function salvarPin(){ const p = $('pin').value.replace(/\D/g,''); if (p.length < 4) return msg('pinMsg','bad','O PIN precisa ter de 4 a 6 números.'); S.pin = p; go(5); }
+function pular(){ S.pin = ''; go(5); }
+
+/* 5 — pronto */
+function resumo(){ $('resumo').innerHTML = '📍 <b>'+esc(S.nome||'Maquininha')+'</b><br>' + (S.wifi ? '📶 Wi-Fi: '+esc(S.wifi)+'<br>' : '') + '🌐 Servidor ok<br>' + (S.provider === 'stone' ? '💳 Stone ativada<br>' : S.provider === 'simulado' ? '🧪 Modo de teste (pagamento simulado)<br>' : '💳 Adquirente: '+esc(S.provider)+'<br>') + (S.pin ? '🔐 PIN do técnico criado' : '🔐 PIN padrão 2580 (troque depois)'); }
+function abrir(){ BeerPOS.saveSetup(JSON.stringify({url:S.url, pin:S.pin, provider:S.provider, token:S.token})); BeerPOS.finishSetup(); }
+</script>
+</body>
+</html>

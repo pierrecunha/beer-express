@@ -1,0 +1,94 @@
+# Gera o APK da maquininha e publica no servidor (https://.../beerexpress/apk/). Roda quando mexe em android/ ou à mão.
+# Segredos usados: HOSTINGER_SSH_KEY, HOSTINGER_SSH, HOSTINGER_PORT, HOSTINGER_PATH (os mesmos do deploy)
+#   PACKAGECLOUD_READ_TOKEN (opcional): token do repositório privado da Stone → habilita o APK "stone" (Sunmi P2 com cartão real)
+# A chave de assinatura é criada uma vez e fica no servidor (~/beerexpress_keys), fora do Git: assim todo APK novo instala por cima do antigo.
+name: apk
+
+on:
+  push:
+    branches: [main]
+    paths: ["android/**", ".github/workflows/apk.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: apk
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      PACKAGECLOUD_READ_TOKEN: ${{ secrets.PACKAGECLOUD_READ_TOKEN }}
+      HOSTINGER_SSH: ${{ secrets.HOSTINGER_SSH || vars.HOSTINGER_SSH }}
+      HOSTINGER_PORT: ${{ secrets.HOSTINGER_PORT || vars.HOSTINGER_PORT }}
+      HOSTINGER_PATH: ${{ secrets.HOSTINGER_PATH || vars.HOSTINGER_PATH }}
+      HOSTINGER_HOST_FP: SHA256:w/VA0zi7P3KePP56aftdPRWQy9tc4LLl1p+lyvhx9TM
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+      - name: chave SSH
+        env:
+          KEY: ${{ secrets.HOSTINGER_SSH_KEY }}
+        run: |
+          if [ -z "$KEY" ]; then echo "SEM_SSH=1" >> "$GITHUB_ENV"; echo "::warning::Sem HOSTINGER_SSH_KEY: o APK não será publicado (só fica no artefato)"; exit 0; fi
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$KEY" | tr -d '\r' > ~/.ssh/id_ed25519 && chmod 600 ~/.ssh/id_ed25519
+          HOST="${HOSTINGER_SSH#*@}"
+          echo "[${HOST}]:${HOSTINGER_PORT} $(ssh-keyscan -p "$HOSTINGER_PORT" -t ed25519 "$HOST" 2>/dev/null | awk '{print $2" "$3}')" >> ~/.ssh/known_hosts
+          ssh-keygen -lf ~/.ssh/known_hosts | grep -q "$HOSTINGER_HOST_FP" || { echo "::error::Impressão digital do servidor não confere"; exit 1; }
+      - name: chave de assinatura (criada uma vez, guardada no servidor)
+        if: env.SEM_SSH != '1'
+        run: |
+          SSH="ssh -p $HOSTINGER_PORT -o BatchMode=yes $HOSTINGER_SSH"
+          if ! $SSH 'test -f ~/beerexpress_keys/beerexpress.jks'; then
+            P=$(openssl rand -hex 16)
+            keytool -genkeypair -keystore /tmp/beerexpress.jks -storepass "$P" -keypass "$P" -alias beerexpress \
+              -keyalg RSA -keysize 2048 -validity 10950 -dname "CN=Beer Express, O=Beer Express, C=BR"
+            $SSH 'umask 077; mkdir -p ~/beerexpress_keys'
+            scp -P "$HOSTINGER_PORT" /tmp/beerexpress.jks "$HOSTINGER_SSH:beerexpress_keys/beerexpress.jks"
+            printf '%s' "$P" | $SSH 'umask 077; cat > ~/beerexpress_keys/senha'
+            rm -f /tmp/beerexpress.jks
+          fi
+          scp -P "$HOSTINGER_PORT" "$HOSTINGER_SSH:beerexpress_keys/beerexpress.jks" "$RUNNER_TEMP/beerexpress.jks"
+          P=$($SSH 'cat ~/beerexpress_keys/senha')
+          echo "::add-mask::$P"
+          echo "BE_KEYSTORE=$RUNNER_TEMP/beerexpress.jks" >> "$GITHUB_ENV"
+          echo "BE_KEYSTORE_PASS=$P" >> "$GITHUB_ENV"
+      - name: compilar (simulado)
+        run: gradle -p android assembleSimuladoRelease --no-daemon --stacktrace
+      - name: compilar (Stone / Sunmi P2)
+        if: env.PACKAGECLOUD_READ_TOKEN != ''
+        run: gradle -p android assembleStoneRelease --no-daemon --stacktrace
+      - name: reunir APKs
+        run: |
+          mkdir -p dist
+          for f in $(find android/app/build/outputs/apk -name '*.apk'); do
+            v=$(echo "$f" | sed -E 's#.*/apk/([^/]+)/.*#\1#')
+            cp "$f" "dist/beerexpress-$v.apk"
+          done
+          ls -l dist
+          test -n "$(ls dist)"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: apk
+          path: dist/*.apk
+      - name: publicar no servidor
+        if: env.SEM_SSH != '1'
+        run: |
+          SSH="ssh -p $HOSTINGER_PORT -o BatchMode=yes $HOSTINGER_SSH"
+          $SSH "mkdir -p '$HOSTINGER_PATH/apk'"
+          scp -P "$HOSTINGER_PORT" dist/*.apk "$HOSTINGER_SSH:$HOSTINGER_PATH/apk/"
+          # nome fixo para o QR/link nunca mudar
+          $SSH "echo '${GITHUB_RUN_NUMBER}' > '$HOSTINGER_PATH/apk/versao.txt'"

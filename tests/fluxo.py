@@ -195,9 +195,10 @@ ok(len(m) == 1 and m[0]["ibu"] == 10 and m[0]["cervejaria"] == "Haisten Beer" an
 call("admin/save", {"entity": "cupons", "data": {"codigo": "beer10", "descricao": "10% off", "tipo": "percentual", "valor": 10, "minimo": 10, "ativo": 1}}, AD)
 call("admin/save", {"entity": "cupons", "data": {"codigo": "CORTESIA", "tipo": "percentual", "valor": 100, "usos_max": 1, "ativo": 1}}, AD)
 ok(call("pos/config", h=T2)[1].get("cupons") is True, "cupom aparece quando há cupom ativo")
-call("admin/settings_save", {"settings": {"verificacao_idade": "declaracao"}}, AD)
 st, r = call("pos/identify", {"declara_maior": True}, T2)
-ok(r.get("ok") and r.get("declaracao") is True and r.get("token"), "modo declaração: só 'Sim, concordo'", r)
+ok(r.get("erro") == "cpf_invalido", "não existe venda só com 'Sim, concordo': CPF é obrigatório", r)
+st, r = call("pos/identify", {"cpf": "111.444.777-35", "nascimento": "01/01/1985", "declara_maior": True}, T2)
+ok(r.get("ok") and r.get("token"), "identifica com CPF + nascimento", r)
 VD = r.get("token")
 it = [{"offer_id": o500, "qtd": 2}]
 st, r = call("pos/coupon", {"token": VD, "itens": it, "codigo": "BEER10"}, T2)
@@ -270,15 +271,13 @@ TD = {"X-Terminal-Token": call("pos/pair", {"codigo": r["codigo"], "serial": "SI
 call("dev/poll&temp=3", h=DK)
 m = call("pos/menu", h=TD)[1]["torneiras"]
 ok(len(m) == 1 and m[0]["disponivel"] and m[0]["produto"] == "Pilsen da Casa", "totem simulado presa à torneira 1", m)
-call("admin/settings_save", {"settings": {"verificacao_idade": "declaracao"}}, AD)
-vt = call("pos/identify", {"declara_maior": True}, TD)[1]["token"]
+vt = call("pos/identify", {"cpf": "111.444.777-35", "nascimento": "01/01/1985", "declara_maior": True}, TD)[1]["token"]
 o = call("pos/order", {"token": vt, "metodo": "credito", "itens": [{"offer_id": m[0]["ofertas"][0]["id"], "qtd": 1}]}, TD)[1]
 call("pos/paid", {"ref": o["ref"], "metodo": "credito"}, TD)
 c = call("dev/poll", h=DK)[1].get("cmd") or {}
 ok(c.get("go") is True and c.get("espera_inicio_s") == 120, "demo usa alavanca: liberada após pagar", c)
 call("dev/report", {"id": c["id"], "status": "concluido", "servido_ml": 300, "pulsos": 578}, DK)
 ok(call(f"pos/order_status&ref={o['ref']}", h=TD)[1]["status"] == "concluido", "venda simulada concluída")
-call("admin/settings_save", {"settings": {"verificacao_idade": "cpf"}}, AD)
 st, r = call("admin/demo_clear", {}, AD)
 ok(r.get("removido") is True, "remove a demonstração", r)
 st, r = call("dev/poll", h=DK)
@@ -380,6 +379,28 @@ st, r = call("admin/relatorio&location_id=" + str(loc), h=AD); ok(r.get("ok"), "
 
 st, r = call("admin/limpeza_feita", {"tap_id": tap}, DN); ok(st == 403, "dono não registra limpeza em torneira de outro ponto", r)
 st, r = call("admin/relatorio&location_id=" + str(loc), h=DN); ok(st == 403, "dono não abre relatório de outro ponto", r)
+print("── Receita obrigatória e maquininha Stone")
+locS = save("locations", {"nome": "Ponto Stone"})
+termS = save("terminais", {"location_id": locS, "nome": "Sunmi P2", "provider": "stone", "stone_code": "123456789"})
+codS = next(t["codigo"] for t in call("admin/catalog", h=AD)[1]["terminais"] if t["id"] == termS)
+st, r = call("pos/pair", {"codigo": codS, "serial": "P2-TESTE"})
+ok(r.get("ok") and r.get("provider") == "stone" and r.get("stone_code") == "123456789", "pareia e já recebe o Stone Code do servidor (sem digitar)", r)
+TS = {"X-Terminal-Token": r.get("token", "")}
+ok(call("pos/config", h=TS)[1]["terminal"]["stone_code"] == "123456789", "config da maquininha traz o Stone Code")
+st, r = call("pos/identify", {"cpf": "111.444.777-35", "nascimento": "01/01/1985", "declara_maior": True}, TS)
+ok(r.get("erro") == "receita_off", "sem consulta na Receita configurada a venda é bloqueada", r)
+d = call("admin/dashboard", h=AD)[1]; ok(d.get("receita_ok") is False, "painel avisa que as vendas estão bloqueadas")
+st, r = call("admin/cpf_teste", {"cpf": "11144477735", "nascimento": "01/01/1985"}, AD); ok(st == 400, "teste da Receita exige provedor configurado", r)
+st, r = call("admin/cpf_teste", {"cpf": "11144477735", "nascimento": "01/01/1985"}, DN); ok(st == 403, "dono não testa a Receita", r)
+st, r = call("admin/terminal_comando", {"terminal_id": termS, "comando": "recarregar"}, AD); ok(r.get("ok"), "painel envia comando remoto", r)
+st, r = call("pos/heartbeat", {"app_version": "1.0.0"}, TS); ok(r.get("comando") == "recarregar", "maquininha recebe o comando no sinal", r)
+st, r = call("pos/heartbeat", {"app_version": "1.0.0"}, TS); ok(r.get("comando") is None, "comando é entregue uma vez só", r)
+st, r = call("admin/terminal_comando", {"terminal_id": termS, "comando": "apagar"}, AD); ok(st == 400, "comando inválido é recusado", r)
+call("admin/settings_save", {"settings": {"cpf_exigir_receita": "0"}}, AD)
+st, r = call("pos/identify", {"cpf": "111.444.777-35", "nascimento": "01/01/1985", "declara_maior": True}, TS)
+ok(r.get("ok"), "com a exigência desligada (só testes) a maquininha Stone vende", r)
+call("admin/settings_save", {"settings": {"cpf_exigir_receita": "1"}}, AD)
+
 print("── segurança")
 for i in range(6): st, r = call("pos/identify", {"cpf": "123.456.789-00", "nascimento": "01/01/1990", "declara_maior": True}, T)
 ok(r.get("erro") == "terminal_bloqueado", "força bruta bloqueia a maquininha", r)
