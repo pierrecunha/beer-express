@@ -6,6 +6,8 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        // espelho do Maven Central mantido pelo Google (alternativa se o principal falhar no CI)
+        maven { url 'https://maven-central.storage-download.googleapis.com/maven2/' }
         // SDK PlugPag (PagBank Smart) — repositório oficial do PagSeguro
         maven { url 'https://github.com/pagseguro/PlugPagServiceWrapper/raw/master' }
         // SDK da Stone (Sunmi P2): repositório privado — só entra se o token existir (segredo PACKAGECLOUD_READ_TOKEN no GitHub)
