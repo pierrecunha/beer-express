@@ -51,6 +51,25 @@ p,li{color:#C9BBA4}li{margin:0 0 8px 20px}
 </ol>
 <div class="card"><p>✅ Pronto: a maquininha abre a tela de vendas e fica sempre ligada neste app. Depois, o painel pode <b>recarregar</b> ou <b>reiniciar</b> a maquininha à distância.</p></div>
 
+<h2>Não consegue instalar o APK? Use o Chrome</h2>
+<div class="card">
+  <p>A maquininha da Stone costuma aceitar só apps liberados por ela. Se o APK for bloqueado, o mesmo sistema roda pelo Chrome, em tela cheia:</p>
+  <a class="btn" href="pos.html" target="_blank">🚀 Abrir a maquininha no Chrome</a>
+  <ol style="margin-top:10px">
+    <li>Com a página aberta, toque no menu <b>⋮</b> do Chrome.</li>
+    <li>Toque em <b>Adicionar à tela inicial</b> (ou <b>Instalar app</b>) e confirme.</li>
+    <li>Abra pelo ícone <b>Beer Express</b> e digite o código de pareamento.</li>
+    <li>Para o cliente não sair do app: Configurações → Acessibilidade → <b>Fixar tela</b>; abra o app, toque em Recentes e no alfinete 📌. Para sair, segure Voltar + Recentes por 3 segundos.</li>
+  </ol>
+  <small>No Chrome o pagamento com cartão real não funciona (só o app nativo conversa com a leitora da Stone). Serve para testes e para o fluxo com cupom/PIX.</small>
+</div>
+
+<h2>Diagnóstico</h2>
+<div class="card">
+  <button class="btn sec" onclick="diag()">📡 Testar a conexão com o servidor</button>
+  <div id="diag" style="margin-top:8px"></div>
+</div>
+
 <h2>Precisa refazer?</h2>
 <p>Toque 5 vezes rápido no canto superior esquerdo da tela, digite o PIN e escolha <b>Refazer instalação</b>.</p>
 
@@ -58,6 +77,10 @@ p,li{color:#C9BBA4}li{margin:0 0 8px 20px}
 const link = location.href.split('#')[0];
 document.getElementById('zap').href = 'https://wa.me/?text=' + encodeURIComponent('Instale o Beer Express na maquininha: ' + link);
 function copiar(){ (navigator.clipboard ? navigator.clipboard.writeText(link) : Promise.reject()).then(() => alert('Link copiado!')).catch(() => prompt('Copie o link:', link)); }
+async function diag(){ const el = document.getElementById('diag'); el.textContent = '⏳ Testando…';
+  try { const base = location.href.replace(/[^\/]*$/, ''); const r = await fetch(base + 'api.php?r=health', {cache:'no-store'}); const j = await r.json();
+    el.innerHTML = j.ok || j.status === 'OK' ? '✅ Servidor respondendo' + (j.versao ? ' (versão ' + j.versao + ')' : '') + (j.cron_min == null ? '<br>⚠️ O cron ainda não está rodando no servidor.' : '') : '⚠️ O servidor respondeu com problema: ' + (j.status || r.status);
+  } catch(e){ el.textContent = '❌ Sem conexão: ' + e.message; } }
 async function existe(u){ try { const r = await fetch(u, {method:'HEAD', cache:'no-store'}); return r.ok; } catch(e){ return false; } }
 (async () => {
   const [s, m] = await Promise.all([existe('apk/beerexpress-stone.apk'), existe('apk/beerexpress-simulado.apk')]);
