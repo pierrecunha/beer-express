@@ -1,0 +1,41 @@
+# Redefinir a senha do painel (Actions → senha → Run workflow).
+# Sem e-mail: só lista os usuários. Com e-mail: gera uma senha nova e mostra NO LOG desta execução (visível a quem tem acesso ao repositório).
+name: senha
+
+on:
+  workflow_dispatch:
+    inputs:
+      email:
+        description: "E-mail do usuário (vazio = só listar os usuários)"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  senha:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      HOSTINGER_SSH: ${{ secrets.HOSTINGER_SSH || vars.HOSTINGER_SSH }}
+      HOSTINGER_PORT: ${{ secrets.HOSTINGER_PORT || vars.HOSTINGER_PORT }}
+      HOSTINGER_PATH: ${{ secrets.HOSTINGER_PATH || vars.HOSTINGER_PATH }}
+      HOSTINGER_HOST_FP: SHA256:w/VA0zi7P3KePP56aftdPRWQy9tc4LLl1p+lyvhx9TM
+      EMAIL: ${{ inputs.email }}
+    steps:
+      - name: chave SSH
+        env:
+          KEY: ${{ secrets.HOSTINGER_SSH_KEY }}
+        run: |
+          [ -n "$KEY" ] || { echo "::error::Falta o segredo HOSTINGER_SSH_KEY"; exit 1; }
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$KEY" | tr -d '\r' > ~/.ssh/id_ed25519 && chmod 600 ~/.ssh/id_ed25519
+          HOST="${HOSTINGER_SSH#*@}"
+          echo "[${HOST}]:${HOSTINGER_PORT} $(ssh-keyscan -p "$HOSTINGER_PORT" -t ed25519 "$HOST" 2>/dev/null | awk '{print $2" "$3}')" >> ~/.ssh/known_hosts
+          ssh-keygen -lf ~/.ssh/known_hosts | grep -q "$HOSTINGER_HOST_FP" || { echo "::error::Impressão digital do servidor não confere"; exit 1; }
+      - name: senha
+        run: |
+          # o e-mail só passa se parecer e-mail (evita injeção no comando remoto)
+          if [ -n "$EMAIL" ] && ! printf '%s' "$EMAIL" | grep -Eq '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+$'; then echo "::error::E-mail inválido"; exit 1; fi
+          ssh -p "$HOSTINGER_PORT" -o BatchMode=yes "$HOSTINGER_SSH" "cd '$HOSTINGER_PATH' && php api.php senha '$EMAIL'"

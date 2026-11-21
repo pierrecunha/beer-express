@@ -2010,7 +2010,7 @@ function be_migrate(): array {
 
 if (defined('BE_LIB_ONLY')) return;
 
-/* Linha de comando: php api.php health | migrate */
+/* Linha de comando: php api.php health | migrate | diag | senha [email] */
 if (PHP_SAPI === 'cli') {
     $cmd = $argv[1] ?? '';
     if ($cmd === 'migrate') {
@@ -2073,7 +2073,24 @@ if (PHP_SAPI === 'cli') {
         echo 'diag ultimo_sinal: ' . val('SELECT MAX(last_seen) FROM be_devices') . "\n";
         exit(0);
     }
-    fwrite(STDERR, "uso: php api.php health|migrate|diag\n"); exit(2);
+    if ($cmd === 'senha') {
+        // php api.php senha            → lista os usuários do painel
+        // php api.php senha EMAIL      → gera uma senha nova e mostra uma única vez (só o hash fica no banco)
+        $email = strtolower(trim((string)($argv[2] ?? '')));
+        if ($email === '') {
+            foreach (rows('SELECT email, role, ativo FROM be_users ORDER BY role, email') as $u) echo "usuario: {$u['email']} ({$u['role']}" . ($u['ativo'] ? '' : ', inativo') . ")\n";
+            exit(0);
+        }
+        $u = row('SELECT id, email FROM be_users WHERE email = ?', [$email]);
+        if (!$u) { fwrite(STDERR, "ERRO: nenhum usuário com o e-mail $email (rode sem e-mail para listar)\n"); exit(1); }
+        $alfa = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        $nova = ''; for ($i = 0; $i < 12; $i++) $nova .= $alfa[random_int(0, strlen($alfa) - 1)];
+        q('UPDATE be_users SET senha_hash = ?, ativo = 1 WHERE id = ?', [password_hash($nova, PASSWORD_DEFAULT), $u['id']]);
+        log_event('aviso', 'senha_redefinida', "Senha do usuário {$u['email']} redefinida pela linha de comando", [], true);
+        echo "NOVA SENHA de {$u['email']}: $nova\n(troque em Painel → Minha conta assim que entrar)\n";
+        exit(0);
+    }
+    fwrite(STDERR, "uso: php api.php health|migrate|diag|senha\n"); exit(2);
 }
 
 header('Access-Control-Allow-Origin: *');

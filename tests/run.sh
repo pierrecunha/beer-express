@@ -27,5 +27,13 @@ $ADMIN "$BE_DB_NAME" -e "UPDATE be_taps SET limpeza_em = NOW() - INTERVAL 40 DAY
 php server/cron_tick.php
 $ADMIN "$BE_DB_NAME" -N -e "SELECT tipo FROM be_events WHERE tipo IN ('limpeza','validade_barril')" | sort | tr '\n' ' ' | grep -q "limpeza validade_barril" && echo "avisos de limpeza e validade: ok"
 php server/api.php health | grep -q '"cron_min":0' && echo "cron: ok"
+echo "→ redefinir senha pela linha de comando"
+php server/api.php senha | grep -q "admin@teste.com" || { echo "senha: lista falhou"; exit 1; }
+php server/api.php senha inexistente@x.com 2>/dev/null && { echo "senha: e-mail inexistente deveria falhar"; exit 1; }
+NOVA=$(php server/api.php senha admin@teste.com | sed -n 's/^NOVA SENHA de [^:]*: //p')
+[ ${#NOVA} -eq 12 ] || { echo "senha: nova senha inválida"; exit 1; }
+curl -s -X POST "http://127.0.0.1:8765/api.php?r=admin/login" -H 'Content-Type: application/json' -d "{\"email\":\"admin@teste.com\",\"senha\":\"$NOVA\"}" | grep -q '"token"' || { echo "senha: login com a nova falhou"; exit 1; }
+curl -s -X POST "http://127.0.0.1:8765/api.php?r=admin/login" -H 'Content-Type: application/json' -d '{"email":"admin@teste.com","senha":"senha12345"}' | grep -q '"token"' && { echo "senha: a antiga ainda vale"; exit 1; }
+echo "redefinir senha: ok"
 if grep -E "PHP (Fatal|Warning|Deprecated)" tests/.run/php.log; then echo "avisos do PHP acima"; exit 1; fi
 echo "testes: ok"
