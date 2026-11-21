@@ -1,0 +1,26 @@
+# Testa, de fora do servidor, se as páginas públicas respondem (Actions → paginas → Run workflow). Não muda nada.
+name: paginas
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  paginas:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: páginas
+        env:
+          BASE: ${{ secrets.BE_URL || vars.BE_URL }}
+        run: |
+          echo "base: ${BASE:-https://lavafacilexpress.com/beerexpress}"
+          B="${BASE:-https://lavafacilexpress.com/beerexpress}"
+          for p in painel.html tv.html pos.html instalar.html "api.php?r=health" ""; do
+            printf '%-22s ' "/$p"; curl -s -o /dev/null -m 20 -w '%{http_code} %{time_total}s %{remote_ip}\n' "$B/$p" || echo "falhou"
+          done
+          echo "--- cabeçalhos do painel"; curl -sI -m 20 "$B/painel.html" | head -8
+          echo "--- domínio raiz"; curl -sI -m 20 https://lavafacilexpress.com/ | head -3
+          echo "--- DNS"; getent hosts lavafacilexpress.com
