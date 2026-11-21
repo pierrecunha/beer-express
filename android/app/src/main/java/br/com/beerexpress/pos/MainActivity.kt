@@ -16,7 +16,9 @@ import android.view.WindowManager
 import android.webkit.*
 import android.widget.EditText
 import android.widget.FrameLayout
+import android.speech.tts.TextToSpeech
 import android.widget.TextView
+import java.util.Locale
 import androidx.appcompat.app.AppCompatActivity
 import org.json.JSONObject
 
@@ -35,6 +37,8 @@ class MainActivity : AppCompatActivity() {
     private val retry = Runnable { web.loadUrl(posUrl) }
     private var cornerTaps = 0
     private var lastCornerTap = 0L
+    private var tts: TextToSpeech? = null
+    private var ttsPronto = false
 
     private val prefs by lazy { getSharedPreferences("beerexpress", Context.MODE_PRIVATE) }
     private val posUrl get() = prefs.getString("pos_url", BuildConfig.POS_URL)!!
@@ -44,6 +48,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         provider = ProviderFactory.create(this)
+        tts = TextToSpeech(this) { st -> if (st == TextToSpeech.SUCCESS) { tts?.language = Locale("pt", "BR"); ttsPronto = true } }
 
         web = WebView(this).apply {
             setBackgroundColor(Color.parseColor("#0E0B07"))
@@ -83,7 +88,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     /* ---------- ponte JS ↔ nativo ---------- */
+    override fun onDestroy() { tts?.shutdown(); super.onDestroy() }
+
     inner class Bridge {
+        /** Voz do totem (português do Brasil) — a página chama BeerPOS.speak("texto"). */
+        @JavascriptInterface fun speak(texto: String) { if (ttsPronto) tts?.speak(texto, TextToSpeech.QUEUE_FLUSH, null, "be") }
         @JavascriptInterface fun getToken(): String = prefs.getString("terminal_token", "") ?: ""
         @JavascriptInterface fun saveToken(t: String) { prefs.edit().putString("terminal_token", t).apply() }
         @JavascriptInterface fun info(): String = JSONObject()

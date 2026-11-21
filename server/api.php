@@ -643,11 +643,8 @@ function r_pos_identify(array $t): array {
     $precisaVerificar = !$cust || $validoAte < db_agora() || (setting('cpf_provider', 'local') !== 'local' && $cust['verificado_por'] === 'local');
 
     if ($precisaVerificar) {
-        if ($nome === '') {
-            q('INSERT INTO be_verifications (terminal_id, cpf, ok, motivo) VALUES (?,?,0,?)', [$t['id'], $cpf, 'precisa_nome']);
-            return ['ok' => false, 'need_name' => true, 'motivo' => 'precisa_nome', 'mensagem' => 'Primeiro acesso: digite seu nome completo.'];
-        }
-        if (count(nome_norm($nome)) < (setting('nome_regra') === 'primeiro' ? 1 : 2)) $falha('nome_incompleto', 'Digite nome e sobrenome.');
+        // Só o CPF + data de nascimento + declaração 18+ valem: o nome é opcional (se vier, é conferido; se a consulta à Receita trouxer, é guardado).
+        if ($nome !== '' && count(nome_norm($nome)) < (setting('nome_regra') === 'primeiro' ? 1 : 2)) $falha('nome_incompleto', 'Digite nome e sobrenome.');
         $res = cpf_consulta($cpf, $nasc);
         if (!$res['ok'] && $res['motivo'] === 'servico_indisponivel') {
             log_event('aviso', 'cpf_api_erro', 'Consulta de CPF indisponível: ' . ($res['detalhe'] ?? ''), $ctx, true);
@@ -655,8 +652,8 @@ function r_pos_identify(array $t): array {
             $res = ['ok' => true, 'nome' => null, 'situacao' => 'local'];
         }
         if (!$res['ok']) $falha($res['motivo'], $res['motivo'] === 'cpf_irregular' ? 'CPF com situação irregular na Receita Federal.' : 'CPF e data de nascimento não conferem com a Receita Federal.');
-        if ($res['nome'] !== null && !nome_confere($nome, $res['nome'])) $falha('nome_nao_confere', 'O nome não confere com o CPF informado.');
-        $nomeFinal = $res['nome'] ?? mb_strtoupper($nome, 'UTF-8');
+        if ($nome !== '' && $res['nome'] !== null && !nome_confere($nome, $res['nome'])) $falha('nome_nao_confere', 'O nome não confere com o CPF informado.');
+        $nomeFinal = $res['nome'] ?? ($nome !== '' ? mb_strtoupper($nome, 'UTF-8') : ($cust['nome'] ?? 'CLIENTE'));
         $por = $res['situacao'] === 'local' ? 'local' : setting('cpf_provider');
         q('INSERT INTO be_customers (cpf, nome, nascimento, verificado_por, verificado_em) VALUES (?,?,?,?,NOW())
            ON DUPLICATE KEY UPDATE nome = VALUES(nome), nascimento = VALUES(nascimento), verificado_por = VALUES(verificado_por), verificado_em = NOW()',
@@ -672,7 +669,7 @@ function r_pos_identify(array $t): array {
     $token = rand_token(16);
     q('INSERT INTO be_verifications (terminal_id, cpf, ok, motivo, token, customer_id, expira_em) VALUES (?,?,1,?,?,?, NOW() + INTERVAL 10 MINUTE)',
         [$t['id'], $cpf, $precisaVerificar ? 'verificado' : 'cliente_conhecido', $token, $cust['id']]);
-    return ['ok' => true, 'token' => $token, 'nome' => nome_exibicao($cust['nome']), 'novo' => $precisaVerificar && (int)$cust['compras'] === 0,
+    return ['ok' => true, 'token' => $token, 'nome' => $cust['nome'] === 'CLIENTE' ? null : nome_exibicao($cust['nome']), 'novo' => $precisaVerificar && (int)$cust['compras'] === 0,
         'compras' => (int)$cust['compras'], 'restante_ml_dia' => $restante];
 }
 

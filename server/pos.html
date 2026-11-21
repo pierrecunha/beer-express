@@ -310,6 +310,7 @@ svg.ic{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:2;strok
 </style>
 </head>
 <body>
+<button id="somBtn" onclick="toggleSom()" aria-label="Som e voz" style="position:fixed;top:14px;right:72px;z-index:60;width:34px;height:34px;border-radius:50%;border:1px solid rgba(255,255,255,.18);background:rgba(0,0,0,.45);color:#fff;font-size:18px;padding:0;line-height:1">🔊</button>
 <div id="prog"><i></i><i></i><i></i><i></i></div>
 <div class="offbar" id="offbar">Sem conexão com o servidor — tentando novamente…</div>
 
@@ -369,7 +370,7 @@ svg.ic{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:2;strok
 
 <!-- CPF -->
 <section class="scr" id="cpf">
-  <div class="top"><button class="back" onclick="go('age')">‹</button><h2>Digite seu CPF</h2><span class="step">2/4</span></div>
+  <div class="top"><button class="back" onclick="go('age')">‹</button><h2>Digite seu CPF</h2><span class="step">2/3</span></div>
   <div class="disp ph" id="cpfDisp">000.000.000-00</div>
   <div class="hint" id="cpfHint">Somente números</div>
   <div class="pad" data-pad="cpf"></div>
@@ -379,22 +380,12 @@ svg.ic{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:2;strok
 
 <!-- NASCIMENTO -->
 <section class="scr" id="nasc">
-  <div class="top"><button class="back" onclick="go('cpf')">‹</button><h2>Data de nascimento</h2><span class="step">3/4</span></div>
+  <div class="top"><button class="back" onclick="go('cpf')">‹</button><h2>Data de nascimento</h2><span class="step">3/3</span></div>
   <div class="disp ph" id="nascDisp">DD/MM/AAAA</div>
   <div class="hint" id="nascHint">Ex.: 25/08/1995</div>
   <div class="pad" data-pad="nasc"></div>
   <div class="grow"></div>
   <button class="btn pri" id="nascOk" disabled onclick="nascNext()">Continuar</button>
-</section>
-
-<!-- NOME (primeiro acesso) -->
-<section class="scr" id="nome">
-  <div class="top"><button class="back" onclick="go('nasc')">‹</button><h2>Seu nome completo</h2><span class="step">4/4</span></div>
-  <div class="disp namebox ph" id="nomeDisp">NOME E SOBRENOME</div>
-  <div class="hint" id="nomeHint">Primeiro acesso: confira com a Receita Federal. Nas próximas compras basta o CPF.</div>
-  <div class="kb" id="nomeKb"></div>
-  <div class="grow"></div>
-  <button class="btn pri" id="nomeOk" disabled onclick="identify(true)">Confirmar</button>
 </section>
 
 <!-- CARDÁPIO -->
@@ -562,22 +553,22 @@ async function api(r, body, method){
   catch(e){ $('offbar').style.display='block'; throw {erro:'rede', mensagem:'Sem conexão. Tente novamente.'}; }
   const j = await res.json().catch(() => ({ok:false, erro:'json', mensagem:'Resposta inválida do servidor'}));
   if (res.status === 401 && j.erro === 'terminal') { TT=''; NATIVE ? BeerPOS.saveToken('') : localStorage.removeItem('be_tt'); go('pair'); }
-  if (!j.ok && !j.need_name) throw j;
+  if (!j.ok) throw j;
   return j;
 }
-const PASSO = {cpf:1, nasc:1, nome:1, tamanho:2, qtd:3, cupomScr:3, pagamento:4, pix:4};
-function go(id){ document.querySelectorAll('.scr').forEach(s => s.classList.toggle('on', s.id === id)); S.screen = id; armIdle();
+const PASSO = {cpf:1, nasc:1, tamanho:2, qtd:3, cupomScr:3, pagamento:4, pix:4};
+function go(id){ const mudou = S.screen !== id; document.querySelectorAll('.scr').forEach(s => s.classList.toggle('on', s.id === id)); S.screen = id; armIdle(); if (mudou && FALAS[id]) falar(FALAS[id]);
   const n = PASSO[id] || 0, pr = $('prog'); pr.classList.toggle('on', n > 0); [...pr.children].forEach((b,i)=>b.classList.toggle('d', i < n));
   const el = $(id); if (el) { el.classList.toggle('hasprog', n > 0); el.scrollTop = 0; } }
 /* Funil de vendas (abandono por etapa no painel) */
 function track(etapa){ if (S.sessao) api('pos/track', {sessao:S.sessao, etapa}).catch(()=>{}); }
 function novaSessao(){ S.sessao = [...crypto.getRandomValues(new Uint8Array(8))].map(b=>b.toString(16).padStart(2,'0')).join(''); }
 /* Toque com resposta tátil (Android) */
-document.addEventListener('click', e => { if (e.target.closest('button, .tapHome, #idle') && navigator.vibrate) navigator.vibrate(12); }, true);
+document.addEventListener('click', e => { if (e.target.closest('button, .tapHome, #idle')) { if (navigator.vibrate) navigator.vibrate(12); if (!e.target.closest('.pad, .kb, #somBtn')) somToque(); } }, true);
 function toast(msg){ const t=$('toast'); t.textContent=msg; t.style.display='block'; clearTimeout(t._t); t._t=setTimeout(()=>t.style.display='none', 3800); }
 function modal(ic, t, p, btns){ $('mIc').innerHTML=ic; $('mT').textContent=t; $('mP').textContent=p||''; const b=$('mB'); b.innerHTML='';
   (btns||[]).forEach(([txt, fn, cls]) => { const e=document.createElement('button'); e.className='btn '+(cls||'pri'); e.style.marginTop='8px'; e.textContent=txt; e.onclick=()=>{ $('modal').classList.remove('on'); fn&&fn(); }; b.appendChild(e); });
-  $('modal').classList.add('on'); }
+  $('modal').classList.add('on'); if (!String(ic).includes('class="spin"')) { /(🔞|❌|⛔|🔒|⚠️|📡)/.test(ic) ? somErro() : somToque(); falar(t + '. ' + (p || '')); } }
 function loading(t){ modal('<div class="spin"></div>', t||'Aguarde…', ''); }
 function unload(){ $('modal').classList.remove('on'); }
 
@@ -589,9 +580,33 @@ function aindaAi(){ let n = 15; modal('⏳', 'Ainda está aí?', `Voltando ao in
   S.awayT = setInterval(() => { n--; $('mP').textContent = `Voltando ao início em ${n} s…`; if (n <= 0) { clearInterval(S.awayT); toIdle(); } }, 1000); }
 document.addEventListener('touchstart', armIdle, {passive:true}); document.addEventListener('mousedown', armIdle);
 
+
+/* ================= Voz e sons ================= */
+const SND = {on: localStorage.getItem('be_som') !== '0', ctx:null};
+function audioCtx(){ if (!SND.ctx) { try { SND.ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e){} } if (SND.ctx && SND.ctx.state === 'suspended') SND.ctx.resume(); return SND.ctx; }
+function tom(freqs, dur, vol, tipo, atraso){ const c = audioCtx(); if (!c) return; const t0 = c.currentTime + (atraso||0), g = c.createGain();
+  g.gain.setValueAtTime(vol, t0); g.gain.exponentialRampToValueAtTime(0.001, t0 + dur); g.connect(c.destination);
+  [].concat(freqs).forEach(f => { const o = c.createOscillator(); o.type = tipo || 'sine'; o.frequency.value = f; o.connect(g); o.start(t0); o.stop(t0 + dur + 0.03); }); }
+const DTMF = {1:[697,1209],2:[697,1336],3:[697,1477],4:[770,1209],5:[770,1336],6:[770,1477],7:[852,1209],8:[852,1336],9:[852,1477],0:[941,1336]};
+function somTecla(k){ if (!SND.on) return; try { if (DTMF[k]) tom(DTMF[k], 0.11, 0.09); else if (k === '⌫') tom(330, 0.09, 0.14, 'triangle'); else if (k === 'C') tom(247, 0.14, 0.14, 'triangle'); else tom(880, 0.05, 0.08); } catch(e){} }
+function somToque(){ if (SND.on) try { tom(660, 0.06, 0.08); } catch(e){} }
+function somOk(){ if (SND.on) try { tom(660, 0.12, 0.12); tom(990, 0.18, 0.12, 'sine', 0.12); } catch(e){} }
+function somErro(){ if (SND.on) try { tom(220, 0.22, 0.14, 'sawtooth'); } catch(e){} }
+function falar(txt){ if (!SND.on || !txt) return;
+  try { if (NATIVE && typeof BeerPOS.speak === 'function') { BeerPOS.speak(txt); return; }
+    if (!window.speechSynthesis) return; speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(txt); u.lang = 'pt-BR'; u.rate = 0.95;
+    const v = speechSynthesis.getVoices().find(v => /^pt[-_]BR/i.test(v.lang)); if (v) u.voice = v; speechSynthesis.speak(u); } catch(e){} }
+function toggleSom(){ SND.on = !SND.on; localStorage.setItem('be_som', SND.on ? '1' : '0'); $('somBtn').textContent = SND.on ? '🔊' : '🔇';
+  if (SND.on) { somOk(); falar('Som e voz ligados.'); } else { try { speechSynthesis.cancel(); } catch(e){} } }
+const FALAS = {age:'Olá! Para comprar chopp você precisa ter 18 anos ou mais. Se concorda, toque em Sim, concordo.',
+  cpf:'Digite o número do seu CPF.', nasc:'Agora digite a sua data de nascimento: dia, mês e ano.', menu:'Escolha o seu chopp.',
+  tamanho:'Escolha o tamanho do copo e toque em confirmar.', qtd:'Quantos copos você quer? Depois toque em ir para o pagamento.',
+  pagamento:'Escolha como pagar: Pix, crédito ou débito.', pix:'Abra o aplicativo do seu banco e pague pelo Pix lendo o QR Code na tela.',
+  fim:'Pronto! Aproveite o seu chopp. Beba com moderação.'};
+
 /* ================= Inicialização ================= */
 async function boot(){
-  buildPads(); buildKb('pairKb', k => padPair(k), true); buildKb('nomeKb', k => padNome(k)); buildKb('cupKb', k => padCup(k), true);
+  if (!SND.on) $('somBtn').textContent='🔇'; buildPads(); buildKb('pairKb', k => padPair(k), true); buildKb('cupKb', k => padCup(k), true);
   if (!TT) return go('pair');
   try { S.cfg = await api('pos/config'); applyBrand(); await loadMenu(); toIdle(); }
   catch(e){ if (TT) { modal('⚠️','Sem conexão', e.mensagem || 'Verificando…'); setTimeout(boot, 5000); } }
@@ -623,8 +638,8 @@ function renderIdleChips(){ const menu = !(S.cfg && S.cfg.tap_id) && S.taps.leng
 function esc(s){ return String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
 function toIdle(){ clearInterval(S.pollT); clearInterval(S.pixT); if (S.ver && S.ver.token) api('pos/logout', {token:S.ver.token}).catch(()=>{});
-  Object.assign(S, {cpf:'', nasc:'', nome:'', ver:null, order:null, wallet:null, vinc:'', rec:null, sel:null, cup:'', prev:null, pre:null}); $('vDisp') && ($('vDisp').textContent='____');
-  updCpf(); updNasc(); updNome(); unload(); go(home()); }
+  Object.assign(S, {cpfOk:false, cpfBad:false, nascOk:false, nascBad:false, falouServe:null, cpf:'', nasc:'', nome:'', ver:null, order:null, wallet:null, vinc:'', rec:null, sel:null, cup:'', prev:null, pre:null}); $('vDisp') && ($('vDisp').textContent='____');
+  updCpf(); updNasc(); unload(); go(home()); }
 function start(){ if (!S.taps.some(t => t.disponivel)) return modal('😕','Chopeira indisponível','Estamos sem chopp disponível agora. Volte em instantes!',[['OK']]);
   $('termos').textContent = S.cfg.termos; $('ajudaBtn').style.display = S.cfg.ajuda ? 'flex' : 'none'; novaSessao(); track('inicio'); go('age'); }
 function ajuda(){ modal('🙋','Precisa de ajuda?', S.cfg.ajuda, [['OK']]); }
@@ -641,18 +656,18 @@ function minor(){ modal('🔞','Venda proibida','A venda de bebidas alcoólicas 
 /* ================= Teclados ================= */
 function buildPads(){ document.querySelectorAll('[data-pad]').forEach(p => { const k = p.dataset.pad;
   p.innerHTML = [1,2,3,4,5,6,7,8,9,'⌫',0,'C'].map(n => `<button data-k="${n}">${n}</button>`).join('');
-  p.onclick = e => { const b = e.target.closest('button'); if (!b) return; k==='cpf' ? padCpf(b.dataset.k) : k==='vinc' ? padVinc(b.dataset.k) : padNasc(b.dataset.k); }; }); }
+  p.onclick = e => { const b = e.target.closest('button'); if (!b) return; somTecla(b.dataset.k); k==='cpf' ? padCpf(b.dataset.k) : k==='vinc' ? padVinc(b.dataset.k) : padNasc(b.dataset.k); }; }); }
 function buildKb(id, fn, alnum){ const rows = alnum ? ['1234567890','QWERTYUIOP','ASDFGHJKL','ZXCVBNM⌫'] : ['QWERTYUIOP','ASDFGHJKL','ZXCVBNM⌫'];
   let h = rows.map(r => '<div>' + [...r].map(c => `<button data-k="${c}" ${c==='⌫'?'class="w2"':''}>${c}</button>`).join('') + '</div>').join('');
   if (!alnum) h += '<div><button class="w" data-k=" ">espaço</button></div>';
-  $(id).innerHTML = h; $(id).onclick = e => { const b = e.target.closest('button'); if (b) fn(b.dataset.k); }; }
+  $(id).innerHTML = h; $(id).onclick = e => { const b = e.target.closest('button'); if (b) { somTecla(b.dataset.k); fn(b.dataset.k); } }; }
 
 function cpfValido(c){ if (!/^\d{11}$/.test(c) || /^(\d)\1{10}$/.test(c)) return false;
   for (let t=9; t<11; t++){ let s=0; for (let i=0;i<t;i++) s += +c[i]*((t+1)-i); if (+c[t] !== ((10*s)%11)%10) return false; } return true; }
 function padCpf(k){ if (k==='⌫') S.cpf=S.cpf.slice(0,-1); else if (k==='C') S.cpf=''; else if (S.cpf.length<11) S.cpf+=k; updCpf(); }
 function updCpf(){ const c=S.cpf, d=$('cpfDisp'); let f=c; if (c.length>3) f=c.slice(0,3)+'.'+c.slice(3); if (c.length>6) f=f.slice(0,7)+'.'+c.slice(6); if (c.length>9) f=f.slice(0,11)+'-'+c.slice(9);
   d.textContent = f || '000.000.000-00'; d.classList.toggle('ph', !c); const ok = cpfValido(c); d.classList.toggle('bad', c.length===11 && !ok);
-  $('cpfHint').textContent = c.length===11 && !ok ? 'CPF inválido — confira os números' : 'Somente números'; $('cpfHint').classList.toggle('err', c.length===11 && !ok); $('cpfOk').disabled = !ok; }
+  $('cpfHint').textContent = c.length===11 && !ok ? 'CPF inválido — confira os números' : 'Somente números'; $('cpfHint').classList.toggle('err', c.length===11 && !ok); $('cpfOk').disabled = !ok; if (ok && !S.cpfOk) { somOk(); falar('CPF completo. Toque em continuar.'); } if (c.length===11 && !ok && !S.cpfBad) falar('CPF inválido. Confira os números.'); S.cpfOk = ok; S.cpfBad = c.length===11 && !ok; }
 function cpfNext(){ go('nasc'); }
 
 function padNasc(k){ if (k==='⌫') S.nasc=S.nasc.slice(0,-1); else if (k==='C') S.nasc=''; else if (S.nasc.length<8) S.nasc+=k; updNasc(); }
@@ -662,20 +677,17 @@ function nascInfo(){ const n=S.nasc; if (n.length<8) return null; const d=+n.sli
 function updNasc(){ const n=S.nasc, d=$('nascDisp'); const mask='DD/MM/AAAA'; let f=''; let j=0;
   for (let i=0;i<mask.length;i++){ if (mask[i]==='/') { f+='/'; continue; } f += j<n.length ? n[j++] : mask[i]; }
   d.textContent = n ? f : mask; d.classList.toggle('ph', !n); const inf=nascInfo(); const bad = inf && !inf.valid;
-  d.classList.toggle('bad', !!bad); $('nascHint').textContent = bad ? 'Data inválida' : 'Ex.: 25/08/1995'; $('nascHint').classList.toggle('err', !!bad); $('nascOk').disabled = !(inf && inf.valid); }
-function nascNext(){ const inf=nascInfo(); if (inf.age < (S.cfg.idade_minima||18)) { identify(false); return; } identify(false); }
+  d.classList.toggle('bad', !!bad); $('nascHint').textContent = bad ? 'Data inválida' : 'Ex.: 25/08/1995'; $('nascHint').classList.toggle('err', !!bad); $('nascOk').disabled = !(inf && inf.valid); const v = !!(inf && inf.valid); if (v && !S.nascOk) { somOk(); falar('Data completa. Toque em continuar.'); } if (bad && !S.nascBad) falar('Data inválida. Confira.'); S.nascOk = v; S.nascBad = !!bad; }
+function nascNext(){ identify(); }
 
-function padNome(k){ if (k==='⌫') S.nome=S.nome.slice(0,-1); else if (S.nome.length<60 && !(k===' ' && (S.nome==='' || S.nome.endsWith(' ')))) S.nome+=k; updNome(); }
-function updNome(){ const d=$('nomeDisp'); d.textContent = S.nome || 'NOME E SOBRENOME'; d.classList.toggle('ph', !S.nome); d.scrollLeft = 9999;
-  const partes = S.nome.trim().split(/\s+/).filter(p => p.length>1); $('nomeOk').disabled = partes.length < (S.cfg && S.cfg.nome_regra==='primeiro' ? 1 : 2); }
+
 
 /* ================= Identificação ================= */
-async function identify(comNome){
+async function identify(){
   loading('Verificando seus dados…');
   try {
-    const n = S.nasc; const j = await api('pos/identify', {cpf:S.cpf, nascimento: n.slice(0,2)+'/'+n.slice(2,4)+'/'+n.slice(4), declara_maior:true, nome: comNome ? S.nome.trim() : ''});
+    const n = S.nasc; const j = await api('pos/identify', {cpf:S.cpf, nascimento: n.slice(0,2)+'/'+n.slice(2,4)+'/'+n.slice(4), declara_maior:true});
     unload();
-    if (j.need_name) { S.nome=''; updNome(); go('nome'); return; }
     S.ver = j; await depoisIdentificar();
   } catch(e){
     unload();
@@ -683,7 +695,7 @@ async function identify(comNome){
       cpf_irregular:['⚠️','CPF irregular'], limite_diario:['🍺','Limite diário atingido'], bloqueado:['⛔','Cadastro bloqueado'], servico_indisponivel:['📡','Tente novamente']};
     const [ic, t] = map[e.erro] || ['⚠️','Não foi possível continuar'];
     const voltar = ['dados_nao_conferem','nascimento_invalido'].includes(e.erro) ? () => { S.nasc=''; updNasc(); go('nasc'); }
-      : e.erro === 'nome_nao_confere' || e.erro === 'nome_incompleto' ? () => go('nome') : e.erro === 'cpf_invalido' ? () => { S.cpf=''; updCpf(); go('cpf'); } : toIdle;
+      : e.erro === 'cpf_invalido' ? () => { S.cpf=''; updCpf(); go('cpf'); } : toIdle;
     modal(ic, t, e.mensagem, [['OK', voltar]]);
   }
 }
@@ -816,6 +828,7 @@ async function pollServe(){
   $('beer').style.height = pct + '%'; $('foam').style.bottom = `calc(${pct}% - 8px)`; $('foam').style.opacity = pct>3?1:0;
   $('svBar').style.width = pct + '%'; $('svMl').textContent = cur.status==='servindo' ? `${cur.servido_ml} de ${cur.volume_ml} ml` : '';
   const btn = $('svBtn');
+  const fk = cur.seq + cur.status; if (S.falouServe !== fk) { S.falouServe = fk; falar(cur.status==='pendente' ? 'Preparando a chopeira. Aguarde.' : cur.status==='armado' ? (cur.start_mode==='pos' ? 'Coloque o copo inclinado sob a torneira e toque em Servir.' : 'Coloque o copo sob a torneira e aperte o botão iluminado.') : cur.start_mode==='auto' && cur.status!=='servindo' ? 'Torneira liberada! Incline o copo e puxe a alavanca.' : cur.status==='servindo' ? 'Servindo. A torneira para sozinha no volume certo.' : ''); }
   if (cur.status==='pendente') { $('svSub').textContent = 'Preparando a chopeira…'; btn.style.display='none'; }
   else if (cur.status==='armado' && cur.start_mode==='pos') { $('svSub').textContent = 'Coloque o copo inclinado sob a torneira indicada e toque em SERVIR.'; btn.style.display='flex'; }
   else if (cur.status==='armado') { $('svSub').textContent = 'Coloque o copo inclinado sob a torneira e aperte o botão iluminado.'; btn.style.display='none'; }
